@@ -1,8 +1,11 @@
 package com.memsql.kafka.utils;
 
+import com.memsql.kafka.sink.MemSQLDbWriter;
 import com.memsql.kafka.sink.MemSQLDialect;
 import com.memsql.kafka.sink.MemSQLSinkConfig;
-import org.apache.kafka.connect.errors.ConnectException;
+import org.apache.kafka.connect.data.Schema;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.*;
 import java.util.Collections;
@@ -11,18 +14,22 @@ import java.util.Properties;
 
 public class JdbcHelper {
 
-    public static boolean tableExists(Connection connection, String table) {
+    private static final Logger log = LoggerFactory.getLogger(JdbcHelper.class);
+
+    public static boolean tableExists(Connection connection, String table) throws SQLException {
         try (Statement stmt = connection.createStatement()) {
             return stmt.execute(MemSQLDialect.getTableExistsQuery(table));
-        } catch (SQLException ex) {
-            throw new ConnectException(ex);
         }
+    }
+
+    public static void createTable(Connection connection, String table, Schema schema) {
+        // TODO Create table
     }
 
     public static boolean isReferenceTable(MemSQLSinkConfig config, String table) {
         String database = config.database;
         String sql = String.format("using %s show tables extended like `%s`", database, table);
-        // Add logging log.trace(s"Executing SQL:\n$sql")
+        log.trace(String.format("Executing SQL:\n%s", sql));
         try (Connection connection = getConnection(Collections.singletonList(config.ddlEndpoint), config);
              Statement stmt = connection.createStatement()) {
             ResultSet resultSet = stmt.executeQuery(sql);
@@ -36,7 +43,7 @@ public class JdbcHelper {
         }
     }
 
-    public static Connection getConnection(List<String> hosts, MemSQLSinkConfig config) {
+    public static Connection getConnection(List<String> hosts, MemSQLSinkConfig config) throws SQLException {
         Properties connectionProps = new Properties();
         String username = config.user;
         String password = config.password;
@@ -47,13 +54,9 @@ public class JdbcHelper {
             connectionProps.setProperty("password", password);
         }
         connectionProps.putAll(config.sqlParams);
-        try {
-            return DriverManager.getConnection(
-                    getJDBCUrl(hosts, config.database),
-                    connectionProps);
-        } catch (SQLException ex) {
-            throw new ConnectException(ex);
-        }
+        return DriverManager.getConnection(
+                getJDBCUrl(hosts, config.database),
+                connectionProps);
     }
 
     private static String getJDBCUrl(List<String> hosts, String database) {

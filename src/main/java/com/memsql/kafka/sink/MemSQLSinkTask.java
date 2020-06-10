@@ -1,16 +1,22 @@
 package com.memsql.kafka.sink;
 
-import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.errors.ConnectException;
+import org.apache.kafka.connect.errors.RetriableException;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.apache.kafka.connect.sink.SinkTask;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.sql.SQLException;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.Map;
 
 public class MemSQLSinkTask extends SinkTask {
 
-    MemSQLSinkConfig config;
-    MemSQLDbWriter writer;
+    private static final Logger log = LoggerFactory.getLogger(MemSQLSinkTask.class);
+    private MemSQLSinkConfig config;
+    private MemSQLDbWriter writer;
     int retriesLeft;
 
     @Override
@@ -22,49 +28,36 @@ public class MemSQLSinkTask extends SinkTask {
 
     @Override
     public void put(Collection<SinkRecord> records) {
-        records.forEach(sinkRecord -> {
-            System.out.println("Sink record value: " + sinkRecord.value());
-            System.out.println("Sink record value string: " + sinkRecord.value().toString());
-            System.out.println("Sink record value class: " + sinkRecord.value().getClass().toString());
-            Struct value = (Struct)sinkRecord.value();
+        if (!records.isEmpty()) {
+            try {
+                writer.write(records);
+            } catch (SQLException ex) {
+                String sqlExceptions = "";
 
-            System.out.println("Record schema: " + sinkRecord.toString());
-            if (sinkRecord.valueSchema() != null) {
-                sinkRecord.valueSchema().fields().forEach(field -> {
-                    if (field.schema() != null) {
-                        System.out.println("Value Field schema: " + field.schema().toString());
-                        if (field.schema().defaultValue() != null) {
-                            System.out.println("Value Field class: " + field.schema().defaultValue().getClass().getName());
-                        }
-                    }
-                    System.out.println("Value Field name: " + field.name());
-                    System.out.println("Value Field string: " + field.toString());
-                });
-            }
-            if (sinkRecord.keySchema() != null) {
-                sinkRecord.keySchema().fields().forEach(field -> {
-                    if (field.schema() != null) {
-                        System.out.println("Key Field schema: " + field.schema().toString());
-                        if (field.schema().defaultValue() != null) {
-                            System.out.println("Key Field class: " + field.schema().defaultValue().getClass().getName());
-                        }
-                    }
-                    System.out.println("Key Field name: " + field.name());
-                    System.out.println("Key Field string: " + field.toString());
-                });
-            }
-        });
+                Throwable e;
+                for(Iterator<Throwable> exIter = ex.iterator(); exIter.hasNext(); sqlExceptions += e + System.lineSeparator()) {
+                    e = exIter.next();
+                }
 
-        writer.write(records);
+                if (this.retriesLeft == 0) {
+                    throw new ConnectException(new SQLException(sqlExceptions));
+                }
+                this.retriesLeft -= 1;
+                this.context.timeout(config.retryBackoffMs);
+                throw new RetriableException(new SQLException(sqlExceptions));
+            }
+            this.retriesLeft = config.maxRetries;
+        }
     }
 
     @Override
     public void stop() {
-
+        //TODO investigate if we should close some connections or make some other work during stopping job
     }
 
     @Override
     public String version() {
-        return null;
+        //TODO make it in more flexible way
+        return "0.0.1-beta";
     }
 }

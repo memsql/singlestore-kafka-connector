@@ -10,7 +10,7 @@ import org.apache.kafka.connect.errors.ConnectException;
 public class MemSQLDialect {
 
     public static String getTableExistsQuery(String table) {
-        return "SELECT * FROM " + table +  " WHERE 1=0";
+        return String.format("SELECT * FROM `%s` WHERE 1=0", table);
     }
 
     public static String getSqlType(SinkRecordField field) {

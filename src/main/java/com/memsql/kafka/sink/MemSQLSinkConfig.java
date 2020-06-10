@@ -129,7 +129,7 @@ public class MemSQLSinkConfig extends AbstractConfig {
                     ConfigDef.Width.SHORT,
                     MAX_RETRIES_DISPLAY)
             .define(RETRY_BACKOFF_MS,
-                    ConfigDef.Type.LONG,
+                    ConfigDef.Type.INT,
                     3000,
                     NON_NEGATIVE_INT_VALIDATOR,
                     ConfigDef.Importance.MEDIUM,
@@ -146,7 +146,7 @@ public class MemSQLSinkConfig extends AbstractConfig {
     public final String password;
     public final Map<String, String> sqlParams;
     public final int maxRetries;
-    public final long retryBackoffMs;
+    public final int retryBackoffMs;
 
     public MemSQLSinkConfig(Map<?, ?> props) {
         super(CONFIG_DEF, props);
@@ -157,7 +157,7 @@ public class MemSQLSinkConfig extends AbstractConfig {
         this.password = getPasswordValue(CONNECTION_PASSWORD);
         this.sqlParams = getSqlParams(props);
         this.maxRetries = getInt(MAX_RETRIES);
-        this.retryBackoffMs = getLong(RETRY_BACKOFF_MS);
+        this.retryBackoffMs = getInt(RETRY_BACKOFF_MS);
     }
 
     private Map<String, String> getSqlParams(Map<?, ?> props) {

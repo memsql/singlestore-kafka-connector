@@ -2,20 +2,34 @@ package com.memsql.kafka.sink;
 
 import com.memsql.kafka.utils.JdbcHelper;
 import org.apache.kafka.connect.sink.SinkRecord;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.Collection;
 
 public class MemSQLDbWriter {
 
-    private MemSQLSinkConfig config;
+    private static final Logger log = LoggerFactory.getLogger(MemSQLDbWriter.class);
+    private final MemSQLSinkConfig config;
 
     public MemSQLDbWriter(MemSQLSinkConfig config) {
         this.config = config;
     }
 
-    public void write(Collection<SinkRecord> records) {
-        Connection connection = JdbcHelper.getConnection(config.dmlEndpoints, config);
+    public void write(Collection<SinkRecord> records) throws SQLException {
+        // TODO think about caching connection instead of opening it each time
+        try (Connection connection = JdbcHelper.getConnection(config.dmlEndpoints, config)) {
+            SinkRecord first = records.iterator().next();
+            String table = first.topic();
+            boolean tableExists = JdbcHelper.tableExists(connection, table);
+            if (!tableExists) {
+                log.info(String.format("Table `%s` doesn't exist. Creating it", table));
+                JdbcHelper.createTable(connection, table, first.valueSchema());
+            }
+            // TODO Do converting and writing
+        }
     }
 
 }
