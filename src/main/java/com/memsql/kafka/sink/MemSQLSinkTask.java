@@ -32,6 +32,7 @@ public class MemSQLSinkTask extends SinkTask {
             try {
                 writer.write(records);
             } catch (SQLException ex) {
+                log.warn(String.format("Write of %s records failed, retriesLeft=%s", records.size(), this.retriesLeft));
                 String sqlExceptions = "";
 
                 Throwable e;

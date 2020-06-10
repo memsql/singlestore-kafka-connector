@@ -11,6 +11,7 @@ import java.sql.*;
 import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
+import java.util.stream.Collectors;
 
 public class JdbcHelper {
 
@@ -22,8 +23,24 @@ public class JdbcHelper {
         }
     }
 
-    public static void createTable(Connection connection, String table, Schema schema) {
-        // TODO Create table
+    public static void createTable(Connection connection, String table, Schema schema) throws SQLException {
+        String sql = String.format("CREATE TABLE `%s` %s}", table, schemaToString(schema));
+        log.trace(String.format("Executing SQL:\n%s", sql));
+        Statement stmt = connection.createStatement();
+        stmt.executeUpdate(sql);
+    }
+
+    private static String schemaToString(Schema schema) {
+        List<String> fieldSql = schema.fields().stream()
+                .map(field -> {
+                    String name = String.format("`%s`", field.name());
+                    String memsqlType = MemSQLDialect.getSqlType(field);
+                    String collation = field.schema().type() == Schema.Type.STRING ? " COLLATE UTF8_BIN" : "";
+                    String nullable = field.schema().isOptional() ? "" : " NOT NULL";
+                  return String.format("%s %s%s%s", name, memsqlType, collation, nullable);
+                }).collect(Collectors.toList());
+        return String.format("(\n  %s\n)", String.join(",\n  ", fieldSql));
+        //TODO add tableKeys (different Keys)
     }
 
     public static boolean isReferenceTable(MemSQLSinkConfig config, String table) {
