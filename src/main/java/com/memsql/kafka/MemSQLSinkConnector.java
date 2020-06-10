@@ -1,5 +1,7 @@
 package com.memsql.kafka;
 
+import com.memsql.kafka.sink.MemSQLSinkConfig;
+import com.memsql.kafka.sink.MemSQLSinkTask;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.connector.Task;
 import org.apache.kafka.connect.sink.SinkConnector;

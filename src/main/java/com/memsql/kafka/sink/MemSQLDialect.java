@@ -1,4 +1,4 @@
-package com.memsql.kafka;
+package com.memsql.kafka.sink;
 
 import io.confluent.connect.jdbc.sink.metadata.SinkRecordField;
 import org.apache.kafka.connect.data.Date;
@@ -8,6 +8,10 @@ import org.apache.kafka.connect.data.Timestamp;
 import org.apache.kafka.connect.errors.ConnectException;
 
 public class MemSQLDialect {
+
+    public static String getTableExistsQuery(String table) {
+        return "SELECT * FROM " + table +  " WHERE 1=0";
+    }
 
     public static String getSqlType(SinkRecordField field) {
         if (field.schemaName() != null) {
