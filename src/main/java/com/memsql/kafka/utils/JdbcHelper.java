@@ -46,19 +46,21 @@ public class JdbcHelper {
     private static String schemaToString(Schema schema) {
         if (schema.type() == Schema.Type.STRUCT) {
             List<String> fieldSql = schema.fields().stream()
-                    .map(field -> {
-                        String name = String.format("`%s`", field.name());
-                        String memsqlType = MemSQLDialect.getSqlType(field);
-                        String collation = field.schema().type() == Schema.Type.STRING ? " COLLATE UTF8_BIN" : "";
-                        String nullable = field.schema().isOptional() ? "" : " NOT NULL";
-                        return String.format("%s %s%s%s", name, memsqlType, collation, nullable);
-                    }).collect(Collectors.toList());
+                    .map(field -> formatSchemaField(field.schema()))
+                    .collect(Collectors.toList());
             return String.format("(\n  %s\n)", String.join(",\n  ", fieldSql));
             //TODO add tableKeys (different Keys)
         } else {
-            // TODO handle case if schema is not STRUCT
-            return null;
+            return formatSchemaField(schema);
         }
+    }
+
+    private static String formatSchemaField(Schema schema) {
+        String name = String.format("`%s`", schema.name());
+        String memsqlType = MemSQLDialect.getSqlType(schema);
+        String collation = schema.type() == Schema.Type.STRING ? " COLLATE UTF8_BIN" : "";
+        String nullable = schema.isOptional() ? "" : " NOT NULL";
+        return String.format("%s %s%s%s", name, memsqlType, collation, nullable);
     }
 
     public static boolean isReferenceTable(MemSQLSinkConfig config, String table) {

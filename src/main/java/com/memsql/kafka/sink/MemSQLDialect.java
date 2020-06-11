@@ -1,6 +1,7 @@
 package com.memsql.kafka.sink;
 
 import org.apache.kafka.connect.data.Field;
+import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.errors.ConnectException;
 
 public class MemSQLDialect {
@@ -9,7 +10,7 @@ public class MemSQLDialect {
         return String.format("SELECT * FROM `%s` WHERE 1=0", table);
     }
 
-    public static String getSqlType(Field field) {
+    public static String getSqlType(Schema fieldSchema) {
         /*
         if (field.schemaName() != null) {
             switch (field.schemaName()) {
@@ -28,7 +29,7 @@ public class MemSQLDialect {
             }
         }
         */
-        switch (field.schema().type()) {
+        switch (fieldSchema.type()) {
             case INT8:
                 return "TINYINT";
             case INT16:
@@ -48,7 +49,7 @@ public class MemSQLDialect {
             case BYTES:
                 return "VARBINARY(1024)";
             default:
-                throw new ConnectException(String.format("%s (%s) type doesn't have a mapping to the MemSQL database column type", field.schema().name(), field.schema().type()));
+                throw new ConnectException(String.format("%s (%s) type doesn't have a mapping to the MemSQL database column type", fieldSchema.name(), fieldSchema.type()));
         }
     }
 }
