@@ -58,6 +58,7 @@ public class MemSQLDbWriter {
                             throw new RuntimeException(ex.getLocalizedMessage());
                         }
                     });
+                    outputStream.close();
                     stmt.executeUpdate(query);
                 }
             }
