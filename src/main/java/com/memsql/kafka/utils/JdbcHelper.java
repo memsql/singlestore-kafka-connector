@@ -28,9 +28,11 @@ public class JdbcHelper {
         }
     }
 
-    public static boolean tableExists(Connection connection, String table) throws SQLException {
+    public static boolean tableExists(Connection connection, String table) {
         try (Statement stmt = connection.createStatement()) {
             return stmt.execute(MemSQLDialect.getTableExistsQuery(table));
+        } catch (SQLException ex) {
+            return false;
         }
     }
 
@@ -56,17 +58,17 @@ public class JdbcHelper {
     private static String schemaToString(Schema schema) {
         if (schema.type() == Schema.Type.STRUCT) {
             List<String> fieldSql = schema.fields().stream()
-                    .map(field -> formatSchemaField(field.schema()))
+                    .map(field -> formatSchemaField(field.name(), field.schema()))
                     .collect(Collectors.toList());
             return String.format("(\n  %s\n)", String.join(",\n  ", fieldSql));
             //TODO add tableKeys (different Keys)
         } else {
-            return formatSchemaField(schema);
+            return formatSchemaField("data", schema);
         }
     }
 
-    private static String formatSchemaField(Schema schema) {
-        String name = String.format("`%s`", schema.name() == null ? "data" : schema.name());
+    private static String formatSchemaField(String fieldName, Schema schema) {
+        String name = String.format("`%s`", fieldName);
         String memsqlType = MemSQLDialect.getSqlType(schema);
         String collation = schema.type() == Schema.Type.STRING ? " COLLATE UTF8_BIN" : "";
         String nullable = schema.isOptional() ? "" : " NOT NULL";
