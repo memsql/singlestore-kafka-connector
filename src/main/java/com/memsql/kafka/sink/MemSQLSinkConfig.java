@@ -12,6 +12,7 @@ public class MemSQLSinkConfig extends AbstractConfig {
 
     private static final String CONNECTION_GROUP = "Connection";
     private static final String RETRY_GROUP = "Retry";
+    private static final String MEMSQL_GROUP = "MemSQL";
 
     public static final String DDL_ENDPOINT = "connection.ddlEndpoint";
     private static final String DDL_ENDPOINT_DOC =
@@ -48,6 +49,10 @@ public class MemSQLSinkConfig extends AbstractConfig {
     public static final String RETRY_BACKOFF_MS = "retry.backoff.ms";
     private static final String RETRY_BACKOFF_MS_DOC = "The time in milliseconds to wait following an error before a retry attempt is made.";
     private static final String RETRY_BACKOFF_MS_DISPLAY = "Retry Backoff (millis)";
+
+    public static final String LOAD_DATA_COMPRESSION = "memsql.loadDataCompression";
+    private static final String LOAD_DATA_COMPRESSION_DOC = "Compress data on load; one of (GZip, LZ4, Skip) (default: GZip)";
+    private static final String LOAD_DATA_COMPRESSION_DISPLAY = "MemSQL Load Data Compression";
 
     private static final ConfigDef.Range NON_NEGATIVE_INT_VALIDATOR = ConfigDef.Range.atLeast(0);
 
@@ -136,8 +141,17 @@ public class MemSQLSinkConfig extends AbstractConfig {
                     RETRY_BACKOFF_MS_DOC,
                     RETRY_GROUP,
                     2,
-                    ConfigDef.Width.SHORT,
-                    RETRY_BACKOFF_MS_DISPLAY);
+                    ConfigDef.Width.MEDIUM,
+                    RETRY_BACKOFF_MS_DISPLAY)
+            .define(LOAD_DATA_COMPRESSION,
+                    ConfigDef.Type.STRING,
+                    "GZip",
+                    ConfigDef.Importance.LOW,
+                    LOAD_DATA_COMPRESSION_DOC,
+                    MEMSQL_GROUP,
+                    1,
+                    ConfigDef.Width.MEDIUM,
+                    LOAD_DATA_COMPRESSION_DISPLAY);
 
     public final String ddlEndpoint;
     public final List<String> dmlEndpoints;
@@ -147,6 +161,7 @@ public class MemSQLSinkConfig extends AbstractConfig {
     public final Map<String, String> sqlParams;
     public final int maxRetries;
     public final int retryBackoffMs;
+    public final String dataCompression;
 
     public MemSQLSinkConfig(Map<?, ?> props) {
         super(CONFIG_DEF, props);
@@ -158,6 +173,7 @@ public class MemSQLSinkConfig extends AbstractConfig {
         this.sqlParams = getSqlParams(props);
         this.maxRetries = getInt(MAX_RETRIES);
         this.retryBackoffMs = getInt(RETRY_BACKOFF_MS);
+        this.dataCompression = getString(LOAD_DATA_COMPRESSION);
     }
 
     private Map<String, String> getSqlParams(Map<?, ?> props) {
