@@ -4,6 +4,7 @@ import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.types.Password;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -166,7 +167,7 @@ public class MemSQLSinkConfig extends AbstractConfig {
     public MemSQLSinkConfig(Map<?, ?> props) {
         super(CONFIG_DEF, props);
         this.ddlEndpoint = getString(DDL_ENDPOINT);
-        this.dmlEndpoints = getList(DML_ENDPOINTS);
+        this.dmlEndpoints = getDmlEndpoints();
         this.database = getString(CONNECTION_DATABASE);
         this.user = getString(CONNECTION_USER);
         this.password = getPasswordValue(CONNECTION_PASSWORD);
@@ -183,6 +184,14 @@ public class MemSQLSinkConfig extends AbstractConfig {
                 .filter(key -> ((String)key).startsWith(paramsPrefix))
                 .forEach(key -> sqlParams.put(((String) key).substring(paramsPrefix.length()), getString((String)key)));
         return sqlParams;
+    }
+
+    private List<String> getDmlEndpoints() {
+        List<String> dmlEndpoints = getList(DML_ENDPOINTS);
+        if (ddlEndpoint == null || dmlEndpoints.isEmpty()) {
+            return Collections.singletonList(getString(DDL_ENDPOINT));
+        }
+        return dmlEndpoints;
     }
 
     private String getPasswordValue(String key) {
