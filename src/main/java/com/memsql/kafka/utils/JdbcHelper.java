@@ -110,6 +110,7 @@ public class JdbcHelper {
         if (password != null) {
             connectionProps.setProperty("password", password);
         }
+        connectionProps.put("allowLoadLocalInfile", "true");
         connectionProps.putAll(config.sqlParams);
         try {
             Class.forName("com.mysql.jdbc.Driver");

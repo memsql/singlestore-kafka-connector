@@ -46,7 +46,6 @@ public class MemSQLDbWriter {
                     String queryPrefix = String.format("LOAD DATA LOCAL INFILE '###.%s'", dataCompression.getExt());
                     String queryEnding = String.format("INTO TABLE `%s` (%s)", table, columnNames);
                     String query = String.join(" ", queryPrefix, queryEnding);
-                    stmt.executeUpdate(query);
 
                     List<byte[]> values = records.stream().map(record ->
                             MemSQLDialect.getRecordValue(record).getBytes(StandardCharsets.UTF_8)
@@ -59,6 +58,7 @@ public class MemSQLDbWriter {
                             throw new RuntimeException(ex.getLocalizedMessage());
                         }
                     });
+                    stmt.executeUpdate(query);
                 }
             }
         } catch (IOException ex) {
