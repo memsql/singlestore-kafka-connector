@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.List;
@@ -38,20 +39,31 @@ public class MemSQLDbWriter {
                  com.mysql.jdbc.Statement stmt = (com.mysql.jdbc.Statement) connection.createStatement()) {
                 connection.setAllowLoadLocalInfile(true);
                 stmt.setLocalInfileInputStream(inputStream);
-                DataCompression dataCompression = getDataCompression(config, baseStream);
-                OutputStream outputStream = dataCompression.getOutputStream();
-            /*
-            List<Object> values = records.stream()
-                    .map(ConnectRecord::value)
-                    .collect(Collectors.toList());
-            */
-                // TODO Do converting and writing
-            }
-        } catch (IOException e) {
-            // TODO add something here
-            e.printStackTrace();
-        }
 
+                DataCompression dataCompression = getDataCompression(config, baseStream);
+                try (OutputStream outputStream = dataCompression.getOutputStream()) {
+                    String columnNames = JdbcHelper.getSchemaTables(first.valueSchema());
+                    String queryPrefix = String.format("LOAD DATA LOCAL INFILE '###.%s'", dataCompression.getExt());
+                    String queryEnding = String.format("INTO TABLE `%s` (%s)", table, columnNames);
+                    String query = String.join(" ", queryPrefix, queryEnding);
+                    stmt.executeUpdate(query);
+
+                    List<byte[]> values = records.stream().map(record ->
+                            record.value().toString().getBytes(StandardCharsets.UTF_8)
+                    ).collect(Collectors.toList());
+                    values.forEach(value -> {
+                        try {
+                            outputStream.write(value);
+                            outputStream.write('\n');
+                        } catch (IOException ex) {
+                            throw new RuntimeException(ex.getLocalizedMessage());
+                        }
+                    });
+                }
+            }
+        } catch (IOException ex) {
+            throw new RuntimeException(ex.getLocalizedMessage());
+        }
     }
 
     private DataCompression getDataCompression(MemSQLSinkConfig config, OutputStream baseStream) {
@@ -67,8 +79,7 @@ public class MemSQLDbWriter {
                     throw new IllegalArgumentException(String.format("Invalid data compression type. Type %s doesn't exist", config.dataCompression));
             }
         } catch (IOException ex) {
-            //TODO change to other exception
-            throw new RuntimeException("");
+            throw new RuntimeException(ex.getLocalizedMessage());
         }
     }
 

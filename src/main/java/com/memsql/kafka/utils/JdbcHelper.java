@@ -1,10 +1,9 @@
 package com.memsql.kafka.utils;
 
-import com.memsql.kafka.sink.MemSQLDbWriter;
 import com.memsql.kafka.sink.MemSQLDialect;
 import com.memsql.kafka.sink.MemSQLSinkConfig;
+import org.apache.kafka.connect.data.Field;
 import org.apache.kafka.connect.data.Schema;
-import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,6 +42,17 @@ public class JdbcHelper {
         }
     }
 
+    public static String getSchemaTables(Schema schema) {
+        if (schema.type() == Schema.Type.STRUCT) {
+            List<String> fieldSql = schema.fields().stream()
+                    .map(Field::name)
+                    .collect(Collectors.toList());
+            return String.join(", ", fieldSql);
+        } else {
+            return schema.name() == null ? "data" : schema.name();
+        }
+    }
+
     private static String schemaToString(Schema schema) {
         if (schema.type() == Schema.Type.STRUCT) {
             List<String> fieldSql = schema.fields().stream()
@@ -56,7 +66,7 @@ public class JdbcHelper {
     }
 
     private static String formatSchemaField(Schema schema) {
-        String name = String.format("`%s`", schema.name());
+        String name = String.format("`%s`", schema.name() == null ? "data" : schema.name());
         String memsqlType = MemSQLDialect.getSqlType(schema);
         String collation = schema.type() == Schema.Type.STRING ? " COLLATE UTF8_BIN" : "";
         String nullable = schema.isOptional() ? "" : " NOT NULL";
