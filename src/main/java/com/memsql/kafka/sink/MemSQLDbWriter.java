@@ -49,7 +49,7 @@ public class MemSQLDbWriter {
                     stmt.executeUpdate(query);
 
                     List<byte[]> values = records.stream().map(record ->
-                            record.value().toString().getBytes(StandardCharsets.UTF_8)
+                            MemSQLDialect.getRecordValue(record).getBytes(StandardCharsets.UTF_8)
                     ).collect(Collectors.toList());
                     values.forEach(value -> {
                         try {
