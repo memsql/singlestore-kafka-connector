@@ -188,7 +188,7 @@ public class MemSQLSinkConfig extends AbstractConfig {
 
     private List<String> getDmlEndpoints() {
         List<String> dmlEndpoints = getList(DML_ENDPOINTS);
-        if (ddlEndpoint == null || dmlEndpoints.isEmpty()) {
+        if (dmlEndpoints == null || dmlEndpoints.isEmpty()) {
             return Collections.singletonList(getString(DDL_ENDPOINT));
         }
         return dmlEndpoints;
