@@ -1,0 +1,1 @@
+# memsql-kafka-connector
