@@ -30,7 +30,7 @@ public class JdbcHelper {
             boolean metadataTableExists = JdbcHelper.tableExists(connection, KAFKA_METADATA_TABLE);
             if (!metadataTableExists) {
                 log.info(String.format("Metadata table `%s` doesn't exist. Creating it", KAFKA_METADATA_TABLE));
-                JdbcHelper.createTable(connection, KAFKA_METADATA_TABLE, getKafkaMetadataSchema());
+                JdbcHelper.createTable(connection, KAFKA_METADATA_TABLE, MemSQLDialect.getKafkaMetadataSchema());
             }
         }
     }
@@ -73,10 +73,6 @@ public class JdbcHelper {
         } else {
             return schema.name() == null ? "data" : schema.name();
         }
-    }
-
-    private static String getKafkaMetadataSchema() {
-        return "(\n  id VARCHAR(255) PRIMARY KEY COLLATE UTF8_BIN,\n  count INT NOT NULL\n)";
     }
 
     private static String schemaToString(Schema schema) {

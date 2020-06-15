@@ -40,8 +40,8 @@ public class MemSQLSinkConfig extends AbstractConfig {
     private static final String CONNECTION_PASSWORD_DISPLAY = "MemSQL Password";
 
     public static final String SQL_PARAMETERS = "params.<value>";
-    private static final String SQL_PARAMETERS_DOC = "Additional parameters for sql queries";
-    private static final String SQL_PARAMETERS_DISPLAY = "SQL Parameters";
+    private static final String SQL_PARAMETERS_DOC = "Specify a specific MySQL or JDBC parameter which will be injected into the connection URI";
+    private static final String SQL_PARAMETERS_DISPLAY = "Additional SQL Parameters";
 
     public static final String MAX_RETRIES = "max.retries";
     private static final String MAX_RETRIES_DOC = "The maximum number of times to retry on errors before failing the task.";
@@ -94,7 +94,7 @@ public class MemSQLSinkConfig extends AbstractConfig {
             .define(
                     CONNECTION_USER,
                     ConfigDef.Type.STRING,
-                    null,
+                    "root",
                     ConfigDef.Importance.HIGH,
                     CONNECTION_USER_DOC,
                     CONNECTION_GROUP,

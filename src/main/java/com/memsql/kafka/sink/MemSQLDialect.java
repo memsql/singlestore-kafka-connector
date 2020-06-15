@@ -1,6 +1,5 @@
 package com.memsql.kafka.sink;
 
-import org.apache.kafka.connect.data.Field;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.errors.ConnectException;
@@ -12,6 +11,10 @@ import java.util.stream.Collectors;
 public class MemSQLDialect {
 
     public static final String KAFKA_METADATA_TABLE = "kafka-connect-transaction-metadata";
+
+    public static String getKafkaMetadataSchema() {
+        return "(\n  id VARCHAR(255) PRIMARY KEY COLLATE UTF8_BIN,\n  count INT NOT NULL\n)";
+    }
 
     public static String getTableExistsQuery(String table) {
         return String.format("SELECT * FROM `%s` WHERE 1=0", table);
