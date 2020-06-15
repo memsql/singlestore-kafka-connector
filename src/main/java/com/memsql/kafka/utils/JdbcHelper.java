@@ -14,6 +14,8 @@ import java.util.List;
 import java.util.Properties;
 import java.util.stream.Collectors;
 
+import static com.memsql.kafka.sink.MemSQLDialect.KAFKA_METADATA_TABLE;
+
 public class JdbcHelper {
 
     private static final Logger log = LoggerFactory.getLogger(JdbcHelper.class);
@@ -25,10 +27,15 @@ public class JdbcHelper {
                 log.info(String.format("Table `%s` doesn't exist. Creating it", table));
                 JdbcHelper.createTable(connection, table, record.valueSchema());
             }
+            boolean metadataTableExists = JdbcHelper.tableExists(connection, KAFKA_METADATA_TABLE);
+            if (!metadataTableExists) {
+                log.info(String.format("Metadata table `%s` doesn't exist. Creating it", KAFKA_METADATA_TABLE));
+                JdbcHelper.createTable(connection, KAFKA_METADATA_TABLE, getKafkaMetadataSchema());
+            }
         }
     }
 
-    public static boolean tableExists(Connection connection, String table) {
+    private static boolean tableExists(Connection connection, String table) {
         try (Statement stmt = connection.createStatement()) {
             return stmt.execute(MemSQLDialect.getTableExistsQuery(table));
         } catch (SQLException ex) {
@@ -36,8 +43,12 @@ public class JdbcHelper {
         }
     }
 
-    public static void createTable(Connection connection, String table, Schema schema) throws SQLException {
-        String sql = String.format("CREATE TABLE `%s` %s}", table, schemaToString(schema));
+    private static void createTable(Connection connection, String table, Schema schema) throws SQLException {
+        createTable(connection, table, schemaToString(schema));
+    }
+
+    private static void createTable(Connection connection, String table, String schema) throws SQLException {
+        String sql = String.format("CREATE TABLE `%s` %s", table, schema);
         log.trace(String.format("Executing SQL:\n%s", sql));
         try (Statement stmt = connection.createStatement()) {
             stmt.executeUpdate(sql);
@@ -55,6 +66,10 @@ public class JdbcHelper {
         }
     }
 
+    private static String getKafkaMetadataSchema() {
+        return "(\n  id VARCHAR(255) PRIMARY KEY COLLATE UTF8_BIN,\n  count INT NOT NULL\n)";
+    }
+
     private static String schemaToString(Schema schema) {
         if (schema.type() == Schema.Type.STRUCT) {
             List<String> fieldSql = schema.fields().stream()
@@ -63,7 +78,8 @@ public class JdbcHelper {
             return String.format("(\n  %s\n)", String.join(",\n  ", fieldSql));
             //TODO add tableKeys (different Keys)
         } else {
-            return formatSchemaField("data", schema);
+            String fieldName = schema.name() == null ? "data" : schema.name();
+            return formatSchemaField(fieldName, schema);
         }
     }
 

@@ -11,6 +11,8 @@ import java.util.stream.Collectors;
 
 public class MemSQLDialect {
 
+    public static final String KAFKA_METADATA_TABLE = "kafka-connect-transaction-metadata";
+
     public static String getTableExistsQuery(String table) {
         return String.format("SELECT * FROM `%s` WHERE 1=0", table);
     }

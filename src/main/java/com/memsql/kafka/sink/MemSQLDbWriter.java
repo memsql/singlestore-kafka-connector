@@ -10,10 +10,13 @@ import org.slf4j.LoggerFactory;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.zip.GZIPOutputStream;
+
+import static com.memsql.kafka.sink.MemSQLDialect.KAFKA_METADATA_TABLE;
 
 public class MemSQLDbWriter {
 
@@ -29,6 +32,10 @@ public class MemSQLDbWriter {
     public void write(Collection<SinkRecord> records) throws SQLException {
         SinkRecord first = records.iterator().next();
         String table = first.topic();
+
+        String metaId = String.format("%s-%s-%s", first.topic(), first.kafkaPartition(), first.kafkaOffset());
+        Integer recordsCount = records.size();
+
         JdbcHelper.createTableIfNeeded(config, table, first);
         try (PipedOutputStream baseStream  = new PipedOutputStream();
             InputStream inputStream = new PipedInputStream(baseStream, BUFFER_SIZE)) {
@@ -39,13 +46,22 @@ public class MemSQLDbWriter {
                  com.mysql.jdbc.Statement stmt = (com.mysql.jdbc.Statement) connection.createStatement()) {
                 connection.setAllowLoadLocalInfile(true);
                 stmt.setLocalInfileInputStream(inputStream);
+                connection.setAutoCommit(false);
+
+                String metadataQuery = String.format("INSERT INTO `%s` VALUES ('%s', %s)", KAFKA_METADATA_TABLE, metaId, recordsCount);
+                try {
+                    stmt.executeUpdate(metadataQuery);
+                } catch (SQLIntegrityConstraintViolationException ex) {
+                    // If metadata record already exists, skip writing this batch of data
+                    return;
+                }
 
                 DataCompression dataCompression = getDataCompression(config, baseStream);
                 try (OutputStream outputStream = dataCompression.getOutputStream()) {
                     String columnNames = JdbcHelper.getSchemaTables(first.valueSchema());
                     String queryPrefix = String.format("LOAD DATA LOCAL INFILE '###.%s'", dataCompression.getExt());
                     String queryEnding = String.format("INTO TABLE `%s` (%s)", table, columnNames);
-                    String query = String.join(" ", queryPrefix, queryEnding);
+                    String dataQuery = String.join(" ", queryPrefix, queryEnding);
 
                     List<byte[]> values = records.stream().map(record ->
                             MemSQLDialect.getRecordValue(record).getBytes(StandardCharsets.UTF_8)
@@ -59,7 +75,8 @@ public class MemSQLDbWriter {
                         }
                     });
                     outputStream.close();
-                    stmt.executeUpdate(query);
+                    stmt.executeUpdate(dataQuery);
+                    connection.commit();
                 }
             }
         } catch (IOException ex) {
