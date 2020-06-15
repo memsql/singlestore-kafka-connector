@@ -57,7 +57,7 @@ public class JdbcHelper {
     }
 
     private static void createTable(Connection connection, String table, String schema) throws SQLException {
-        String sql = String.format("CREATE TABLE `%s` %s", table, schema);
+        String sql = String.format("CREATE TABLE IF NOT EXISTS `%s` %s", table, schema);
         log.trace(String.format("Executing SQL:\n%s", sql));
         try (Statement stmt = connection.createStatement()) {
             stmt.executeUpdate(sql);
