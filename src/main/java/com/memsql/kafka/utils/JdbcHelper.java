@@ -43,6 +43,15 @@ public class JdbcHelper {
         }
     }
 
+    public static boolean metadataRecordExists(Connection connection, String id) {
+        try (Statement stmt = connection.createStatement()) {
+            ResultSet resultSet = stmt.executeQuery(String.format("SELECT * FROM `%s` WHERE `id` = '%s'", KAFKA_METADATA_TABLE, id));
+            return resultSet.next();
+        } catch (SQLException ex) {
+            return false;
+        }
+    }
+
     private static void createTable(Connection connection, String table, Schema schema) throws SQLException {
         createTable(connection, table, schemaToString(schema));
     }

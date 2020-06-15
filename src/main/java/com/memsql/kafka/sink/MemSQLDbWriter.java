@@ -44,17 +44,16 @@ public class MemSQLDbWriter {
                     ? (com.mysql.jdbc.Connection)JdbcHelper.getDDLConnection(config)
                     : (com.mysql.jdbc.Connection)JdbcHelper.getDMLConnection(config);
                  com.mysql.jdbc.Statement stmt = (com.mysql.jdbc.Statement) connection.createStatement()) {
+
+                if (JdbcHelper.metadataRecordExists(connection, metaId)) {
+                    // If metadata record already exists, skip writing this batch of data
+                    return;
+                }
                 connection.setAllowLoadLocalInfile(true);
                 stmt.setLocalInfileInputStream(inputStream);
                 connection.setAutoCommit(false);
 
                 String metadataQuery = String.format("INSERT INTO `%s` VALUES ('%s', %s)", KAFKA_METADATA_TABLE, metaId, recordsCount);
-                try {
-                    stmt.executeUpdate(metadataQuery);
-                } catch (SQLIntegrityConstraintViolationException ex) {
-                    // If metadata record already exists, skip writing this batch of data
-                    return;
-                }
 
                 DataCompression dataCompression = getDataCompression(config, baseStream);
                 try (OutputStream outputStream = dataCompression.getOutputStream()) {
@@ -76,6 +75,7 @@ public class MemSQLDbWriter {
                     });
                     outputStream.close();
                     stmt.executeUpdate(dataQuery);
+                    stmt.executeUpdate(metadataQuery);
                     connection.commit();
                 }
             }
