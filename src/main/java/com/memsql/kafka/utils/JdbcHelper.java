@@ -14,8 +14,6 @@ import java.util.List;
 import java.util.Properties;
 import java.util.stream.Collectors;
 
-import static com.memsql.kafka.sink.MemSQLDialect.KAFKA_METADATA_TABLE;
-
 public class JdbcHelper {
 
     private static final Logger log = LoggerFactory.getLogger(JdbcHelper.class);
@@ -27,10 +25,12 @@ public class JdbcHelper {
                 log.info(String.format("Table `%s` doesn't exist. Creating it", table));
                 JdbcHelper.createTable(connection, table, record.valueSchema(), config.tableKeys);
             }
-            boolean metadataTableExists = JdbcHelper.tableExists(connection, KAFKA_METADATA_TABLE);
-            if (!metadataTableExists) {
-                log.info(String.format("Metadata table `%s` doesn't exist. Creating it", KAFKA_METADATA_TABLE));
-                JdbcHelper.createTable(connection, KAFKA_METADATA_TABLE, MemSQLDialect.getKafkaMetadataSchema());
+            if (config.metadataTableAllow) {
+                boolean metadataTableExists = JdbcHelper.tableExists(connection, config.metadataTableName);
+                if (!metadataTableExists) {
+                    log.info(String.format("Metadata table `%s` doesn't exist. Creating it", config.metadataTableName));
+                    JdbcHelper.createTable(connection, config.metadataTableName, MemSQLDialect.getKafkaMetadataSchema());
+                }
             }
         }
     }
@@ -43,9 +43,9 @@ public class JdbcHelper {
         }
     }
 
-    public static boolean metadataRecordExists(Connection connection, String id) {
+    public static boolean metadataRecordExists(Connection connection, String id, MemSQLSinkConfig config) {
         try (Statement stmt = connection.createStatement()) {
-            ResultSet resultSet = stmt.executeQuery(String.format("SELECT * FROM `%s` WHERE `id` = '%s'", KAFKA_METADATA_TABLE, id));
+            ResultSet resultSet = stmt.executeQuery(String.format("SELECT * FROM `%s` WHERE `id` = '%s'", config.metadataTableName, id));
             return resultSet.next();
         } catch (SQLException ex) {
             return false;

@@ -1,12 +1,11 @@
 package com.memsql.kafka.sink;
 
-import com.memsql.kafka.utils.TableKey;
 import com.memsql.kafka.utils.DataCompression;
+import com.memsql.kafka.utils.TableKey;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.config.types.Password;
-import org.apache.kafka.connect.errors.ConnectException;
 
 import java.util.*;
 
@@ -43,6 +42,10 @@ public class MemSQLSinkConfig extends AbstractConfig {
     private static final String SQL_PARAMETERS_DOC = "Specify a specific MySQL or JDBC parameter which will be injected into the connection URI";
     private static final String SQL_PARAMETERS_DISPLAY = "Additional SQL Parameters";
 
+    public static final String TABLE_KEY = "tableKey.<index_type>[.<name>]";
+    private static final String TABLE_KEY_DOCS = "Specify additional keys to add to tables created by the connector";
+    private static final String TABLE_KEY_DISPLAY = "Table key";
+
     public static final String MAX_RETRIES = "max.retries";
     private static final String MAX_RETRIES_DOC = "The maximum number of times to retry on errors before failing the task.";
     private static final String MAX_RETRIES_DISPLAY = "Maximum Retries";
@@ -55,9 +58,14 @@ public class MemSQLSinkConfig extends AbstractConfig {
     private static final String LOAD_DATA_COMPRESSION_DOC = "Compress data on load; one of (GZip, LZ4, Skip) (default: GZip)";
     private static final String LOAD_DATA_COMPRESSION_DISPLAY = "MemSQL Load Data Compression";
 
-    private static  final String TABLE_KEY = "tableKey.<index_type>[.<name>]";
-    private static final String  TABLE_KEY_DOCS = "Specify additional keys to add to tables created by the connector";
-    private static final String TABLE_KEY_DISPLAY = "Table key";
+    public static final String METADATA_TABLE_ALLOW = "memsql.metadata.allow";
+    private static final String METADATA_TABLE_ALLOW_DOCS = "Allows or denies the use of an additional meta-table to save the recording results (default: true)";
+    private static final String METADATA_TABLE_ALLOW_DISPLAY = "Allow metadata store";
+
+    public static final String METADATA_TABLE_NAME = "memsql.metadata.table";
+    private static final String METADATA_TABLE_NAME_DOCS = "Specify the name of an additional meta-table to save the recording results " +
+                                                            "(default: `kafka-connect-transaction-metadata`)";
+    private static final String METADATA_TABLE_NAME_DISPLAY = "Metadata table name";
 
     private static final ConfigDef.Range NON_NEGATIVE_INT_VALIDATOR = ConfigDef.Range.atLeast(0);
 
@@ -166,7 +174,26 @@ public class MemSQLSinkConfig extends AbstractConfig {
                     MEMSQL_GROUP,
                     1,
                     ConfigDef.Width.MEDIUM,
-                    LOAD_DATA_COMPRESSION_DISPLAY);
+                    LOAD_DATA_COMPRESSION_DISPLAY)
+            .define(METADATA_TABLE_ALLOW,
+                    ConfigDef.Type.BOOLEAN,
+                    true,
+                    ConfigDef.Importance.MEDIUM,
+                    METADATA_TABLE_ALLOW_DOCS,
+                    MEMSQL_GROUP,
+                    2,
+                    ConfigDef.Width.MEDIUM,
+                    METADATA_TABLE_ALLOW_DISPLAY)
+            .define(METADATA_TABLE_NAME,
+                    ConfigDef.Type.STRING,
+                    "kafka-connect-transaction-metadata",
+                    ConfigDef.Importance.LOW,
+                    METADATA_TABLE_NAME_DOCS,
+                    MEMSQL_GROUP,
+                    3,
+                    ConfigDef.Width.MEDIUM,
+                    METADATA_TABLE_NAME_DISPLAY,
+                    Collections.singletonList(METADATA_TABLE_ALLOW));
 
     public final String ddlEndpoint;
     public final List<String> dmlEndpoints;
@@ -178,6 +205,8 @@ public class MemSQLSinkConfig extends AbstractConfig {
     public final int retryBackoffMs;
     public final List<TableKey> tableKeys;
     public final DataCompression dataCompression;
+    public final boolean metadataTableAllow;
+    public final String metadataTableName;
 
     public MemSQLSinkConfig(Map<String, String> props) {
         super(CONFIG_DEF, props);
@@ -191,6 +220,8 @@ public class MemSQLSinkConfig extends AbstractConfig {
         this.retryBackoffMs = getInt(RETRY_BACKOFF_MS);
         this.tableKeys = getTableKeys(props);
         this.dataCompression = getDataCompression();
+        this.metadataTableAllow = getBoolean(METADATA_TABLE_ALLOW);
+        this.metadataTableName = getString(METADATA_TABLE_NAME);
     }
 
     private DataCompression getDataCompression() {
@@ -219,7 +250,7 @@ public class MemSQLSinkConfig extends AbstractConfig {
                         key -> {
                             String[]keyParts = key.split("\\.");
                             if (keyParts.length < 2) {
-                                throw new ConnectException(
+                                throw new ConfigException(
                                         String.format("Options starting with '%s.' must be formatted correctly. The key should be in the form `%s<index_type>[.<name>]`.", tableKeysPrefix, tableKeysPrefix)
                                 );
                             }
@@ -228,7 +259,7 @@ public class MemSQLSinkConfig extends AbstractConfig {
                             try {
                                 keyType = TableKey.Type.valueOf(keyParts[1].toUpperCase());
                             } catch(IllegalArgumentException ex) {
-                                throw new ConnectException(
+                                throw new ConfigException(
                                         String.format("Option '%s' must specify an index type from the following options: %s", key, Arrays.toString(TableKey.Type.values()))
                                 );
                             }

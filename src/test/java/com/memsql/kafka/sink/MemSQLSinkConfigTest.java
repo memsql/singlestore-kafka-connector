@@ -1,6 +1,7 @@
 package com.memsql.kafka.sink;
 
 import com.memsql.kafka.utils.DataCompression;
+import com.memsql.kafka.utils.TableKey;
 import org.apache.kafka.common.config.ConfigException;
 import org.junit.Test;
 
@@ -177,5 +178,84 @@ public class MemSQLSinkConfigTest {
         } catch (ConfigException ex) {
             assertEquals(ex.getLocalizedMessage(), "Configuration \"memsql.loadDataCompression\" is wrong. Available options: Gzip, LZ4, Skip");
         }
+    }
+
+    @Test
+    public void successTableKeysParameter() {
+        Map<String, String> props = getMinimalRequiredParameters();
+        Map<String, String> tableKeys = new HashMap<String, String>() {{
+            put("tableKey.primary", "column1");
+            put("tableKey.columnStore.name", "column2");
+            put("tableKey.uniQUE", "column3");
+            put("tableKey.shaRd", "another-column");
+            put("tableKey.key.SOME-name", "weIrD_ColUMN");
+        }};
+        props.putAll(tableKeys);
+        MemSQLSinkConfig config = new MemSQLSinkConfig(props);
+        assertEquals(config.tableKeys.size(), tableKeys.size());
+        for (int i = 0; i < config.tableKeys.size(); i++) {
+            TableKey tableKey = config.tableKeys.get(i);
+            tableKeys.keySet().forEach(key -> {
+                String[] keyParts = key.split("\\.");
+                if (keyParts[1].toUpperCase().equals(tableKey.type.name())) {
+                    assertEquals(tableKeys.get(key), tableKey.columns);
+                    if (!tableKey.name.isEmpty()) {
+                        assertEquals(tableKey.name, key.split("\\.")[2]);
+                    }
+                }
+            });
+        }
+    }
+
+    @Test
+    public void failTableKeysParameter() {
+
+        List<String> keysToCheck = new ArrayList<String>() {{
+            add("tableKey.primarry.name");
+            add("tableKey.columStore");
+            add("tableKey.uniQUu");
+            add("tableKey.shad");
+            add("tableKey.keys");
+            add("tableKey.something");
+        }};
+        keysToCheck.forEach(this::testTableKeyParameter);
+    }
+
+    private void testTableKeyParameter(String key) {
+        Map<String, String> props = getMinimalRequiredParameters();
+        Map<String, String> tableKeys = new HashMap<String, String>() {{
+            put(key, "column1");
+        }};
+        props.putAll(tableKeys);
+        try {
+            new MemSQLSinkConfig(props);
+            fail("Exception should be thrown");
+        } catch (ConfigException ex) {
+            assertEquals(ex.getLocalizedMessage(),
+                    String.format("Option '%s' must specify an index type from the following options: [PRIMARY, COLUMNSTORE, UNIQUE, SHARD, KEY]", key));
+        }
+    }
+
+    @Test
+    public void successMetadataTableAllowParameter() {
+        Map<String, String> props = getMinimalRequiredParameters();
+        props.put(MemSQLSinkConfig.METADATA_TABLE_ALLOW, "true");
+        MemSQLSinkConfig config = new MemSQLSinkConfig(props);
+        assertTrue(config.metadataTableAllow);
+
+        props.put(MemSQLSinkConfig.METADATA_TABLE_ALLOW, "false");
+        config = new MemSQLSinkConfig(props);
+        assertFalse(config.metadataTableAllow);
+    }
+
+    @Test
+    public void successMetadataTableNameParameter() {
+        Map<String, String> props = getMinimalRequiredParameters();
+        MemSQLSinkConfig config = new MemSQLSinkConfig(props);
+        assertEquals(config.metadataTableName, "kafka-connect-transaction-metadata");
+
+        props.put(MemSQLSinkConfig.METADATA_TABLE_NAME, "kafka-connect-new-table-name");
+        config = new MemSQLSinkConfig(props);
+        assertEquals(config.metadataTableName, props.get(MemSQLSinkConfig.METADATA_TABLE_NAME));
     }
 }

@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class MemSQLDialect {
-    public static final String KAFKA_METADATA_TABLE = "kafka-connect-transaction-metadata";
 
     public static String getKafkaMetadataSchema() {
         return "(\n  id VARCHAR(255) PRIMARY KEY COLLATE UTF8_BIN,\n  count INT NOT NULL\n)";
