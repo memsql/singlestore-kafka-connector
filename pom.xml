@@ -12,6 +12,7 @@
         <java.version>1.8</java.version>
         <kafka.version>2.5.0</kafka.version>
         <kafka-connect.version>5.5.0</kafka-connect.version>
+        <kafka.connect.maven.plugin.version>0.11.1</kafka.connect.maven.plugin.version>
         <confluent-maven-plugin.version>0.11.3</confluent-maven-plugin.version>
         <mysql-connector.version>5.1.49</mysql-connector.version>
         <lz4.version>1.7.1</lz4.version>
@@ -69,6 +70,47 @@
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>io.confluent</groupId>
+                <version>${kafka.connect.maven.plugin.version}</version>
+                <artifactId>kafka-connect-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>kafka-connect</goal>
+                        </goals>
+                        <configuration>
+                            <title>MemSQL Kafka Connect</title>
+                            <description>
+                                The JDBC sink connectors allow you to exchange data between MemSQL and Kafka.
+                            </description>
+
+                            <supportProviderName>MemSQL, Inc.</supportProviderName>
+
+                            <ownerUsername>memsql</ownerUsername>
+                            <ownerType>organization</ownerType>
+                            <ownerName>MemSQL, Inc.</ownerName>
+
+                            <dockerNamespace>memsqlinc</dockerNamespace>
+                            <dockerName>memsql-kafka-connect</dockerName>
+                            <dockerTag>${project.version}</dockerTag>
+
+                            <componentTypes>
+                                <componentType>sink</componentType>
+                            </componentTypes>
+
+                            <tags>
+                                <tag>jdbc</tag>
+                                <tag>database</tag>
+                                <tag>dbms</tag>
+                                <tag>rdbms</tag>
+                                <tag>sql</tag>
+                                <tag>memsql</tag>
+                            </tags>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>

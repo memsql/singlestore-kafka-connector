@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.List;
@@ -39,16 +40,15 @@ public class MemSQLDbWriter {
         try (PipedOutputStream baseStream  = new PipedOutputStream();
             InputStream inputStream = new PipedInputStream(baseStream, BUFFER_SIZE)) {
             // TODO think about caching connection instead of opening it each time
-            try (com.mysql.jdbc.Connection connection = JdbcHelper.isReferenceTable(config, table)
-                    ? (com.mysql.jdbc.Connection)JdbcHelper.getDDLConnection(config)
-                    : (com.mysql.jdbc.Connection)JdbcHelper.getDMLConnection(config);
+            try (Connection connection = JdbcHelper.isReferenceTable(config, table)
+                    ? JdbcHelper.getDDLConnection(config)
+                    : JdbcHelper.getDMLConnection(config);
                  com.mysql.jdbc.Statement stmt = (com.mysql.jdbc.Statement) connection.createStatement()) {
 
                 if (JdbcHelper.metadataRecordExists(connection, metaId)) {
                     // If metadata record already exists, skip writing this batch of data
                     return;
                 }
-                connection.setAllowLoadLocalInfile(true);
                 stmt.setLocalInfileInputStream(inputStream);
                 connection.setAutoCommit(false);
 
