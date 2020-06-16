@@ -1,16 +1,14 @@
 package com.memsql.kafka.sink;
 
+import com.memsql.kafka.utils.TableKey;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.types.Password;
+import org.apache.kafka.connect.errors.ConnectException;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class MemSQLSinkConfig extends AbstractConfig {
-
     private static final String CONNECTION_GROUP = "Connection";
     private static final String RETRY_GROUP = "Retry";
     private static final String MEMSQL_GROUP = "MemSQL";
@@ -54,6 +52,10 @@ public class MemSQLSinkConfig extends AbstractConfig {
     public static final String LOAD_DATA_COMPRESSION = "memsql.loadDataCompression";
     private static final String LOAD_DATA_COMPRESSION_DOC = "Compress data on load; one of (GZip, LZ4, Skip) (default: GZip)";
     private static final String LOAD_DATA_COMPRESSION_DISPLAY = "MemSQL Load Data Compression";
+
+    private static  final String TABLE_KEY = "tableKey.<index_type>[.<name>]";
+    private static final String  TABLE_KEY_DOCS = "Specify additional keys to add to tables created by the connector";
+    private static final String TABLE_KEY_DISPLAY = "Table key";
 
     private static final ConfigDef.Range NON_NEGATIVE_INT_VALIDATOR = ConfigDef.Range.atLeast(0);
 
@@ -124,6 +126,16 @@ public class MemSQLSinkConfig extends AbstractConfig {
                     ConfigDef.Width.MEDIUM,
                     SQL_PARAMETERS_DISPLAY
             )
+            .define(TABLE_KEY,
+                    ConfigDef.Type.STRING,
+                    null,
+                    ConfigDef.Importance.LOW,
+                    TABLE_KEY_DOCS,
+                    CONNECTION_GROUP,
+                    7,
+                    ConfigDef.Width.MEDIUM,
+                    TABLE_KEY_DISPLAY
+            )
             .define(MAX_RETRIES,
                     ConfigDef.Type.INT,
                     10,
@@ -163,8 +175,9 @@ public class MemSQLSinkConfig extends AbstractConfig {
     public final int maxRetries;
     public final int retryBackoffMs;
     public final String dataCompression;
+    public final List<TableKey> tableKeys;
 
-    public MemSQLSinkConfig(Map<?, ?> props) {
+    public MemSQLSinkConfig(Map<String, String> props) {
         super(CONFIG_DEF, props);
         this.ddlEndpoint = getString(DDL_ENDPOINT);
         this.dmlEndpoints = getDmlEndpoints();
@@ -175,15 +188,50 @@ public class MemSQLSinkConfig extends AbstractConfig {
         this.maxRetries = getInt(MAX_RETRIES);
         this.retryBackoffMs = getInt(RETRY_BACKOFF_MS);
         this.dataCompression = getString(LOAD_DATA_COMPRESSION);
+        this.tableKeys = getTableKeys(props);
     }
 
-    private Map<String, String> getSqlParams(Map<?, ?> props) {
+    private Map<String, String> getSqlParams(Map<String, String> props) {
         String paramsPrefix = "params.";
         Map<String, String> sqlParams = new HashMap<>();
         props.keySet().stream()
-                .filter(key -> ((String)key).startsWith(paramsPrefix))
-                .forEach(key -> sqlParams.put(((String) key).substring(paramsPrefix.length()), getString((String)key)));
+                .filter(key -> (key).startsWith(paramsPrefix))
+                .forEach(key -> sqlParams.put((key).substring(paramsPrefix.length()), getString(key)));
         return sqlParams;
+    }
+
+    private List<TableKey> getTableKeys(Map<String, String> props) {
+        String tableKeysPrefix = "tableKey.";
+        List<TableKey> tableKeys = new ArrayList<>();
+        props.keySet().stream()
+                .filter(key -> key.startsWith(tableKeysPrefix))
+                .forEach(
+                        key -> {
+                            String[]keyParts = key.split("\\.");
+                            if (keyParts.length < 2) {
+                                throw new ConnectException(
+                                        String.format("Options starting with '%s.' must be formatted correctly. The key should be in the form `%s<index_type>[.<name>]`.", tableKeysPrefix, tableKeysPrefix)
+                                );
+                            }
+
+                            TableKey.Type keyType;
+                            try {
+                                keyType = TableKey.Type.valueOf(keyParts[1].toUpperCase());
+                            } catch(IllegalArgumentException ex) {
+                                throw new ConnectException(
+                                        String.format("Option '%s' must specify an index type from the following options: %s", key, Arrays.toString(TableKey.Type.values()))
+                                );
+                            }
+
+                            String name = "";
+                            if (keyParts.length == 3) {
+                                name = keyParts[2];
+                            }
+
+                            tableKeys.add(new TableKey(keyType, name, props.get(key)));
+                        }
+                );
+        return tableKeys;
     }
 
     private List<String> getDmlEndpoints() {

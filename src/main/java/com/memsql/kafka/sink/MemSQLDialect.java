@@ -9,11 +9,14 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class MemSQLDialect {
-
     public static final String KAFKA_METADATA_TABLE = "kafka-connect-transaction-metadata";
 
     public static String getKafkaMetadataSchema() {
         return "(\n  id VARCHAR(255) PRIMARY KEY COLLATE UTF8_BIN,\n  count INT NOT NULL\n)";
+    }
+
+    public static String quoteIdentifier(String colName) {
+        return "`" + colName + "`";
     }
 
     public static String getTableExistsQuery(String table) {
@@ -36,24 +39,6 @@ public class MemSQLDialect {
     }
 
     public static String getSqlType(Schema fieldSchema) {
-        /*
-        if (field.schemaName() != null) {
-            switch (field.schemaName()) {
-                case Decimal.LOGICAL_NAME:
-                    // Maximum precision supported by MySQL is 65
-                    int scale = Integer.parseInt(field.schemaParameters().get(Decimal.SCALE_FIELD));
-                    return "DECIMAL(65," + scale + ")";
-                case Date.LOGICAL_NAME:
-                    return "DATE";
-                case Time.LOGICAL_NAME:
-                    return "TIME(3)";
-                case Timestamp.LOGICAL_NAME:
-                    return "DATETIME(3)";
-                default:
-                    // pass through to primitive types
-            }
-        }
-        */
         switch (fieldSchema.type()) {
             case INT8:
                 return "TINYINT";

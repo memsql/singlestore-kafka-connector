@@ -25,7 +25,7 @@ public class JdbcHelper {
             boolean tableExists = JdbcHelper.tableExists(connection, table);
             if (!tableExists) {
                 log.info(String.format("Table `%s` doesn't exist. Creating it", table));
-                JdbcHelper.createTable(connection, table, record.valueSchema());
+                JdbcHelper.createTable(connection, table, record.valueSchema(), config.tableKeys);
             }
             boolean metadataTableExists = JdbcHelper.tableExists(connection, KAFKA_METADATA_TABLE);
             if (!metadataTableExists) {
@@ -52,8 +52,8 @@ public class JdbcHelper {
         }
     }
 
-    private static void createTable(Connection connection, String table, Schema schema) throws SQLException {
-        createTable(connection, table, schemaToString(schema));
+    private static void createTable(Connection connection, String table, Schema schema, List<TableKey> keys) throws SQLException {
+        createTable(connection, table, schemaToString(schema, keys));
     }
 
     private static void createTable(Connection connection, String table, String schema) throws SQLException {
@@ -75,17 +75,33 @@ public class JdbcHelper {
         }
     }
 
-    private static String schemaToString(Schema schema) {
+    private static String schemaToString(Schema schema, List<TableKey> keys) {
+        List<Field> fields;
         if (schema.type() == Schema.Type.STRUCT) {
-            List<String> fieldSql = schema.fields().stream()
-                    .map(field -> formatSchemaField(field.name(), field.schema()))
-                    .collect(Collectors.toList());
-            return String.format("(\n  %s\n)", String.join(",\n  ", fieldSql));
-            //TODO add tableKeys (different Keys)
+            fields = schema.fields();
         } else {
-            String fieldName = schema.name() == null ? "data" : schema.name();
-            return formatSchemaField(fieldName, schema);
+            fields = Collections.singletonList(new Field("data", 0, schema));
         }
+        List<String> fieldsSql = fields.stream()
+                .map(field -> formatSchemaField(field.name(), field.schema()))
+                .collect(Collectors.toList());
+
+        boolean containShardKey = false;
+        for (TableKey key:keys) {
+            if (key.type == TableKey.Type.SHARD) {
+                containShardKey = true;
+                break;
+            }
+        }
+        if (containShardKey) {
+            keys.add(new TableKey(TableKey.Type.COLUMNSTORE, "", fields.get(0).name()));
+        }
+
+        List<String> keysSql= keys.stream().map(TableKey::toString)
+                .collect(Collectors.toList());
+
+        fieldsSql.addAll(keysSql);
+        return "(\n"+ String.join("\n,", fieldsSql) +"\n)";
     }
 
     private static String formatSchemaField(String fieldName, Schema schema) {
