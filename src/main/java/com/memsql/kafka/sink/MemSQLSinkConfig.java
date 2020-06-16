@@ -1,8 +1,10 @@
 package com.memsql.kafka.sink;
 
 import com.memsql.kafka.utils.TableKey;
+import com.memsql.kafka.utils.DataCompression;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.config.types.Password;
 import org.apache.kafka.connect.errors.ConnectException;
 
@@ -174,8 +176,8 @@ public class MemSQLSinkConfig extends AbstractConfig {
     public final Map<String, String> sqlParams;
     public final int maxRetries;
     public final int retryBackoffMs;
-    public final String dataCompression;
     public final List<TableKey> tableKeys;
+    public final DataCompression dataCompression;
 
     public MemSQLSinkConfig(Map<String, String> props) {
         super(CONFIG_DEF, props);
@@ -187,16 +189,24 @@ public class MemSQLSinkConfig extends AbstractConfig {
         this.sqlParams = getSqlParams(props);
         this.maxRetries = getInt(MAX_RETRIES);
         this.retryBackoffMs = getInt(RETRY_BACKOFF_MS);
-        this.dataCompression = getString(LOAD_DATA_COMPRESSION);
         this.tableKeys = getTableKeys(props);
+        this.dataCompression = getDataCompression();
+    }
+
+    private DataCompression getDataCompression() {
+        try {
+            return DataCompression.valueOf(getString(LOAD_DATA_COMPRESSION).toLowerCase());
+        } catch (IllegalArgumentException ex) {
+            throw new ConfigException("Configuration \"memsql.loadDataCompression\" is wrong. Available options: Gzip, LZ4, Skip");
+        }
     }
 
     private Map<String, String> getSqlParams(Map<String, String> props) {
         String paramsPrefix = "params.";
         Map<String, String> sqlParams = new HashMap<>();
         props.keySet().stream()
-                .filter(key -> (key).startsWith(paramsPrefix))
-                .forEach(key -> sqlParams.put((key).substring(paramsPrefix.length()), getString(key)));
+                .filter(key -> key.startsWith(paramsPrefix))
+                .forEach(key -> sqlParams.put(key.substring(paramsPrefix.length()), props.get(key)));
         return sqlParams;
     }
 

@@ -12,8 +12,12 @@
         <java.version>1.8</java.version>
         <kafka.version>2.5.0</kafka.version>
         <kafka-connect.version>5.5.0</kafka-connect.version>
+        <confluent-maven-plugin.version>0.11.3</confluent-maven-plugin.version>
         <mysql-connector.version>5.1.49</mysql-connector.version>
         <lz4.version>1.7.1</lz4.version>
+        <avro.version>1.9.2</avro.version>
+        <junit.version>4.13</junit.version>
+        <maven-compiler-plugin.version>3.8.1</maven-compiler-plugin.version>
     </properties>
 
     <repositories>
@@ -49,6 +53,18 @@
             <artifactId>lz4-java</artifactId>
             <version>${lz4.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.apache.avro</groupId>
+            <artifactId>avro</artifactId>
+            <version>${avro.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -60,6 +76,7 @@
                     <source>${java.version}</source>
                     <target>${java.version}</target>
                 </configuration>
+                <version>${maven-compiler-plugin.version}</version>
             </plugin>
             <plugin>
                 <artifactId>maven-assembly-plugin</artifactId>

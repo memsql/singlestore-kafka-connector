@@ -1,6 +1,6 @@
 package com.memsql.kafka.sink;
 
-import com.memsql.kafka.utils.DataCompression;
+import com.memsql.kafka.utils.DataExtension;
 import com.memsql.kafka.utils.JdbcHelper;
 import net.jpountz.lz4.LZ4FrameOutputStream;
 import org.apache.kafka.connect.sink.SinkRecord;
@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
-import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -55,7 +54,7 @@ public class MemSQLDbWriter {
 
                 String metadataQuery = String.format("INSERT INTO `%s` VALUES ('%s', %s)", KAFKA_METADATA_TABLE, metaId, recordsCount);
 
-                DataCompression dataCompression = getDataCompression(config, baseStream);
+                DataExtension dataCompression = getDataCompression(config, baseStream);
                 try (OutputStream outputStream = dataCompression.getOutputStream()) {
                     String columnNames = JdbcHelper.getSchemaTables(first.valueSchema());
                     String queryPrefix = String.format("LOAD DATA LOCAL INFILE '###.%s'", dataCompression.getExt());
@@ -84,17 +83,17 @@ public class MemSQLDbWriter {
         }
     }
 
-    private DataCompression getDataCompression(MemSQLSinkConfig config, OutputStream baseStream) {
+    private DataExtension getDataCompression(MemSQLSinkConfig config, OutputStream baseStream) {
         try {
-            switch (config.dataCompression.toLowerCase()) {
-                case "gzip" :
-                    return new DataCompression("gz", new GZIPOutputStream(baseStream));
-                case "lz4" :
-                    return new DataCompression("lz4", new LZ4FrameOutputStream(baseStream));
-                case "skip" :
-                    return new DataCompression("tsv", baseStream);
+            switch (config.dataCompression) {
+                case gzip:
+                    return new DataExtension("gz", new GZIPOutputStream(baseStream));
+                case lz4:
+                    return new DataExtension("lz4", new LZ4FrameOutputStream(baseStream));
+                case skip:
+                    return new DataExtension("tsv", baseStream);
                 default:
-                    throw new IllegalArgumentException(String.format("Invalid data compression type. Type %s doesn't exist", config.dataCompression));
+                    throw new IllegalArgumentException(String.format("Invalid data compression type. Type `%s` doesn't exist", config.dataCompression));
             }
         } catch (IOException ex) {
             throw new RuntimeException(ex.getLocalizedMessage());

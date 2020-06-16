@@ -33,7 +33,7 @@ specified before starting kafka-connect job.
         "connection.database" : "test",
         "connection.user" : "root",
         "params.connectTimeout" : "10000"
-        "params.ssl" : "true"
+        "params.ssl" : "false"
     }
 }
 ```
