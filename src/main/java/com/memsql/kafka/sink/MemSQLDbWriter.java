@@ -1,19 +1,22 @@
 package com.memsql.kafka.sink;
 
+import com.memsql.kafka.sink.writer.AvroDbWriter;
+import com.memsql.kafka.sink.writer.CsvDbWriter;
+import com.memsql.kafka.sink.writer.DbWriter;
 import com.memsql.kafka.utils.DataExtension;
+import com.memsql.kafka.utils.DataFormat;
 import com.memsql.kafka.utils.JdbcHelper;
+import com.mysql.jdbc.Statement;
 import net.jpountz.lz4.LZ4FrameOutputStream;
+import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Collection;
-import java.util.List;
-import java.util.stream.Collectors;
 import java.util.zip.GZIPOutputStream;
 
 public class MemSQLDbWriter {
@@ -54,34 +57,31 @@ public class MemSQLDbWriter {
 
                 stmt.setLocalInfileInputStream(inputStream);
 
-                DataExtension dataCompression = getDataCompression(config, baseStream);
-                try (OutputStream outputStream = dataCompression.getOutputStream()) {
-                    String columnNames = JdbcHelper.getSchemaTables(first.valueSchema());
-                    String queryPrefix = String.format("LOAD DATA LOCAL INFILE '###.%s'", dataCompression.getExt());
-                    String queryEnding = String.format("INTO TABLE `%s` (%s)", table, columnNames);
-                    String dataQuery = String.join(" ", queryPrefix, queryEnding);
-
-                    List<byte[]> values = records.stream().map(record ->
-                            MemSQLDialect.getRecordValue(record).getBytes(StandardCharsets.UTF_8)
-                    ).collect(Collectors.toList());
-                    values.forEach(value -> {
-                        try {
-                            outputStream.write(value);
-                            outputStream.write('\n');
-                        } catch (IOException ex) {
-                            throw new RuntimeException(ex.getLocalizedMessage());
-                        }
-                    });
-                    outputStream.close();
-                    stmt.executeUpdate(dataQuery);
+                DataExtension dataExtension = getDataCompression(config, baseStream);
+                try (OutputStream outputStream = dataExtension.getOutputStream()) {
+                    write(config.dataFormat, first, dataExtension, table, outputStream, records, stmt);
                     if (config.metadataTableAllow) {
                         connection.commit();
                     }
                 }
             }
         } catch (IOException ex) {
-            throw new RuntimeException(ex.getLocalizedMessage());
+            throw new ConnectException(ex.getLocalizedMessage());
         }
+    }
+
+    private void write(DataFormat dataFormat, SinkRecord record, DataExtension dataCompression, String table,
+                         OutputStream outputStream, Collection<SinkRecord> records, Statement stmt) throws IOException, SQLException {
+        DbWriter dbWriter;
+        if (dataFormat == DataFormat.CSV) {
+            dbWriter = new CsvDbWriter(record);
+        } else {
+            dbWriter = new AvroDbWriter(record);
+        }
+        String dataQuery = dbWriter.generateQuery(dataCompression.getExt(), table);
+        dbWriter.writeData(outputStream, records);
+        outputStream.close();
+        stmt.executeUpdate(dataQuery);
     }
 
     private DataExtension getDataCompression(MemSQLSinkConfig config, OutputStream baseStream) {
@@ -97,7 +97,7 @@ public class MemSQLDbWriter {
                     throw new IllegalArgumentException(String.format("Invalid data compression type. Type `%s` doesn't exist", config.dataCompression));
             }
         } catch (IOException ex) {
-            throw new RuntimeException(ex.getLocalizedMessage());
+            throw new ConnectException(ex.getLocalizedMessage());
         }
     }
 

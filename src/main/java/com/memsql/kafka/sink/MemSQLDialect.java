@@ -5,6 +5,7 @@ import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.sink.SinkRecord;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -33,6 +34,20 @@ public class MemSQLDialect {
                 return String.join("\t", values);
             default:
                 return record.value().toString();
+
+        }
+    }
+
+    public static List<Object> getRecordValues(SinkRecord record) {
+        switch (record.valueSchema().type()) {
+            case STRUCT:
+                Struct struct = (Struct)record.value();
+                Schema structSchema = struct.schema();
+                return structSchema.fields().stream()
+                        .map(field -> struct.get(field.name()))
+                        .collect(Collectors.toList());
+            default:
+                return Collections.singletonList(record.value());
 
         }
     }
