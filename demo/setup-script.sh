@@ -7,12 +7,12 @@ fi
 echo "Entered top-level of the repo"
 
 if docker network ls | grep confluent >/dev/null ;
-  then echo "docker network 'confluent' already exists";
+  then echo "Docker network 'confluent' already exists";
 fi
 
-echo "creating 'confluent' docker network..."
+echo "Creating 'confluent' docker network..."
 docker network create confluent
-echo "docker network 'confluent' created"
+echo "Docker network 'confluent' created"
 
 zookeeper-start() {
   echo "Starting 'zookeeper' docker container..."
@@ -20,14 +20,15 @@ zookeeper-start() {
     --net=confluent \
     --name=zookeeper \
     -e ZOOKEEPER_CLIENT_PORT=2181 \
-    confluentinc/cp-zookeeper:5.0.0
+    confluentinc/cp-zookeeper:5.0.0 >/dev/null
+    echo "Docker container 'zookeeper' successfully started"
 }
 
 if docker ps -a | grep zookeeper ;
   then
     echo "Docker container 'zookeeper' already exists, stopping it..."
-    docker stop zookeeper
-    docker rm zookeeper
+    docker stop zookeeper >/dev/null
+    docker rm zookeeper >/dev/null
     echo "Docker container 'zookeeper' successfully stopped"
 fi
 
@@ -41,14 +42,15 @@ kafka-start() {
     -e KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181 \
     -e KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092 \
     -e KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1 \
-    confluentinc/cp-kafka:5.0.0
+    confluentinc/cp-kafka:5.0.0 >/dev/null
+    echo "Docker container 'kafka' successfully started"
 }
 
 if docker ps -a | grep kafka ;
   then
     echo "Docker container 'kafka' already exists, stopping it..."
-    docker stop kafka
-    docker rm kafka
+    docker stop kafka >/dev/null
+    docker rm kafka >/dev/null
     echo "Docker container 'kafka' successfully stopped"
 fi
 
@@ -62,14 +64,15 @@ schema-registry-start() {
     -e SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL=zookeeper:2181 \
     -e SCHEMA_REGISTRY_HOST_NAME=schema-registry \
     -e SCHEMA_REGISTRY_LISTENERS=http://0.0.0.0:8081 \
-    confluentinc/cp-schema-registry:5.0.0
+    confluentinc/cp-schema-registry:5.0.0 >/dev/null
+    echo "Docker container 'schema-registry' successfully started"
 }
 
 if docker ps -a | grep schema-registry ;
   then
     echo "Docker container 'schema-registry' already exists, stopping it..."
-    docker stop schema-registry
-    docker rm schema-registry
+    docker stop schema-registry >/dev/null
+    docker rm schema-registry >/dev/null
     echo "Docker container 'schema-registry' successfully stopped"
 fi
 
@@ -84,14 +87,15 @@ kafka-rest-start() {
     -e KAFKA_REST_LISTENERS=http://0.0.0.0:8082 \
     -e KAFKA_REST_SCHEMA_REGISTRY_URL=http://schema-registry:8081 \
     -e KAFKA_REST_HOST_NAME=kafka-rest \
-    confluentinc/cp-kafka-rest:5.0.0
+    confluentinc/cp-kafka-rest:5.0.0 >/dev/null
+    echo "Docker container 'kafka-rest' successfully started"
 }
 
 if docker ps -a | grep kafka-rest ;
   then
     echo "Docker container 'kafka-rest' already exists, stopping it..."
-    docker stop kafka-rest
-    docker rm kafka-rest
+    docker stop kafka-rest >/dev/null
+    docker rm kafka-rest >/dev/null
     echo "Docker container 'kafka-rest' successfully stopped."
 fi
 
@@ -116,6 +120,7 @@ create-topic() {
     confluentinc/cp-kafka:5.0.0 \
     kafka-topics --create --topic "$1" --partitions 1 \
     --replication-factor 1 --if-not-exists --zookeeper zookeeper:2181
+    echo "Kafka topic '$1' created"
 }
 
 create-topic quickstart-data
@@ -146,27 +151,28 @@ kafka-connect-start() {
     -e CONNECT_PLUGIN_PATH=/usr/share/java \
     -e CONNECT_REST_HOST_NAME="kafka-connect" \
     -v /tmp/quickstart/file:/tmp/quickstart \
-    confluentinc/cp-kafka-connect:5.0.0
+    confluentinc/cp-kafka-connect:5.0.0 >/dev/null
+    echo "Docker container 'kafka-connect' successfully started"
 }
 
 if docker ps -a | grep kafka-connect ;
   then
     echo "Docker container 'kafka-connect' already exists, stopping it..."
-    docker stop kafka-connect
-    docker rm kafka-connect
+    docker stop kafka-connect >/dev/null
+    docker rm kafka-connect >/dev/null
     echo "Docker container 'kafka-connect' successfully stopped."
 fi
 
 kafka-connect-start
 
-echo "building project..."
+echo "Building project..."
 mvn clean package >/dev/null 2>/dev/null
 if [[ $? -ne 0 ]] ; then
   echo 'project build failed'; exit 1
 fi
-echo "project built"
+echo "Project built"
 
-echo "copying kafka-connect jar file"
+echo "Copying kafka-connect jar file"
 docker cp target/memsql-kafka-connector-1.0-SNAPSHOT-jar-with-dependencies.jar kafka-connect:/usr/share/java/kafka
 
 memsql-start() {
@@ -176,16 +182,17 @@ memsql-start() {
     -e LICENSE_KEY=$LICENSE_KEY \
     -p 3306:3306 \
     --net=confluent \
-    memsql/cluster-in-a-box
+    memsql/cluster-in-a-box >/dev/null
 
-  docker start memsql-kafka
+  docker start memsql-kafka >/dev/null
+  echo "Docker container 'memsql-kafka' successfully started"
 }
 
 if docker ps -a | grep memsql-kafka ;
   then
     echo "Docker container 'memsql-kafka' already exists, stopping it..."
-    docker stop memsql-kafka
-    docker rm memsql-kafka
+    docker stop memsql-kafka >/dev/null
+    docker rm memsql-kafka >/dev/null
     echo "Docker container 'memsql-kafka' successfully stopped."
 fi
 
@@ -216,6 +223,7 @@ kafka-connect-wait-start() {
 
 kafka-connect-wait-start
 
+echo "Starting 'memsql-kafka-connect' job"
 docker exec kafka-connect curl -X POST -H "Content-Type: application/json" \
   --data '{
         "name": "memsql-sink-connector",
@@ -229,3 +237,4 @@ docker exec kafka-connect curl -X POST -H "Content-Type: application/json" \
         }
   }' \
   http://kafka-connect:8082/connectors
+echo "'memsql-kafka-connect' job successfully started"
