@@ -29,7 +29,7 @@ public class CsvDbWriter implements DbWriter {
     @Override
     public void writeData(OutputStream outputStream, Collection<SinkRecord> records) throws IOException {
         for (SinkRecord record: records) {
-            byte[] value = MemSQLDialect.getRecordValue(record).getBytes(StandardCharsets.UTF_8);
+            byte[] value = MemSQLDialect.getRecordValueCSV(record).getBytes(StandardCharsets.UTF_8);
             outputStream.write(value);
             outputStream.write('\n');
         }
