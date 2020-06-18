@@ -36,16 +36,20 @@ public class JdbcHelper {
     }
 
     private static boolean tableExists(Connection connection, String table) {
+        String query = MemSQLDialect.getTableExistsQuery(table);
+        log.trace("Executing SQL:\n{}", query);
         try (Statement stmt = connection.createStatement()) {
-            return stmt.execute(MemSQLDialect.getTableExistsQuery(table));
+            return stmt.execute(query);
         } catch (SQLException ex) {
             return false;
         }
     }
 
     public static boolean metadataRecordExists(Connection connection, String id, MemSQLSinkConfig config) {
+        String query = String.format("SELECT * FROM `%s` WHERE `id` = '%s'", config.metadataTableName, id);
+        log.trace("Executing SQL:\n{}", query);
         try (Statement stmt = connection.createStatement()) {
-            ResultSet resultSet = stmt.executeQuery(String.format("SELECT * FROM `%s` WHERE `id` = '%s'", config.metadataTableName, id));
+            ResultSet resultSet = stmt.executeQuery(query);
             return resultSet.next();
         } catch (SQLException ex) {
             return false;
@@ -58,7 +62,7 @@ public class JdbcHelper {
 
     private static void createTable(Connection connection, String table, String schema) throws SQLException {
         String sql = String.format("CREATE TABLE IF NOT EXISTS `%s` %s", table, schema);
-        log.trace(String.format("Executing SQL:\n%s", sql));
+        log.trace("Executing SQL:\n{}", sql);
         try (Statement stmt = connection.createStatement()) {
             stmt.executeUpdate(sql);
         }
@@ -115,7 +119,7 @@ public class JdbcHelper {
     public static boolean isReferenceTable(MemSQLSinkConfig config, String table) {
         String database = config.database;
         String sql = String.format("using %s show tables extended like `%s`", database, table);
-        log.trace(String.format("Executing SQL:\n%s", sql));
+        log.trace("Executing SQL:\n{}", sql);
         try (Connection connection = getDDLConnection(config);
              Statement stmt = connection.createStatement()) {
             ResultSet resultSet = stmt.executeQuery(sql);

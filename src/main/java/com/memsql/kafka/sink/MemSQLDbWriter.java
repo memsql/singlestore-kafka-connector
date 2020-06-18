@@ -52,6 +52,7 @@ public class MemSQLDbWriter {
                         return;
                     }
                     String metadataQuery = String.format("INSERT INTO `%s` VALUES ('%s', %s)", config.metadataTableName, metaId, recordsCount);
+                    log.trace("Executing SQL:\n{}", metadataQuery);
                     stmt.executeUpdate(metadataQuery);
                 }
 
@@ -81,6 +82,7 @@ public class MemSQLDbWriter {
         String dataQuery = dbWriter.generateQuery(dataCompression.getExt(), table);
         dbWriter.writeData(outputStream, records);
         outputStream.close();
+        log.trace("Executing SQL:\n{}", dataQuery);
         stmt.executeUpdate(dataQuery);
     }
 

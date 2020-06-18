@@ -21,6 +21,7 @@ public class MemSQLSinkTask extends SinkTask {
 
     @Override
     public void start(Map<String, String> props) {
+        log.info("Starting MemSQL Sink Task");
         this.config = new MemSQLSinkConfig(props);
         this.writer = new MemSQLDbWriter(config);
         this.retriesLeft = config.maxRetries;
@@ -29,6 +30,13 @@ public class MemSQLSinkTask extends SinkTask {
     @Override
     public void put(Collection<SinkRecord> records) {
         if (!records.isEmpty()) {
+            SinkRecord first = records.iterator().next();
+            log.debug(
+                    "Received {} records. First record kafka coordinates:({}-{}-{}). Writing them to the "
+                            + "database",
+                    records.size(), first.topic(), first.kafkaPartition(), first.kafkaOffset()
+            );
+
             try {
                 writer.write(records);
             } catch (SQLException ex) {
@@ -53,6 +61,7 @@ public class MemSQLSinkTask extends SinkTask {
 
     @Override
     public void stop() {
+        log.info("Stopping MemSQL Sink Task");
         //TODO investigate if we should close some connections or make some other work during stopping job
     }
 
