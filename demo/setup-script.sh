@@ -143,6 +143,7 @@ kafka-connect-start() {
     -e CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR=1 \
     -e CONNECT_STATUS_STORAGE_REPLICATION_FACTOR=1 \
     -e CONNECT_KEY_CONVERTER="org.apache.kafka.connect.json.JsonConverter" \
+    -e CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE=false \
     -e CONNECT_VALUE_CONVERTER="org.apache.kafka.connect.json.JsonConverter" \
     -e CONNECT_INTERNAL_KEY_CONVERTER="org.apache.kafka.connect.json.JsonConverter" \
     -e CONNECT_INTERNAL_VALUE_CONVERTER="org.apache.kafka.connect.json.JsonConverter" \
@@ -212,6 +213,10 @@ memsql-wait-start() {
 
 memsql-wait-start
 
+echo "Creating 'test' MemSQL database"
+docker exec memsql-kafka memsql -u root -e "create database if not exists test;"
+echo "MemSQL database 'test' created"
+
 kafka-connect-wait-start() {
   echo -n "Waiting for kafka-connect to start..."
   while [[ $(docker logs kafka-connect >/dev/null 2>/dev/null | grep 'Kafka Connect started' | wc -l) -ne 1 ]]; do
@@ -230,11 +235,11 @@ docker exec kafka-connect curl -X POST -H "Content-Type: application/json" \
         "config": {
                 "connector.class":"com.memsql.kafka.MemSQLSinkConnector",
                 "tasks.max":"1",
-                "topics":"quickstart-jdbc-test",
+                "topics":"memsql-json-songs",
                 "connection.ddlEndpoint" : "memsql-kafka:3306",
                 "connection.database" : "test",
-                "connection.user" : "root",                                                                                                                                                                                        "memsql.loadDataFormat" : "avro"
+                "connection.user" : "root"
         }
   }' \
   http://kafka-connect:8082/connectors
-echo "'memsql-kafka-connect' job successfully started"
+echo "Job 'memsql-kafka-connect' successfully started"

@@ -25,4 +25,8 @@ public class SinkRecordCreator {
         }
         return records;
     }
+
+    public static SinkRecord createRecord(Schema schema, Object value) {
+        return new SinkRecord("topic",0,null,null, schema, value, 0);
+    }
 }

@@ -1,6 +1,7 @@
 package com.memsql.kafka.sink;
 
 import com.memsql.kafka.utils.DataCompression;
+import com.memsql.kafka.utils.DataFormat;
 import com.memsql.kafka.utils.TableKey;
 import org.apache.kafka.common.config.ConfigException;
 import org.junit.Test;
@@ -257,5 +258,36 @@ public class MemSQLSinkConfigTest {
         props.put(MemSQLSinkConfig.METADATA_TABLE_NAME, "kafka-connect-new-table-name");
         config = new MemSQLSinkConfig(props);
         assertEquals(config.metadataTableName, props.get(MemSQLSinkConfig.METADATA_TABLE_NAME));
+    }
+
+    @Test
+    public void successDataFormatParameter() {
+        Map<String, String> props = getMinimalRequiredParameters();
+        MemSQLSinkConfig config = new MemSQLSinkConfig(props);
+        assertEquals(config.dataFormat, DataFormat.CSV);
+
+        props.put(MemSQLSinkConfig.LOAD_DATA_FORMAT, "Csv");
+        config = new MemSQLSinkConfig(props);
+        assertEquals(config.dataFormat, DataFormat.CSV);
+
+        props.put(MemSQLSinkConfig.LOAD_DATA_FORMAT, "CSV");
+        config = new MemSQLSinkConfig(props);
+        assertEquals(config.dataFormat, DataFormat.CSV);
+
+        props.put(MemSQLSinkConfig.LOAD_DATA_FORMAT, "csv");
+        config = new MemSQLSinkConfig(props);
+        assertEquals(config.dataFormat, DataFormat.CSV);
+
+        props.put(MemSQLSinkConfig.LOAD_DATA_FORMAT, "Avro");
+        config = new MemSQLSinkConfig(props);
+        assertEquals(config.dataFormat, DataFormat.AVRO);
+
+        props.put(MemSQLSinkConfig.LOAD_DATA_FORMAT, "avro");
+        config = new MemSQLSinkConfig(props);
+        assertEquals(config.dataFormat, DataFormat.AVRO);
+
+        props.put(MemSQLSinkConfig.LOAD_DATA_FORMAT, "AVRO");
+        config = new MemSQLSinkConfig(props);
+        assertEquals(config.dataFormat, DataFormat.AVRO);
     }
 }
