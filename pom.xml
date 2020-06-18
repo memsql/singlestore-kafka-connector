@@ -19,6 +19,7 @@
         <avro.version>1.9.2</avro.version>
         <junit.version>4.13</junit.version>
         <maven-compiler-plugin.version>3.8.1</maven-compiler-plugin.version>
+        <jackson-databind.version>2.9.8</jackson-databind.version>
     </properties>
 
     <repositories>
@@ -65,6 +66,11 @@
             <artifactId>junit</artifactId>
             <version>${junit.version}</version>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson-databind.version}</version>
         </dependency>
     </dependencies>
 

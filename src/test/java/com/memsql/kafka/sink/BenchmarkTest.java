@@ -25,7 +25,7 @@ public class BenchmarkTest {
         MemSQLSinkConfig config = new MemSQLSinkConfig(props);
         MemSQLDbWriter writer = new MemSQLDbWriter(config);
 
-        List<SinkRecord> records = SinkRecordCreator.createRecords(3000000);
+        List<SinkRecord> records = SinkRecordCreator.createRecords(1000000);
 
         props.put(MemSQLSinkConfig.LOAD_DATA_FORMAT, "avro");
         long startTimeAvro = System.nanoTime();
