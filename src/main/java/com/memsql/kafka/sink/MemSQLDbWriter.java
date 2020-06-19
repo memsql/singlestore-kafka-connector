@@ -44,13 +44,13 @@ public class MemSQLDbWriter {
                  com.mysql.jdbc.Statement stmt = (com.mysql.jdbc.Statement) connection.createStatement()) {
 
                 if (config.metadataTableAllow) {
-                    connection.setAutoCommit(false);
                     String metaId = String.format("%s-%s-%s", first.topic(), first.kafkaPartition(), first.kafkaOffset());
-                    Integer recordsCount = records.size();
                     if (JdbcHelper.metadataRecordExists(connection, metaId, config)) {
                         // If metadata record already exists, skip writing this batch of data
                         return;
                     }
+                    connection.setAutoCommit(false);
+                    Integer recordsCount = records.size();
                     String metadataQuery = String.format("INSERT INTO `%s` VALUES ('%s', %s)", config.metadataTableName, metaId, recordsCount);
                     log.trace("Executing SQL:\n{}", metadataQuery);
                     stmt.executeUpdate(metadataQuery);
@@ -58,7 +58,7 @@ public class MemSQLDbWriter {
 
                 stmt.setLocalInfileInputStream(inputStream);
 
-                DataExtension dataExtension = getDataCompression(config, baseStream);
+                DataExtension dataExtension = getDataExtension(config, baseStream);
                 try (OutputStream outputStream = dataExtension.getOutputStream()) {
                     write(config.dataFormat, first, dataExtension, table, outputStream, records, stmt);
                     if (config.metadataTableAllow) {
@@ -86,7 +86,7 @@ public class MemSQLDbWriter {
         stmt.executeUpdate(dataQuery);
     }
 
-    private DataExtension getDataCompression(MemSQLSinkConfig config, OutputStream baseStream) {
+    private DataExtension getDataExtension(MemSQLSinkConfig config, OutputStream baseStream) {
         try {
             switch (config.dataCompression) {
                 case gzip:
@@ -96,7 +96,7 @@ public class MemSQLDbWriter {
                 case skip:
                     return new DataExtension("tsv", baseStream);
                 default:
-                    throw new IllegalArgumentException(String.format("Invalid data compression type. Type `%s` doesn't exist", config.dataCompression));
+                    throw new ConnectException(String.format("Invalid data compression type. Type `%s` doesn't exist", config.dataCompression));
             }
         } catch (IOException ex) {
             throw new ConnectException(ex.getLocalizedMessage());

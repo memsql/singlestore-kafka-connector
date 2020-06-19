@@ -5,7 +5,6 @@ This demo will show basic functionality of `memsql-kafka-connector`
 ## Requirements
 
 * docker
-* maven
 
 ## Set up environment
 
@@ -25,6 +24,7 @@ This script will start all required components:
 * zookeeper 
 * kafka 
 * schema-registry 
+* kafka-rest
 * kafka-connect
 * memsql
 
