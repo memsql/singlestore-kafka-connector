@@ -13,7 +13,18 @@ public class AvroSchemaConverter {
     private static Schema nullSchema = Schema.create(NULL);
 
     public static Schema toAvroType(org.apache.kafka.connect.data.Schema kafkaSchema) {
-        return toAvroType(kafkaSchema, false, "topLevelRecord", "");
+        if (kafkaSchema.type() == org.apache.kafka.connect.data.Schema.Type.STRUCT) {
+            return toAvroType(kafkaSchema, false, "topLevelRecord", "");
+        } else {
+            String recordName = "topLevelRecord";
+            SchemaBuilder.TypeBuilder<Schema> builder = SchemaBuilder.builder();
+            SchemaBuilder.FieldAssembler<Schema> fieldsAssembler = builder.record(recordName).namespace("").fields();
+            Schema fieldAvroType =
+                toAvroType(kafkaSchema.schema(), kafkaSchema.schema().isOptional(), kafkaSchema.name(), "topLevelRecord");
+            String fieldName = kafkaSchema.name() == null ? "data" : kafkaSchema.name();
+                    fieldsAssembler.name(fieldName).type(fieldAvroType).noDefault();
+            return fieldsAssembler.endRecord();
+        }
     }
 
     private static Schema toAvroType(org.apache.kafka.connect.data.Schema kafkaSchema,
@@ -44,6 +55,8 @@ public class AvroSchemaConverter {
                 schema = builder.bytesType();
                 break;
             case STRING:
+            case MAP:
+            case ARRAY:
                 schema = builder.stringType();
                 break;
             case STRUCT:
@@ -55,16 +68,6 @@ public class AvroSchemaConverter {
                     fieldsAssembler.name(f.name()).type(fieldAvroType).noDefault();
                 });
                 schema = fieldsAssembler.endRecord();
-                break;
-            case MAP:
-                schema = builder
-                        .map()
-                        .values(toAvroType(kafkaSchema.valueSchema(), kafkaSchema.isOptional(), recordName, nameSpace));
-                break;
-            case ARRAY:
-                schema = builder
-                        .array()
-                        .items(toAvroType(kafkaSchema.valueSchema(), kafkaSchema.isOptional(), recordName, nameSpace));
                 break;
             default: throw new ConnectException(String.format("Unexpected kafka type `%s`.", kafkaSchema.type()));
         }

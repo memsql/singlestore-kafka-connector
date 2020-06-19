@@ -43,6 +43,10 @@ public class SinkRecordCreator {
     }
 
     public static SinkRecord createRecord(Schema schema, Object value) {
-        return new SinkRecord("topic",0,null,null, schema, value, 0);
+        return createRecord(schema, value, "topic");
+    }
+
+    public static SinkRecord createRecord(Schema schema, Object value, String topic) {
+        return new SinkRecord(topic,0,null,null, schema, value, 0);
     }
 }

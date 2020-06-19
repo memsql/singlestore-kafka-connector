@@ -104,8 +104,12 @@ kafka-rest-start
 kafka-wait-start() {
   echo -n "Waiting for kafka to start..."
   while [[ $(docker logs kafka >/dev/null 2>/dev/null | grep 'started' | wc -l) -ne 1 ]]; do
-      echo -n "."
-      sleep 0.2
+    docker logs kafka >/dev/null 2>/dev/null
+    if [[ $? -ne 0 ]] ; then
+      echo "Docker container 'kafka' failed"; exit 1
+    fi
+    echo -n "."
+    sleep 0.2
   done
   echo ". Success!"
 }
@@ -167,7 +171,7 @@ fi
 kafka-connect-start
 
 echo "Building project..."
-mvn clean package >/dev/null 2>/dev/null
+./mvnw clean package >/dev/null 2>/dev/null
 if [[ $? -ne 0 ]] ; then
   echo 'project build failed'; exit 1
 fi
@@ -241,5 +245,5 @@ docker exec kafka-connect curl -X POST -H "Content-Type: application/json" \
                 "connection.user" : "root"
         }
   }' \
-  http://kafka-connect:8082/connectors
+  http://kafka-connect:8082/connectors >/dev/null
 echo "Job 'memsql-kafka-connect' successfully started"

@@ -129,6 +129,14 @@ public class JdbcHelper {
         }
     }
 
+    public static ResultSet executeQuery(MemSQLSinkConfig config, String sql) throws SQLException {
+        return getDDLConnection(config).createStatement().executeQuery(sql);
+    }
+
+    public static int executeUpdate(MemSQLSinkConfig config, String sql) throws SQLException {
+        return getDDLConnection(config).createStatement().executeUpdate(sql);
+    }
+
     public static Connection getDDLConnection(MemSQLSinkConfig config) throws SQLException {
         return getConnection(Collections.singletonList(config.ddlEndpoint), config);
     }

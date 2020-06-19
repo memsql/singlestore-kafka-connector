@@ -1,14 +1,14 @@
 package com.memsql.kafka.sink;
 
 import com.memsql.kafka.utils.SinkRecordCreator;
+import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.junit.Ignore;
 import org.junit.Test;
 
 import java.sql.SQLException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class BenchmarkTest {
 
@@ -63,6 +63,29 @@ public class BenchmarkTest {
 
         props.put(MemSQLSinkConfig.LOAD_DATA_COMPRESSION, "lz4");
         write(iterations, writer, records, "LZ4 time:  ");
+    }
+
+    @Ignore
+    @Test
+    public void avroTest() throws Exception {
+        Map<String, String> props = new HashMap<String, String>() {{
+            put(MemSQLSinkConfig.DDL_ENDPOINT, "localhost:3306");
+            put(MemSQLSinkConfig.CONNECTION_DATABASE, "test");
+            put(MemSQLSinkConfig.CONNECTION_USER, "root");
+            put(MemSQLSinkConfig.METADATA_TABLE_ALLOW, "false");
+            put(MemSQLSinkConfig.LOAD_DATA_FORMAT, "Avro");
+        }};
+        MemSQLSinkConfig config = new MemSQLSinkConfig(props);
+        MemSQLDbWriter writer = new MemSQLDbWriter(config);
+        Schema schema = SchemaBuilder.array(
+                Schema.STRING_SCHEMA
+        );
+        List<String> values = new ArrayList<String>() {{
+            add("Name");
+            add("Age");
+        }};
+        List<SinkRecord> records = Collections.nCopies(100, SinkRecordCreator.createRecord(schema, values, "topicArray"));
+        writer.write(records);
     }
 
     private void write(int n, MemSQLDbWriter writer, List<SinkRecord> records, String message) throws SQLException {
