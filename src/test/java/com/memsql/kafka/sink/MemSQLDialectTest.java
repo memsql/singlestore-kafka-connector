@@ -69,9 +69,8 @@ public class MemSQLDialectTest {
                 ),
                 new HashMap<Struct, List<String>>() {{
                     put(new Struct(schema).put("name", "Archie"), new ArrayList<>(Arrays.asList("Bob", "Alice")));
-                    put(new Struct(schema).put("name", "Adalbert"), new ArrayList<>(Arrays.asList("Alice", "Bob")));
                 }}),
-                "[{\"key\":{\"name\":\"Archie\"},\"value\":[\"Bob\",\"Alice\"]},{\"key\":{\"name\":\"Adalbert\"},\"value\":[\"Alice\",\"Bob\"]}]");
+                "[{\"key\":{\"name\":\"Archie\"},\"value\":[\"Bob\",\"Alice\"]}]");
 
         assertEquals(MemSQLDialect.toJSON(SchemaBuilder.array(
                 SchemaBuilder.array(Schema.STRING_SCHEMA)
