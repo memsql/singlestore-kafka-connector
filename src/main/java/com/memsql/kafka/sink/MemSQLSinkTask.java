@@ -62,7 +62,6 @@ public class MemSQLSinkTask extends SinkTask {
     @Override
     public void stop() {
         log.info("Stopping MemSQL Sink Task");
-        //TODO investigate if we should close some connections or make some other work during stopping job
     }
 
     @Override

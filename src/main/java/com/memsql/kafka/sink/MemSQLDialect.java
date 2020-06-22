@@ -3,13 +3,12 @@ package com.memsql.kafka.sink;
 import com.fasterxml.jackson.core.JsonEncoding;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
+import com.memsql.kafka.utils.TableKey;
 import org.apache.kafka.connect.data.Field;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.sink.SinkRecord;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -18,10 +17,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class MemSQLDialect {
-
-    private static final Logger log = LoggerFactory.getLogger(MemSQLDialect.class);
+    public static  String getInsertIntoMetadataQuery(String metadataTableName, String metaId, Integer recordsCount) {
+        return String.format("INSERT INTO %s VALUES ('%s', %d)", quoteIdentifier(metadataTableName), metaId, recordsCount);
+    }
 
     public static String getKafkaMetadataSchema() {
         return "(\n  id VARCHAR(255) PRIMARY KEY COLLATE UTF8_BIN,\n  count INT NOT NULL\n)";
@@ -31,8 +32,71 @@ public class MemSQLDialect {
         return "`" + colName + "`";
     }
 
+    public static String showExtendedTables(String database, String table) {
+        return String.format("using %s show tables extended like `%s`", MemSQLDialect.quoteIdentifier(database), MemSQLDialect.quoteIdentifier(table));
+    }
+
     public static String getTableExistsQuery(String table) {
-        return String.format("SELECT * FROM `%s` WHERE 1=0", table);
+        return String.format("SELECT * FROM %s WHERE 1=0", MemSQLDialect.quoteIdentifier(table));
+    }
+
+    public static String getMetadataRecordExistsQuery(String metadataTableName, String id) {
+        return String.format("SELECT * FROM %s WHERE `id` = '%s'", MemSQLDialect.quoteIdentifier(metadataTableName), id);
+    }
+
+    public static String getDefaultColumnName(Schema schema) {
+        return schema.name() == null ? "data" : schema.name();
+    }
+
+    public static String getCreateTableQuery(String table, String schema) {
+        return String.format("CREATE TABLE IF NOT EXISTS %s %s", MemSQLDialect.quoteIdentifier(table), schema);
+    }
+
+    public static String getColumnNames(Schema schema) {
+        if (schema.type() == Schema.Type.STRUCT) {
+            return  schema.fields().stream()
+                    .map(field -> MemSQLDialect.quoteIdentifier(field.name()))
+                    .collect(Collectors.joining(", "));
+        } else {
+            return MemSQLDialect.getDefaultColumnName(schema);
+        }
+    }
+
+    public static String getSchemaForCrateTableQuery(Schema schema, List<TableKey> keys) {
+        List<Field> fields;
+        if (schema.type() == Schema.Type.STRUCT) {
+            fields = schema.fields();
+        } else {
+            fields = Collections.singletonList(new Field("data", 0, schema));
+        }
+        List<String> fieldsSql = fields.stream()
+                .map(field -> formatSchemaField(field.name(), field.schema()))
+                .collect(Collectors.toList());
+
+        boolean containShardKey = false;
+        for (TableKey key:keys) {
+            if (key.type == TableKey.Type.SHARD) {
+                containShardKey = true;
+                break;
+            }
+        }
+        if (containShardKey) {
+            keys.add(new TableKey(TableKey.Type.COLUMNSTORE, "", fields.get(0).name()));
+        }
+
+        List<String> keysSql= keys.stream().map(TableKey::toString)
+                .collect(Collectors.toList());
+
+        fieldsSql.addAll(keysSql);
+        return "(\n"+ String.join(",\n", fieldsSql) +"\n)";
+    }
+
+    private static String formatSchemaField(String fieldName, Schema schema) {
+        String name = quoteIdentifier(fieldName);
+        String memsqlType = MemSQLDialect.getSqlType(schema);
+        String collation = schema.type() == Schema.Type.STRING ? " COLLATE UTF8_BIN" : "";
+        String nullable = schema.isOptional() ? "" : " NOT NULL";
+        return String.format("%s %s%s%s", name, memsqlType, collation, nullable);
     }
 
     public static String getRecordValueCSV(SinkRecord record) throws IOException {

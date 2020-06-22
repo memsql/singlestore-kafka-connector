@@ -1,5 +1,6 @@
 package com.memsql.kafka.utils;
 
+import com.memsql.kafka.sink.MemSQLDialect;
 import org.apache.avro.Schema;
 import org.apache.avro.SchemaBuilder;
 import org.apache.kafka.connect.errors.ConnectException;
@@ -21,8 +22,8 @@ public class AvroSchemaConverter {
             SchemaBuilder.FieldAssembler<Schema> fieldsAssembler = builder.record(recordName).namespace("").fields();
             Schema fieldAvroType =
                 toAvroType(kafkaSchema.schema(), kafkaSchema.schema().isOptional(), kafkaSchema.name(), "topLevelRecord");
-            String fieldName = kafkaSchema.name() == null ? "data" : kafkaSchema.name();
-                    fieldsAssembler.name(fieldName).type(fieldAvroType).noDefault();
+            String fieldName = MemSQLDialect.getDefaultColumnName(kafkaSchema);
+            fieldsAssembler.name(fieldName).type(fieldAvroType).noDefault();
             return fieldsAssembler.endRecord();
         }
     }
@@ -78,13 +79,13 @@ public class AvroSchemaConverter {
         }
     }
 
-    public static Schema resolveNullableType(Schema avroSchema, boolean nullable) {
-        if (nullable && avroSchema.getType() != NULL) {
-            List<Schema> fields = avroSchema.getTypes();
-            if (fields.size() < 2) return avroSchema;
-            return (fields.get(0).getType() == NULL) ? fields.get(1) : fields.get(0);
-        } else {
+    public static Schema resolveNullableType(Schema avroSchema) {
+        if (avroSchema.getType() == NULL) {
             return avroSchema;
         }
+
+        List<Schema> fields = avroSchema.getTypes();
+        if (fields.size() < 2) return avroSchema;
+        return (fields.get(0).getType() == NULL) ? fields.get(1) : fields.get(0);
     }
 }

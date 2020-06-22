@@ -1,6 +1,7 @@
 package com.memsql.kafka.sink;
 
 import com.memsql.kafka.utils.SinkRecordCreator;
+import com.memsql.kafka.utils.TableKey;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.data.Struct;
@@ -213,5 +214,65 @@ public class MemSQLDialectTest {
     private void testGetRecord(SinkRecord record, String expectedValue) throws IOException {
         String value = MemSQLDialect.getRecordValueCSV(record);
         assertEquals(expectedValue, value);
+    }
+
+    @Test
+    public void getSchemaForCrateTableQueryStruct() {
+        Schema schema = SchemaBuilder.struct()
+                .field("f1", Schema.STRING_SCHEMA)
+                .field("f2", Schema.STRING_SCHEMA)
+                .field("f3", Schema.STRING_SCHEMA)
+                .field("f4", Schema.STRING_SCHEMA)
+                .field("f5", Schema.STRING_SCHEMA)
+                .field("f6", Schema.STRING_SCHEMA)
+                .build();
+
+        List<TableKey> keys = new ArrayList<>(Arrays.asList(
+                new TableKey(TableKey.Type.COLUMNSTORE, "n1", "f1"),
+                new TableKey(TableKey.Type.UNIQUE, "n2", "f2, f1"),
+                new TableKey(TableKey.Type.PRIMARY, "n3", "f3"),
+                new TableKey(TableKey.Type.SHARD, "n4", "f4"),
+                new TableKey(TableKey.Type.KEY, "", "f5")
+                ));
+
+        assertEquals(MemSQLDialect.getSchemaForCrateTableQuery(schema, keys), "(\n" +
+                "`f1` TEXT COLLATE UTF8_BIN NOT NULL,\n" +
+                "`f2` TEXT COLLATE UTF8_BIN NOT NULL,\n" +
+                "`f3` TEXT COLLATE UTF8_BIN NOT NULL,\n" +
+                "`f4` TEXT COLLATE UTF8_BIN NOT NULL,\n" +
+                "`f5` TEXT COLLATE UTF8_BIN NOT NULL,\n" +
+                "`f6` TEXT COLLATE UTF8_BIN NOT NULL,\n" +
+                "KEY `n1`(f1) USING CLUSTERED COLUMNSTORE,\n" +
+                "UNIQUE KEY `n2`(f2, f1),\n" +
+                "PRIMARY KEY `n3`(f3),\n" +
+                "SHARD KEY `n4`(f4),\n" +
+                "KEY (f5),\n" +
+                "KEY (f1) USING CLUSTERED COLUMNSTORE\n" +
+                ")");
+    }
+
+    @Test
+    public void getSchemaForCrateTableQueryNotStruct() {
+        Schema schema = Schema.STRING_SCHEMA;
+
+        List<TableKey> keys = new ArrayList<>(Collections.singletonList(
+                new TableKey(TableKey.Type.COLUMNSTORE, "", "data")
+        ));
+
+        assertEquals(MemSQLDialect.getSchemaForCrateTableQuery(schema, keys), "(\n" +
+                "`data` TEXT COLLATE UTF8_BIN NOT NULL,\n" +
+                "KEY (data) USING CLUSTERED COLUMNSTORE\n" +
+                ")");
+    }
+
+    @Test
+    public void getSchemaForCrateTableQueryNoKeys() {
+        Schema schema = Schema.STRING_SCHEMA;
+
+        List<TableKey> keys = new ArrayList<>();
+
+        assertEquals(MemSQLDialect.getSchemaForCrateTableQuery(schema, keys), "(\n" +
+                "`data` TEXT COLLATE UTF8_BIN NOT NULL\n" +
+                ")");
     }
 }

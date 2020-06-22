@@ -229,7 +229,7 @@ public class MemSQLSinkConfig extends AbstractConfig {
         this.dmlEndpoints = getDmlEndpoints();
         this.database = getString(CONNECTION_DATABASE);
         this.user = getString(CONNECTION_USER);
-        this.password = getPasswordValue(CONNECTION_PASSWORD);
+        this.password = getPasswordValue();
         this.sqlParams = getSqlParams(props);
         this.maxRetries = getInt(MAX_RETRIES);
         this.retryBackoffMs = getInt(RETRY_BACKOFF_MS);
@@ -307,8 +307,8 @@ public class MemSQLSinkConfig extends AbstractConfig {
         return dmlEndpoints;
     }
 
-    private String getPasswordValue(String key) {
-        Password password = getPassword(key);
+    private String getPasswordValue() {
+        Password password = getPassword(CONNECTION_PASSWORD);
         if (password != null) {
             return password.value();
         }

@@ -34,7 +34,7 @@ public class MemSQLDbWriter {
         SinkRecord first = records.iterator().next();
         String table = first.topic();
 
-        JdbcHelper.createTableIfNeeded(config, table, first);
+        JdbcHelper.createTableIfNeeded(config, table, first.valueSchema());
         try (PipedOutputStream baseStream  = new PipedOutputStream();
             InputStream inputStream = new PipedInputStream(baseStream, BUFFER_SIZE)) {
             // TODO think about caching connection instead of opening it each time
@@ -51,14 +51,14 @@ public class MemSQLDbWriter {
                     }
                     connection.setAutoCommit(false);
                     Integer recordsCount = records.size();
-                    String metadataQuery = String.format("INSERT INTO `%s` VALUES ('%s', %s)", config.metadataTableName, metaId, recordsCount);
+                    String metadataQuery = MemSQLDialect.getInsertIntoMetadataQuery(config.metadataTableName, metaId, recordsCount);
                     log.trace("Executing SQL:\n{}", metadataQuery);
                     stmt.executeUpdate(metadataQuery);
                 }
 
                 stmt.setLocalInfileInputStream(inputStream);
 
-                DataExtension dataExtension = getDataExtension(config, baseStream);
+                DataExtension dataExtension = getDataExtension(baseStream);
                 try (OutputStream outputStream = dataExtension.getOutputStream()) {
                     write(config.dataFormat, first, dataExtension, table, outputStream, records, stmt);
                     if (config.metadataTableAllow) {
@@ -86,9 +86,9 @@ public class MemSQLDbWriter {
         stmt.executeUpdate(dataQuery);
     }
 
-    private DataExtension getDataExtension(MemSQLSinkConfig config, OutputStream baseStream) {
+    private DataExtension getDataExtension(OutputStream baseStream) {
         try {
-            switch (config.dataCompression) {
+            switch (this.config.dataCompression) {
                 case gzip:
                     return new DataExtension("gz", new GZIPOutputStream(baseStream));
                 case lz4:
@@ -102,5 +102,4 @@ public class MemSQLDbWriter {
             throw new ConnectException(ex.getLocalizedMessage());
         }
     }
-
 }

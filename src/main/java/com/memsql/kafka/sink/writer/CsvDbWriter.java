@@ -1,7 +1,6 @@
 package com.memsql.kafka.sink.writer;
 
 import com.memsql.kafka.sink.MemSQLDialect;
-import com.memsql.kafka.utils.JdbcHelper;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.sink.SinkRecord;
 
@@ -21,8 +20,8 @@ public class CsvDbWriter implements DbWriter {
     @Override
     public String generateQuery(String ext, String table) {
         String queryPrefix = String.format("LOAD DATA LOCAL INFILE '###.%s'", ext);
-        String columnNames = JdbcHelper.getSchemaTables(schema);
-        String queryEnding = String.format("INTO TABLE `%s` (%s)", table, columnNames);
+        String columnNames = MemSQLDialect.getColumnNames(schema);
+        String queryEnding = String.format("INTO TABLE %s (%s)", MemSQLDialect.quoteIdentifier(table), columnNames);
         return String.join(" ", queryPrefix, queryEnding);
     }
 

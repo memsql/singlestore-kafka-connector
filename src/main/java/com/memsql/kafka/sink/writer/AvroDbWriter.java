@@ -27,23 +27,19 @@ public class AvroDbWriter implements DbWriter {
     @Override
     public String generateQuery(String ext, String table) {
         String queryPrefix = String.format("LOAD DATA LOCAL INFILE '###.%s'", ext);
-        List<Schema> nullableSchemas = new ArrayList<>();
-        avroSchema.getFields().forEach(field ->
-                nullableSchemas.add(AvroSchemaConverter.resolveNullableType(field.schema(), field.schema().isNullable()))
-        );
+
         List<String> avroSchemaParts = new ArrayList<>();
-        int fieldsSize = avroSchema.getFields().size();
-        for (int i = 0; i < fieldsSize; i++) {
-            Schema.Field currentField = avroSchema.getFields().get(i);
-            String avroSchemaMapping = MemSQLDialect.quoteIdentifier(currentField.name()) +  " <- %::" + currentField.name();
-            String avroSchemaPart = currentField.schema().isNullable() ?
-                    String.format("%s::%s", avroSchemaMapping, nullableSchemas.get(i).getType().getName()) : avroSchemaMapping;
+        for (Schema.Field field: avroSchema.getFields()) {
+            String avroSchemaPart = MemSQLDialect.quoteIdentifier(field.name()) +  " <- %::" + field.name();
+            if (field.schema().isNullable()) {
+                avroSchemaPart += "::"+AvroSchemaConverter.resolveNullableType(field.schema()).getType().getName();
+            }
             avroSchemaParts.add(avroSchemaPart);
         }
 
         String avroMapping = "( " + String.join(", ", avroSchemaParts) + " )";
-        String queryEnding = String.format("INTO TABLE `%s` FORMAT AVRO %s SCHEMA '%s'",
-                table, avroMapping, avroSchema.toString());
+        String queryEnding = String.format("INTO TABLE %s FORMAT AVRO %s SCHEMA '%s'",
+                MemSQLDialect.quoteIdentifier(table), avroMapping, avroSchema.toString());
         return String.join(" ", queryPrefix, queryEnding);
     }
 
