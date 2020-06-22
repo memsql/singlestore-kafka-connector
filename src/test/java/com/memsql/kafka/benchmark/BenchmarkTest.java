@@ -1,5 +1,7 @@
-package com.memsql.kafka.sink;
+package com.memsql.kafka.benchmark;
 
+import com.memsql.kafka.sink.MemSQLDbWriter;
+import com.memsql.kafka.sink.MemSQLSinkConfig;
 import com.memsql.kafka.utils.SinkRecordCreator;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;

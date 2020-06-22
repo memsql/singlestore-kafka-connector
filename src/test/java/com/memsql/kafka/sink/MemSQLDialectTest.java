@@ -128,7 +128,7 @@ public class MemSQLDialectTest {
                 .put("age", 75);
 
         SinkRecord record = SinkRecordCreator.createRecord(schema, struct);
-        String expectedValue = "Barbara Liskov\t75\tfalse";
+        String expectedValue = "Barbara Liskov\t75\t0";
         testGetRecord(record, expectedValue);
     }
 
@@ -240,10 +240,10 @@ public class MemSQLDialectTest {
         Schema schema = SchemaBuilder.bool().name("schema").build();
 
         SinkRecord record = SinkRecordCreator.createRecord(schema, true);
-        testGetRecord(record, "true");
+        testGetRecord(record, "1");
 
         record = SinkRecordCreator.createRecord(schema, false);
-        testGetRecord(record, "false");
+        testGetRecord(record, "0");
     }
 
     @Test
@@ -263,11 +263,11 @@ public class MemSQLDialectTest {
     public void successGetRecordValueInt8() throws IOException {
         Schema schema = SchemaBuilder.int8().name("schema").build();
         byte value = -128;
-        SinkRecord record = SinkRecordCreator.createRecord(schema, value);
+        SinkRecord record = SinkRecordCreator.createRecord(schema, (int) value);
         testGetRecord(record, Integer.toString(value));
 
         value = 127;
-        record = SinkRecordCreator.createRecord(schema, value);
+        record = SinkRecordCreator.createRecord(schema, (int) value);
         testGetRecord(record, Integer.toString(value));
     }
 
@@ -544,11 +544,11 @@ public class MemSQLDialectTest {
         Schema schema = SchemaBuilder.int8().name("schema").build();
         byte value = 127;
         SinkRecord record = SinkRecordCreator.createRecord(schema, value);
-        testGetRecords(record, Collections.singletonList(value));
+        testGetRecords(record, Collections.singletonList((int)value));
 
         value = -128;
         record = SinkRecordCreator.createRecord(schema, value);
-        testGetRecords(record, Collections.singletonList(value));
+        testGetRecords(record, Collections.singletonList((int)value));
     }
 
     @Test
@@ -556,11 +556,11 @@ public class MemSQLDialectTest {
         Schema schema = SchemaBuilder.int16().name("schema").build();
         short value = 32767;
         SinkRecord record = SinkRecordCreator.createRecord(schema, value);
-        testGetRecords(record, Collections.singletonList(value));
+        testGetRecords(record, Collections.singletonList((int) value));
 
         value = -32768;
         record = SinkRecordCreator.createRecord(schema, value);
-        testGetRecords(record, Collections.singletonList(value));
+        testGetRecords(record, Collections.singletonList((int)value));
     }
 
     @Test

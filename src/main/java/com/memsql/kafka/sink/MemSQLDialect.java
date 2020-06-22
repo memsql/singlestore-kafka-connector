@@ -12,6 +12,7 @@ import org.apache.kafka.connect.sink.SinkRecord;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -99,45 +100,76 @@ public class MemSQLDialect {
         return String.format("%s %s%s%s", name, memsqlType, collation, nullable);
     }
 
+    private static String escapeCSV(String value) {
+        if (value.indexOf('\\') != -1) {
+            value = value.replace("\\", "\\\\");
+        }
+        if (value.indexOf('\n') != -1) {
+            value = value.replace("\n", "\\n");
+        }
+        if (value.indexOf('\t') != -1) {
+            value = value.replace("\t", "\\t");
+        }
+        return value;
+    }
+
+    private static String escapeCSV(Schema schema, Object value) throws IOException {
+        if(schema.type().isPrimitive()) {
+            if (value == null) {
+                return "\\N";
+            } else if (value instanceof Boolean) {
+                return (Boolean) value ? "1" : "0";
+            } else {
+                return escapeCSV(value.toString());
+            }
+        } else {
+            return escapeCSV(toJSON(schema, value));
+        }
+    }
+
     public static String getRecordValueCSV(SinkRecord record) throws IOException {
         if (record.valueSchema().type() != Schema.Type.STRUCT) {
-            if (record.valueSchema().type().isPrimitive()) {
-                return record.value().toString();
-            }
-            return toJSON(record.valueSchema(), record.value());
+            return escapeCSV(record.valueSchema(), record.value());
         }
 
         List<String> fields = new ArrayList<>();
         Struct struct = (Struct) record.value();
         Schema structSchema = struct.schema();
         for (Field field:structSchema.fields()) {
-            if (field.schema().type().isPrimitive()) {
-                fields.add(struct.get(field.name()).toString());
-            } else {
-                fields.add(toJSON(field.schema(), struct.get(field.name())));
-            }
+            fields.add(escapeCSV(field.schema(), struct.get(field.name())));
         }
 
         return String.join("\t", fields);
     }
 
+    private static Object toAvroSupportedObject(Schema schema, Object value) throws IOException {
+        if (schema.type().isPrimitive()) {
+            if (value == null) {
+                return null;
+            } else switch(schema.type()) {
+                case INT8:
+                    return ((Byte)value).intValue();
+                case INT16:
+                    return ((Short)value).intValue();
+                case BYTES:
+                    return ByteBuffer.wrap((byte[])value);
+                default:
+                    return value;
+            }
+        }
+        return toJSON(schema, value);
+    }
+
     public static List<Object> getRecordValues(SinkRecord record) throws IOException {
         if (record.valueSchema().type() != Schema.Type.STRUCT) {
-            if (record.valueSchema().type().isPrimitive()) {
-                return Collections.singletonList(record.value());
-            }
-            return Collections.singletonList(toJSON(record.valueSchema(), record.value()));
+            return Collections.singletonList(toAvroSupportedObject(record.valueSchema(), record.value()));
         }
 
         List<Object> fields = new ArrayList<>();
         Struct struct = (Struct) record.value();
         Schema structSchema = struct.schema();
         for (Field field:structSchema.fields()) {
-            if (field.schema().type().isPrimitive()) {
-                fields.add(struct.get(field.name()));
-            } else {
-                fields.add(toJSON(field.schema(), struct.get(field.name())));
-            }
+            fields.add(toAvroSupportedObject(field.schema(), struct.get(field.name())));
         }
 
         return fields;
