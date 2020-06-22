@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
 public class MemSQLDialectTest {
@@ -128,6 +129,109 @@ public class MemSQLDialectTest {
 
         SinkRecord record = SinkRecordCreator.createRecord(schema, struct);
         String expectedValue = "Barbara Liskov\t75\tfalse";
+        testGetRecord(record, expectedValue);
+    }
+
+    @Test
+    public void successGetRecordValueStructWithJson() throws IOException {
+        Schema nestedSchema = SchemaBuilder.struct().name("nestedSchema")
+                .field("key1", Schema.STRING_SCHEMA)
+                .field("key2", Schema.INT32_SCHEMA);
+        Schema schema = SchemaBuilder.struct().name("NAME")
+                .field("name", Schema.STRING_SCHEMA)
+                .field("age", Schema.INT32_SCHEMA)
+                .field("nested", nestedSchema)
+                .build();
+
+        Struct struct = new Struct(schema)
+                .put("name", "Barbara Liskov")
+                .put("age", 75)
+                .put("nested", new Struct(nestedSchema)
+                        .put("key1", "value1")
+                        .put("key2", 75));
+
+        SinkRecord record = SinkRecordCreator.createRecord(schema, struct);
+        String expectedValue = "Barbara Liskov\t75\t{\"key1\":\"value1\",\"key2\":75}";
+        testGetRecord(record, expectedValue);
+    }
+
+    @Test
+    public void successGetRecordValueArray() throws IOException {
+        Schema schema = SchemaBuilder.array(
+                Schema.STRING_SCHEMA
+        );
+
+        List<String> values = new ArrayList<String>() {{
+            add("Name");
+            add("Age");
+        }};
+
+        SinkRecord record = SinkRecordCreator.createRecord(schema, values);
+        String expectedValue = "[\"Name\",\"Age\"]";
+        testGetRecord(record, expectedValue);
+    }
+
+    @Test
+    public void successGetRecordValueArrayComplex() throws IOException {
+        Schema schema = SchemaBuilder.array(
+                SchemaBuilder.map(
+                        Schema.STRING_SCHEMA,
+                        Schema.INT32_SCHEMA
+                )
+        );
+
+        List<Map<String, Integer>> values = new ArrayList<Map<String, Integer>>() {{
+            add(new HashMap<String, Integer>() {{
+                put("key1", 12);
+                put("key2", 500);
+            }});
+        }};
+
+        SinkRecord record = SinkRecordCreator.createRecord(schema, values);
+        String expectedValue = "[[{\"key\":\"key1\",\"value\":12},{\"key\":\"key2\",\"value\":500}]]";
+        testGetRecord(record, expectedValue);
+    }
+
+    @Test
+    public void successGetRecordValueMap() throws IOException {
+        Schema schema = SchemaBuilder.map(
+                Schema.STRING_SCHEMA,
+                Schema.STRING_SCHEMA
+        );
+
+        Map<String, String> values = new HashMap<String, String>() {{
+            put("name", "Alice");
+            put("surname", "Woffenden");
+        }};
+
+        SinkRecord record = SinkRecordCreator.createRecord(schema, values);
+        String expectedValue = "[{\"key\":\"surname\",\"value\":\"Woffenden\"},{\"key\":\"name\",\"value\":\"Alice\"}]";
+        testGetRecord(record, expectedValue);
+    }
+
+    @Test
+    public void successGetRecordValueMapComplex() throws IOException {
+        Schema schema = SchemaBuilder.map(
+                SchemaBuilder.map(
+                        Schema.STRING_SCHEMA,
+                        Schema.INT32_SCHEMA
+                ),
+                SchemaBuilder.array(
+                        Schema.BOOLEAN_SCHEMA
+                )
+        );
+        Map<Map<String, Integer>, List<Boolean>> values = new HashMap<Map<String, Integer>, List<Boolean>>() {{
+            put(new HashMap<String, Integer>() {{
+                put("key1", 0);
+                put("key2", 100);
+            }}, new ArrayList<Boolean>() {{
+                add(true);
+                add(true);
+                add(false);
+            }});
+        }};
+        SinkRecord record = SinkRecordCreator.createRecord(schema, values);
+        String expectedValue = "[{\"key\":[{\"key\":\"key1\",\"value\":0},{\"key\":\"key2\",\"value\":100}],\"value\":[true,true,false]}]";
         testGetRecord(record, expectedValue);
     }
 
@@ -274,5 +378,209 @@ public class MemSQLDialectTest {
         assertEquals(MemSQLDialect.getSchemaForCrateTableQuery(schema, keys), "(\n" +
                 "`data` TEXT COLLATE UTF8_BIN NOT NULL\n" +
                 ")");
+    }
+
+    @Test
+    public void successGetRecordsValueStruct() throws IOException {
+        Schema schema = SchemaBuilder.struct().name("NAME")
+                .field("name", Schema.STRING_SCHEMA)
+                .field("age", Schema.INT32_SCHEMA)
+                .field("admin", SchemaBuilder.bool().defaultValue(false).build())
+                .build();
+
+        Struct struct = new Struct(schema)
+                .put("name", "Barbara Liskov")
+                .put("age", 75);
+
+        SinkRecord record = SinkRecordCreator.createRecord(schema, struct);
+        String expectedValue = "Barbara Liskov\t75\tfalse";
+        testGetRecords(record, Arrays.asList("Barbara Liskov", 75, false));
+    }
+
+    @Test
+    public void successGetRecordsValueStructWithJson() throws IOException {
+        Schema nestedSchema = SchemaBuilder.struct().name("nestedSchema")
+                .field("key1", Schema.STRING_SCHEMA)
+                .field("key2", Schema.INT32_SCHEMA);
+        Schema schema = SchemaBuilder.struct().name("NAME")
+                .field("name", Schema.STRING_SCHEMA)
+                .field("age", Schema.INT32_SCHEMA)
+                .field("nested", nestedSchema)
+                .build();
+
+        Struct struct = new Struct(schema)
+                .put("name", "Barbara Liskov")
+                .put("age", 75)
+                .put("nested", new Struct(nestedSchema)
+                        .put("key1", "value1")
+                        .put("key2", 75));
+
+        SinkRecord record = SinkRecordCreator.createRecord(schema, struct);
+        testGetRecords(record, Arrays.asList("Barbara Liskov", 75, "{\"key1\":\"value1\",\"key2\":75}"));
+    }
+
+    @Test
+    public void successGetRecordsValueArray() throws IOException {
+        Schema schema = SchemaBuilder.array(
+                Schema.STRING_SCHEMA
+        );
+
+        List<String> values = new ArrayList<String>() {{
+            add("Name");
+            add("Age");
+        }};
+
+        SinkRecord record = SinkRecordCreator.createRecord(schema, values);
+        String expectedValue = "[\"Name\",\"Age\"]";
+        testGetRecords(record, Collections.singletonList(expectedValue));
+    }
+
+    @Test
+    public void successGetRecordsValueArrayComplex() throws IOException {
+        Schema schema = SchemaBuilder.array(
+                SchemaBuilder.map(
+                        Schema.STRING_SCHEMA,
+                        Schema.INT32_SCHEMA
+                )
+        );
+
+        List<Map<String, Integer>> values = new ArrayList<Map<String, Integer>>() {{
+            add(new HashMap<String, Integer>() {{
+                put("key1", 12);
+                put("key2", 500);
+            }});
+        }};
+
+        SinkRecord record = SinkRecordCreator.createRecord(schema, values);
+        String expectedValue = "[[{\"key\":\"key1\",\"value\":12},{\"key\":\"key2\",\"value\":500}]]";
+        testGetRecords(record, Collections.singletonList(expectedValue));
+    }
+
+    @Test
+    public void successGetRecordsValueMap() throws IOException {
+        Schema schema = SchemaBuilder.map(
+                Schema.STRING_SCHEMA,
+                Schema.STRING_SCHEMA
+        );
+
+        Map<String, String> values = new HashMap<String, String>() {{
+            put("name", "Alice");
+            put("surname", "Woffenden");
+        }};
+
+        SinkRecord record = SinkRecordCreator.createRecord(schema, values);
+        String expectedValue = "[{\"key\":\"surname\",\"value\":\"Woffenden\"},{\"key\":\"name\",\"value\":\"Alice\"}]";
+        testGetRecords(record, Collections.singletonList(expectedValue));
+    }
+
+    @Test
+    public void successGetRecordsValueMapComplex() throws IOException {
+        Schema schema = SchemaBuilder.map(
+                SchemaBuilder.map(
+                        Schema.STRING_SCHEMA,
+                        Schema.INT32_SCHEMA
+                ),
+                SchemaBuilder.array(
+                        Schema.BOOLEAN_SCHEMA
+                )
+        );
+        Map<Map<String, Integer>, List<Boolean>> values = new HashMap<Map<String, Integer>, List<Boolean>>() {{
+            put(new HashMap<String, Integer>() {{
+                put("key1", 0);
+                put("key2", 100);
+            }}, new ArrayList<Boolean>() {{
+                add(true);
+                add(true);
+                add(false);
+            }});
+        }};
+        SinkRecord record = SinkRecordCreator.createRecord(schema, values);
+        String expectedValue = "[{\"key\":[{\"key\":\"key1\",\"value\":0},{\"key\":\"key2\",\"value\":100}],\"value\":[true,true,false]}]";
+        testGetRecords(record, Collections.singletonList(expectedValue));
+    }
+
+    @Test
+    public void successGetRecordsValueBoolean() throws IOException {
+        Schema schema = SchemaBuilder.bool().name("schema").build();
+
+        SinkRecord record = SinkRecordCreator.createRecord(schema, true);
+        testGetRecords(record, Collections.singletonList(true));
+
+        record = SinkRecordCreator.createRecord(schema, false);
+        testGetRecords(record, Collections.singletonList(false));
+    }
+
+    @Test
+    public void successGetRecordsValueString() throws IOException {
+        Schema schema = SchemaBuilder.string().name("schema").build();
+
+        String value = "Some name";
+        SinkRecord record = SinkRecordCreator.createRecord(schema, value);
+        testGetRecords(record, Collections.singletonList(value));
+
+        value = "Some big string with a lot of words";
+        record = SinkRecordCreator.createRecord(schema, value);
+        testGetRecords(record, Collections.singletonList(value));
+    }
+
+    @Test
+    public void successGetRecordsValueInt8() throws IOException {
+        Schema schema = SchemaBuilder.int8().name("schema").build();
+        testIntRecords(schema);
+    }
+
+    @Test
+    public void successGetRecordsValueInt16() throws IOException {
+        Schema schema = SchemaBuilder.int16().name("schema").build();
+        testIntRecords(schema);
+    }
+
+    @Test
+    public void successGetRecordsValueInt32() throws IOException {
+        Schema schema = SchemaBuilder.int32().name("schema").build();
+        testIntRecords(schema);
+    }
+
+    @Test
+    public void successGetRecordsValueInt64() throws IOException {
+        Schema schema = SchemaBuilder.int64().name("schema").build();
+        testIntRecords(schema);
+    }
+
+    @Test
+    public void successGetRecordsValueFloat32() throws IOException {
+        Schema schema = SchemaBuilder.float32().name("schema").build();
+        testFloatRecords(schema);
+    }
+
+    @Test
+    public void successGetRecordsValueFloat64() throws IOException {
+        Schema schema = SchemaBuilder.float64().name("schema").build();
+        testFloatRecords(schema);
+    }
+
+    private void testFloatRecords(Schema schema) throws IOException {
+        float value = 15.14f;
+        SinkRecord record = SinkRecordCreator.createRecord(schema, value);
+        testGetRecords(record, Collections.singletonList(value));
+
+        value = 5348.23523f;
+        record = SinkRecordCreator.createRecord(schema, value);
+        testGetRecords(record, Collections.singletonList(value));
+    }
+
+    private void testIntRecords(Schema schema) throws IOException {
+        int value = 15;
+        SinkRecord record = SinkRecordCreator.createRecord(schema, value);
+        testGetRecords(record, Collections.singletonList(value));
+
+        value = 555;
+        record = SinkRecordCreator.createRecord(schema, value);
+        testGetRecords(record, Collections.singletonList(value));
+    }
+
+    private void testGetRecords(SinkRecord record, List<Object> expectedValues) throws IOException {
+        List<Object> values = MemSQLDialect.getRecordValues(record);
+        assertArrayEquals(expectedValues.toArray(), values.toArray());
     }
 }

@@ -33,15 +33,15 @@ public class MemSQLDialect {
     }
 
     public static String showExtendedTables(String database, String table) {
-        return String.format("using %s show tables extended like `%s`", MemSQLDialect.quoteIdentifier(database), MemSQLDialect.quoteIdentifier(table));
+        return String.format("using %s show tables extended like `%s`", quoteIdentifier(database), quoteIdentifier(table));
     }
 
     public static String getTableExistsQuery(String table) {
-        return String.format("SELECT * FROM %s WHERE 1=0", MemSQLDialect.quoteIdentifier(table));
+        return String.format("SELECT * FROM %s WHERE 1=0", quoteIdentifier(table));
     }
 
     public static String getMetadataRecordExistsQuery(String metadataTableName, String id) {
-        return String.format("SELECT * FROM %s WHERE `id` = '%s'", MemSQLDialect.quoteIdentifier(metadataTableName), id);
+        return String.format("SELECT * FROM %s WHERE `id` = '%s'", quoteIdentifier(metadataTableName), id);
     }
 
     public static String getDefaultColumnName(Schema schema) {
@@ -49,16 +49,16 @@ public class MemSQLDialect {
     }
 
     public static String getCreateTableQuery(String table, String schema) {
-        return String.format("CREATE TABLE IF NOT EXISTS %s %s", MemSQLDialect.quoteIdentifier(table), schema);
+        return String.format("CREATE TABLE IF NOT EXISTS %s %s", quoteIdentifier(table), schema);
     }
 
     public static String getColumnNames(Schema schema) {
         if (schema.type() == Schema.Type.STRUCT) {
             return  schema.fields().stream()
-                    .map(field -> MemSQLDialect.quoteIdentifier(field.name()))
+                    .map(field -> quoteIdentifier(field.name()))
                     .collect(Collectors.joining(", "));
         } else {
-            return MemSQLDialect.getDefaultColumnName(schema);
+            return getDefaultColumnName(schema);
         }
     }
 
@@ -93,7 +93,7 @@ public class MemSQLDialect {
 
     private static String formatSchemaField(String fieldName, Schema schema) {
         String name = quoteIdentifier(fieldName);
-        String memsqlType = MemSQLDialect.getSqlType(schema);
+        String memsqlType = getSqlType(schema);
         String collation = schema.type() == Schema.Type.STRING ? " COLLATE UTF8_BIN" : "";
         String nullable = schema.isOptional() ? "" : " NOT NULL";
         return String.format("%s %s%s%s", name, memsqlType, collation, nullable);
@@ -145,8 +145,7 @@ public class MemSQLDialect {
 
     public static String toJSON(Schema schema, Object value) throws IOException {
         ByteArrayOutputStream stream = new ByteArrayOutputStream();
-        JsonFactory jfactory = new JsonFactory();
-        JsonGenerator jGenerator = jfactory
+        JsonGenerator jGenerator = new JsonFactory()
                 .createGenerator(stream, JsonEncoding.UTF8);
 
         generateJSON(jGenerator, schema, value);
@@ -220,7 +219,7 @@ public class MemSQLDialect {
         }
     }
 
-    public static String getSqlType(Schema fieldSchema) {
+    private static String getSqlType(Schema fieldSchema) {
         switch (fieldSchema.type()) {
             case INT8:
             case BOOLEAN:

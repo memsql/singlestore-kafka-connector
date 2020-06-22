@@ -11,27 +11,26 @@ import static org.apache.avro.Schema.Type.NULL;
 
 public class AvroSchemaConverter {
 
-    private static Schema nullSchema = Schema.create(NULL);
+    private static final Schema nullSchema = Schema.create(NULL);
 
     public static Schema toAvroType(org.apache.kafka.connect.data.Schema kafkaSchema) {
+        SchemaBuilder.TypeBuilder<Schema> builder = SchemaBuilder.builder();
+        SchemaBuilder.FieldAssembler<Schema> fieldsAssembler = builder.record("topLevelRecord").namespace("").fields();
         if (kafkaSchema.type() == org.apache.kafka.connect.data.Schema.Type.STRUCT) {
-            return toAvroType(kafkaSchema, false, "topLevelRecord", "");
+            kafkaSchema.fields().forEach(f -> {
+                Schema fieldAvroType = toAvroType(f.schema(), f.schema().isOptional());
+                fieldsAssembler.name(f.name()).type(fieldAvroType).noDefault();
+            });
         } else {
-            String recordName = "topLevelRecord";
-            SchemaBuilder.TypeBuilder<Schema> builder = SchemaBuilder.builder();
-            SchemaBuilder.FieldAssembler<Schema> fieldsAssembler = builder.record(recordName).namespace("").fields();
-            Schema fieldAvroType =
-                toAvroType(kafkaSchema.schema(), kafkaSchema.schema().isOptional(), kafkaSchema.name(), "topLevelRecord");
+            Schema fieldAvroType = toAvroType(kafkaSchema.schema(), kafkaSchema.schema().isOptional());
             String fieldName = MemSQLDialect.getDefaultColumnName(kafkaSchema);
             fieldsAssembler.name(fieldName).type(fieldAvroType).noDefault();
-            return fieldsAssembler.endRecord();
         }
+        return fieldsAssembler.endRecord();
     }
 
     private static Schema toAvroType(org.apache.kafka.connect.data.Schema kafkaSchema,
-                                     boolean nullable,
-                                     String recordName,
-                                     String nameSpace) {
+                                     boolean nullable) {
         SchemaBuilder.TypeBuilder<Schema> builder = SchemaBuilder.builder();
         Schema schema;
         switch (kafkaSchema.type()) {
@@ -58,17 +57,8 @@ public class AvroSchemaConverter {
             case STRING:
             case MAP:
             case ARRAY:
-                schema = builder.stringType();
-                break;
             case STRUCT:
-                String childNameSpace = (!nameSpace.equals("")) ? String.format("%s.%s", nameSpace, recordName) : recordName;
-                SchemaBuilder.FieldAssembler<Schema> fieldsAssembler = builder.record(recordName).namespace(nameSpace).fields();
-                kafkaSchema.fields().forEach(f -> {
-                    Schema fieldAvroType =
-                            toAvroType(f.schema(), f.schema().isOptional(), f.name(), childNameSpace);
-                    fieldsAssembler.name(f.name()).type(fieldAvroType).noDefault();
-                });
-                schema = fieldsAssembler.endRecord();
+                schema = builder.stringType();
                 break;
             default: throw new ConnectException(String.format("Unexpected kafka type `%s`.", kafkaSchema.type()));
         }

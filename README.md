@@ -1,11 +1,11 @@
 # MemSQL Kafka Connector
-## Version: 0.0.1 [![License](http://img.shields.io/:license-Apache%202-brightgreen.svg)](http://www.apache.org/licenses/LICENSE-2.0.txt)
+## Version: 0.0.1 [![Continuous Integration](https://circleci.com/gh/memsql/memsql-kafka-connector/tree/master.svg?style=shield)](https://circleci.com/gh/memsql/memsql-kafka-connector) [![License](http://img.shields.io/:license-Apache%202-brightgreen.svg)](http://www.apache.org/licenses/LICENSE-2.0.txt)
 
 ## Getting Started
 
 ## Configuration
 
-The `memsql-kafka-connector` is configurable via json file that should be
+The `memsql-kafka-connector` is configurable via property file that should be
 specified before starting kafka-connect job.
 
 | Option                               | Description
@@ -18,7 +18,11 @@ specified before starting kafka-connect job.
 | `params.<name>`                      | Specify a specific MySQL or JDBC parameter which will be injected into the connection URI (default: empty)
 | `max.retries`                        | The maximum number of times to retry on errors before failing the task. (default: 10)
 | `retry.backoff.ms`                   | The time in milliseconds to wait following an error before a retry attempt is made. (default 3000)
+| `tableKey.<index_type>[.name]`       | Specify additional keys to add to tables created by the connector; value of this property is the name of the column to apply key; <index_type> one of (`PRIMARY`, `COLUMNSTORE`, `UNIQUE`, `SHARD`, `KEY`);
 | `memsql.loadDataCompression`         | Compress data on load; one of (`GZip`, `LZ4`, `Skip`) (default: GZip)
+| `memsql.loadDataFormat`              | Serialize data on load; one of (`Avro`, `CSV`) (default: CSV)
+| `memsql.metadata.allow`              | Allows or denies the use of an additional meta-table to save the recording results (default: true)
+| `memsql.metadata.table`              | Specify the name of the table to save kafka transaction metadata (default: `kafka-connect-transaction-metadata`) 
 
 ### Config example
 ```
@@ -29,11 +33,13 @@ specified before starting kafka-connect job.
         "tasks.max":"1",
         "topics":"topic-test-1,topic-test-2",
         "connection.ddlEndpoint" : "memsql-host1:3306",
-        "connection.ddlEndpoint" : "memsql-host2:3306,memsql-host3:3306",
+        "connection.dmlEndpoints" : "memsql-host2:3306,memsql-host3:3306",
         "connection.database" : "test",
         "connection.user" : "root",
         "params.connectTimeout" : "10000"
-        "params.ssl" : "false"
+        "params.ssl" : "false",
+        "tableKey.primary.keyName" : "id",
+        "memsql.loadDataCompression" : "LZ4"
     }
 }
 ```

@@ -3,6 +3,7 @@ package com.memsql.kafka.utils;
 import com.memsql.kafka.sink.MemSQLDialect;
 import com.memsql.kafka.sink.MemSQLSinkConfig;
 import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.errors.ConnectException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -75,7 +76,7 @@ public class JdbcHelper {
             if (resultSet.next()) {
                 return !resultSet.getBoolean("distributed");
             } else {
-                throw new IllegalArgumentException(String.format("Table `%s.%s` doesn't exist", database, table));
+                throw new ConnectException(String.format("Table `%s.%s` doesn't exist", database, table));
             }
         } catch (SQLException ex) {
             return false;
