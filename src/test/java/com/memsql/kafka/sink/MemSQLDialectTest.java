@@ -262,40 +262,54 @@ public class MemSQLDialectTest {
     @Test
     public void successGetRecordValueInt8() throws IOException {
         Schema schema = SchemaBuilder.int8().name("schema").build();
-        testInt(schema);
+        byte value = -128;
+        SinkRecord record = SinkRecordCreator.createRecord(schema, value);
+        testGetRecord(record, Integer.toString(value));
+
+        value = 127;
+        record = SinkRecordCreator.createRecord(schema, value);
+        testGetRecord(record, Integer.toString(value));
     }
 
     @Test
     public void successGetRecordValueInt16() throws IOException {
         Schema schema = SchemaBuilder.int16().name("schema").build();
-        testInt(schema);
+        short value = 32767;
+        SinkRecord record = SinkRecordCreator.createRecord(schema, value);
+        testGetRecord(record, Integer.toString(value));
+
+        value = -32768;
+        record = SinkRecordCreator.createRecord(schema, value);
+        testGetRecord(record, Integer.toString(value));
     }
 
     @Test
     public void successGetRecordValueInt32() throws IOException {
         Schema schema = SchemaBuilder.int32().name("schema").build();
-        testInt(schema);
+        int value = 1000000000;
+        SinkRecord record = SinkRecordCreator.createRecord(schema, value);
+        testGetRecords(record, Collections.singletonList(value));
+
+        value = 555;
+        record = SinkRecordCreator.createRecord(schema, value);
+        testGetRecords(record, Collections.singletonList(value));
     }
 
     @Test
     public void successGetRecordValueInt64() throws IOException {
         Schema schema = SchemaBuilder.int64().name("schema").build();
-        testInt(schema);
+        long value = 1000000000000000000L;
+        SinkRecord record = SinkRecordCreator.createRecord(schema, value);
+        testGetRecords(record, Collections.singletonList(value));
+
+        value = 555L;
+        record = SinkRecordCreator.createRecord(schema, value);
+        testGetRecords(record, Collections.singletonList(value));
     }
 
     @Test
     public void successGetRecordValueFloat32() throws IOException {
         Schema schema = SchemaBuilder.float32().name("schema").build();
-        testFloat(schema);
-    }
-
-    @Test
-    public void successGetRecordValueFloat64() throws IOException {
-        Schema schema = SchemaBuilder.float64().name("schema").build();
-        testFloat(schema);
-    }
-
-    private void testFloat(Schema schema) throws IOException {
         float value = 15.14f;
         SinkRecord record = SinkRecordCreator.createRecord(schema, value);
         testGetRecord(record, Float.toString(value));
@@ -305,14 +319,16 @@ public class MemSQLDialectTest {
         testGetRecord(record, Float.toString(value));
     }
 
-    private void testInt(Schema schema) throws IOException {
-        int value = 15;
+    @Test
+    public void successGetRecordValueFloat64() throws IOException {
+        Schema schema = SchemaBuilder.float64().name("schema").build();
+        double value = 15.14d;
         SinkRecord record = SinkRecordCreator.createRecord(schema, value);
-        testGetRecord(record, Integer.toString(value));
+        testGetRecord(record, Double.toString(value));
 
-        value = 555;
+        value = 5348.23523d;
         record = SinkRecordCreator.createRecord(schema, value);
-        testGetRecord(record, Integer.toString(value));
+        testGetRecord(record, Double.toString(value));
     }
 
     private void testGetRecord(SinkRecord record, String expectedValue) throws IOException {
@@ -526,45 +542,71 @@ public class MemSQLDialectTest {
     @Test
     public void successGetRecordsValueInt8() throws IOException {
         Schema schema = SchemaBuilder.int8().name("schema").build();
-        testIntRecords(schema);
+        byte value = 127;
+        SinkRecord record = SinkRecordCreator.createRecord(schema, value);
+        testGetRecords(record, Collections.singletonList(value));
+
+        value = -128;
+        record = SinkRecordCreator.createRecord(schema, value);
+        testGetRecords(record, Collections.singletonList(value));
     }
 
     @Test
     public void successGetRecordsValueInt16() throws IOException {
         Schema schema = SchemaBuilder.int16().name("schema").build();
-        testIntRecords(schema);
+        short value = 32767;
+        SinkRecord record = SinkRecordCreator.createRecord(schema, value);
+        testGetRecords(record, Collections.singletonList(value));
+
+        value = -32768;
+        record = SinkRecordCreator.createRecord(schema, value);
+        testGetRecords(record, Collections.singletonList(value));
     }
 
     @Test
     public void successGetRecordsValueInt32() throws IOException {
         Schema schema = SchemaBuilder.int32().name("schema").build();
-        testIntRecords(schema);
+        int value = 15;
+        SinkRecord record = SinkRecordCreator.createRecord(schema, value);
+        testGetRecords(record, Collections.singletonList(value));
+
+        value = 555;
+        record = SinkRecordCreator.createRecord(schema, value);
+        testGetRecords(record, Collections.singletonList(value));
     }
 
     @Test
     public void successGetRecordsValueInt64() throws IOException {
         Schema schema = SchemaBuilder.int64().name("schema").build();
-        testIntRecords(schema);
+        long value = 1000000000000000000L;
+        SinkRecord record = SinkRecordCreator.createRecord(schema, value);
+        testGetRecords(record, Collections.singletonList(value));
+
+        value = 555;
+        record = SinkRecordCreator.createRecord(schema, value);
+        testGetRecords(record, Collections.singletonList(value));
     }
 
     @Test
     public void successGetRecordsValueFloat32() throws IOException {
         Schema schema = SchemaBuilder.float32().name("schema").build();
-        testFloatRecords(schema);
-    }
-
-    @Test
-    public void successGetRecordsValueFloat64() throws IOException {
-        Schema schema = SchemaBuilder.float64().name("schema").build();
-        testFloatRecords(schema);
-    }
-
-    private void testFloatRecords(Schema schema) throws IOException {
         float value = 15.14f;
         SinkRecord record = SinkRecordCreator.createRecord(schema, value);
         testGetRecords(record, Collections.singletonList(value));
 
         value = 5348.23523f;
+        record = SinkRecordCreator.createRecord(schema, value);
+        testGetRecords(record, Collections.singletonList(value));
+    }
+
+    @Test
+    public void successGetRecordsValueFloat64() throws IOException {
+        Schema schema = SchemaBuilder.float64().name("schema").build();
+        double value = 15.14d;
+        SinkRecord record = SinkRecordCreator.createRecord(schema, value);
+        testGetRecords(record, Collections.singletonList(value));
+
+        value = 5348.23523d;
         record = SinkRecordCreator.createRecord(schema, value);
         testGetRecords(record, Collections.singletonList(value));
     }
