@@ -22,11 +22,11 @@ import java.util.stream.Collectors;
 
 public class MemSQLDialect {
     public static  String getInsertIntoMetadataQuery(String metadataTableName, String metaId, Integer recordsCount) {
-        return String.format("INSERT INTO %s VALUES ('%s', %d)", quoteIdentifier(metadataTableName), metaId, recordsCount);
+        return String.format("INSERT INTO %s(id, count) VALUES ('%s', %d)", quoteIdentifier(metadataTableName), metaId, recordsCount);
     }
 
     public static String getKafkaMetadataSchema() {
-        return "(\n  id VARCHAR(255) PRIMARY KEY,\n  count INT NOT NULL\n)";
+        return "(\n  id VARCHAR(255) PRIMARY KEY,\n  count INT NOT NULL,\n  createdAt TIMESTAMP DEFAULT NOW()\n)";
     }
 
     public static String quoteIdentifier(String colName) {

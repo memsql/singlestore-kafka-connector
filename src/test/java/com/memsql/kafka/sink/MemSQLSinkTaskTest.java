@@ -44,6 +44,7 @@ public class MemSQLSinkTaskTest {
         SinkTaskContext context = new WorkerSinkTaskContext(null,null,null);
         task.initialize(context);
         Map<String, String> props = ConfigHelper.getMinimalRequiredParameters();
+        props.put(MemSQLSinkConfig.CONNECTION_DATABASE, "nonexistingDatabase");
         task.start(props);
         MemSQLSinkConfig config = new MemSQLSinkConfig(props);
         List<SinkRecord> records = SinkRecordCreator.createRecords(10);

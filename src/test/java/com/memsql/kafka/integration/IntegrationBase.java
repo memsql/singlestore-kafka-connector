@@ -48,8 +48,6 @@ public class IntegrationBase {
     public static void put(Map<String, String> props, List<SinkRecord> records) throws SQLException {
         props.put(MemSQLSinkConfig.DDL_ENDPOINT, "localhost:5506");
         props.put(MemSQLSinkConfig.CONNECTION_DATABASE, "testdb");
-        props.put(MemSQLSinkConfig.CONNECTION_USER, "root");
-        props.put(MemSQLSinkConfig.LOAD_DATA_FORMAT, "csv");
         props.put(MemSQLSinkConfig.METADATA_TABLE_ALLOW, "false");
 
         executeQuery(String.format("DROP TABLE IF EXISTS testdb.%s", MemSQLDialect.quoteIdentifier(records.iterator().next().topic())));
