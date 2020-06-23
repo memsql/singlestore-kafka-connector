@@ -26,7 +26,7 @@ public class MemSQLDialect {
     }
 
     public static String getKafkaMetadataSchema() {
-        return "(\n  id VARCHAR(255) PRIMARY KEY COLLATE UTF8_BIN,\n  count INT NOT NULL\n)";
+        return "(\n  id VARCHAR(255) PRIMARY KEY,\n  count INT NOT NULL\n)";
     }
 
     public static String quoteIdentifier(String colName) {
@@ -95,9 +95,8 @@ public class MemSQLDialect {
     private static String formatSchemaField(String fieldName, Schema schema) {
         String name = quoteIdentifier(fieldName);
         String memsqlType = getSqlType(schema);
-        String collation = schema.type() == Schema.Type.STRING ? " COLLATE UTF8_BIN" : "";
         String nullable = schema.isOptional() ? "" : " NOT NULL";
-        return String.format("%s %s%s%s", name, memsqlType, collation, nullable);
+        return String.format("%s %s%s", name, memsqlType, nullable);
     }
 
     private static String escapeCSV(String value) {

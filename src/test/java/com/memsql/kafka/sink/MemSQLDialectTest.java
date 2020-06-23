@@ -356,12 +356,12 @@ public class MemSQLDialectTest {
                 ));
 
         assertEquals(MemSQLDialect.getSchemaForCrateTableQuery(schema, keys), "(\n" +
-                "`f1` TEXT COLLATE UTF8_BIN NOT NULL,\n" +
-                "`f2` TEXT COLLATE UTF8_BIN NOT NULL,\n" +
-                "`f3` TEXT COLLATE UTF8_BIN NOT NULL,\n" +
-                "`f4` TEXT COLLATE UTF8_BIN NOT NULL,\n" +
-                "`f5` TEXT COLLATE UTF8_BIN NOT NULL,\n" +
-                "`f6` TEXT COLLATE UTF8_BIN NOT NULL,\n" +
+                "`f1` TEXT NOT NULL,\n" +
+                "`f2` TEXT NOT NULL,\n" +
+                "`f3` TEXT NOT NULL,\n" +
+                "`f4` TEXT NOT NULL,\n" +
+                "`f5` TEXT NOT NULL,\n" +
+                "`f6` TEXT NOT NULL,\n" +
                 "KEY `n1`(f1) USING CLUSTERED COLUMNSTORE,\n" +
                 "UNIQUE KEY `n2`(f2, f1),\n" +
                 "PRIMARY KEY `n3`(f3),\n" +
@@ -380,7 +380,7 @@ public class MemSQLDialectTest {
         ));
 
         assertEquals(MemSQLDialect.getSchemaForCrateTableQuery(schema, keys), "(\n" +
-                "`data` TEXT COLLATE UTF8_BIN NOT NULL,\n" +
+                "`data` TEXT NOT NULL,\n" +
                 "KEY (data) USING CLUSTERED COLUMNSTORE\n" +
                 ")");
     }
@@ -392,7 +392,7 @@ public class MemSQLDialectTest {
         List<TableKey> keys = new ArrayList<>();
 
         assertEquals(MemSQLDialect.getSchemaForCrateTableQuery(schema, keys), "(\n" +
-                "`data` TEXT COLLATE UTF8_BIN NOT NULL\n" +
+                "`data` TEXT NOT NULL\n" +
                 ")");
     }
 
