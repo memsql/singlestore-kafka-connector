@@ -34,7 +34,7 @@ public class MemSQLDialect {
     }
 
     public static String showExtendedTables(String database, String table) {
-        return String.format("using %s show tables extended like `%s`", quoteIdentifier(database), quoteIdentifier(table));
+        return String.format("USING %s SHOW TABLES EXTENDED LIKE %s", quoteIdentifier(database), quoteIdentifier(table));
     }
 
     public static String getTableExistsQuery(String table) {

@@ -32,10 +32,10 @@ public class IntegrationBase {
                 connProperties);
 
         // make memsql use less memory
-        executeQuery("set global default_partitions_per_leaf = 2");
+        executeQuery("SET GLOBAL default_partitions_per_leaf = 2");
 
-        executeQuery("drop database if exists testdb");
-        executeQuery("create database testdb");
+        executeQuery("DROP DATABASE IF EXISTS testdb");
+        executeQuery("CREATE DATABASE testdb");
     }
 
     public static void executeQuery(String sql) throws SQLException{
@@ -52,14 +52,14 @@ public class IntegrationBase {
         props.put(MemSQLSinkConfig.LOAD_DATA_FORMAT, "csv");
         props.put(MemSQLSinkConfig.METADATA_TABLE_ALLOW, "false");
 
-        executeQuery(String.format("drop table if exists testdb.%s", MemSQLDialect.quoteIdentifier(records.iterator().next().topic())));
+        executeQuery(String.format("DROP TABLE IF EXISTS testdb.%s", MemSQLDialect.quoteIdentifier(records.iterator().next().topic())));
 
         MemSQLSinkTask taskCSV = new MemSQLSinkTask();
         taskCSV.start(props);
         taskCSV.put(records);
         taskCSV.stop();
 
-        executeQuery(String.format("drop table if exists testdb.%s", MemSQLDialect.quoteIdentifier(records.iterator().next().topic())));
+        executeQuery(String.format("DROP TABLE IF EXISTS testdb.%s", MemSQLDialect.quoteIdentifier(records.iterator().next().topic())));
 
         props.put(MemSQLSinkConfig.LOAD_DATA_FORMAT, "avro");
         MemSQLSinkTask taskAvro = new MemSQLSinkTask();
