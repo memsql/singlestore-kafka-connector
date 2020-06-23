@@ -2,6 +2,7 @@ package com.memsql.kafka;
 
 import com.memsql.kafka.sink.MemSQLSinkConfig;
 import com.memsql.kafka.sink.MemSQLSinkTask;
+import com.memsql.kafka.utils.VersionProvider;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.connector.Task;
 import org.apache.kafka.connect.sink.SinkConnector;
@@ -46,6 +47,6 @@ public class MemSQLSinkConnector extends SinkConnector {
 
     @Override
     public String version() {
-        return "0.0.1-beta";
+        return VersionProvider.getVersion();
     }
 }

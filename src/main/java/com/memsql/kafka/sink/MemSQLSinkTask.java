@@ -1,5 +1,6 @@
 package com.memsql.kafka.sink;
 
+import com.memsql.kafka.utils.VersionProvider;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.RetriableException;
 import org.apache.kafka.connect.sink.SinkRecord;
@@ -17,7 +18,7 @@ public class MemSQLSinkTask extends SinkTask {
     private static final Logger log = LoggerFactory.getLogger(MemSQLSinkTask.class);
     private MemSQLSinkConfig config;
     private MemSQLDbWriter writer;
-    int retriesLeft;
+    private int retriesLeft;
 
     @Override
     public void start(Map<String, String> props) {
@@ -66,7 +67,6 @@ public class MemSQLSinkTask extends SinkTask {
 
     @Override
     public String version() {
-        //TODO make it in more flexible way
-        return "0.0.1-beta";
+        return VersionProvider.getVersion();
     }
 }

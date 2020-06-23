@@ -8,6 +8,7 @@ import org.junit.Test;
 
 import java.util.*;
 
+import static com.memsql.kafka.utils.ConfigHelper.getMinimalRequiredParameters;
 import static org.junit.Assert.*;
 
 public class MemSQLSinkConfigTest {
@@ -44,13 +45,6 @@ public class MemSQLSinkConfigTest {
         } catch (ConfigException ex) {
             assertEquals(ex.getLocalizedMessage(), "Missing required configuration \"connection.database\" which has no default value.");
         }
-    }
-
-    private Map<String, String> getMinimalRequiredParameters() {
-        return new HashMap<String, String>() {{
-            put(MemSQLSinkConfig.DDL_ENDPOINT, "ddlendpoint:3306");
-            put(MemSQLSinkConfig.CONNECTION_DATABASE, "testDb");
-        }};
     }
 
     @Test
