@@ -1,6 +1,5 @@
 package com.memsql.kafka.utils;
 
-import com.memsql.kafka.sink.MemSQLDbWriter;
 import com.memsql.kafka.sink.MemSQLSinkConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

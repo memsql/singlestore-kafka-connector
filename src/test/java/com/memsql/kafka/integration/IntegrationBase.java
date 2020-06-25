@@ -9,7 +9,6 @@ import org.junit.BeforeClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.reflect.Executable;
 import java.sql.*;
 import java.util.List;
 import java.util.Map;

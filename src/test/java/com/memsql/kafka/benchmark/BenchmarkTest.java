@@ -18,7 +18,7 @@ public class BenchmarkTest {
     @Test
     public void benchmarkTest() throws Exception {
         Map<String, String> props = new HashMap<String, String>() {{
-            put(MemSQLSinkConfig.DDL_ENDPOINT, "localhost:3306");
+            put(MemSQLSinkConfig.DDL_ENDPOINT, "localhost:5506");
             put(MemSQLSinkConfig.CONNECTION_DATABASE, "testdb");
             put(MemSQLSinkConfig.CONNECTION_USER, "root");
             put(MemSQLSinkConfig.METADATA_TABLE_ALLOW, "false");
@@ -48,7 +48,7 @@ public class BenchmarkTest {
         int recordCount = 5000;
 
         Map<String, String> props = new HashMap<String, String>() {{
-            put(MemSQLSinkConfig.DDL_ENDPOINT, "localhost:3306");
+            put(MemSQLSinkConfig.DDL_ENDPOINT, "localhost:5506");
             put(MemSQLSinkConfig.CONNECTION_DATABASE, "testdb");
             put(MemSQLSinkConfig.CONNECTION_USER, "root");
             put(MemSQLSinkConfig.METADATA_TABLE_ALLOW, "false");
@@ -71,7 +71,7 @@ public class BenchmarkTest {
     @Test
     public void avroTest() throws Exception {
         Map<String, String> props = new HashMap<String, String>() {{
-            put(MemSQLSinkConfig.DDL_ENDPOINT, "localhost:3306");
+            put(MemSQLSinkConfig.DDL_ENDPOINT, "localhost:5506");
             put(MemSQLSinkConfig.CONNECTION_DATABASE, "testdb");
             put(MemSQLSinkConfig.CONNECTION_USER, "root");
             put(MemSQLSinkConfig.METADATA_TABLE_ALLOW, "false");

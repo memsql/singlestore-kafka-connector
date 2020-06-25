@@ -14,10 +14,11 @@
         <kafka-connect.version>5.5.0</kafka-connect.version>
         <kafka.connect.maven.plugin.version>0.11.1</kafka.connect.maven.plugin.version>
         <confluent-maven-plugin.version>0.11.3</confluent-maven-plugin.version>
-        <mysql-connector.version>5.1.49</mysql-connector.version>
+        <mariadb-java-client.version>2.3.0</mariadb-java-client.version>
         <lz4.version>1.7.1</lz4.version>
         <avro.version>1.9.2</avro.version>
         <jackson-databind.version>2.9.8</jackson-databind.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!--Testing-->
         <junit.version>4.13</junit.version>
         <!--Maven Plugins-->
@@ -36,9 +37,9 @@
             <version>${kafka.version}</version>
         </dependency>
         <dependency>
-            <groupId>mysql</groupId>
-            <artifactId>mysql-connector-java</artifactId>
-            <version>${mysql-connector.version}</version>
+            <groupId>org.mariadb.jdbc</groupId>
+            <artifactId>mariadb-java-client</artifactId>
+            <version>${mariadb-java-client.version}</version>
         </dependency>
         <dependency>
             <groupId>org.lz4</groupId>

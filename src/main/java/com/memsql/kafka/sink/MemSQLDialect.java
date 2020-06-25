@@ -14,6 +14,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -21,28 +24,42 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 public class MemSQLDialect {
-    public static  String getInsertIntoMetadataQuery(String metadataTableName, String metaId, Integer recordsCount) {
-        return String.format("INSERT INTO %s(id, count) VALUES ('%s', %d)", quoteIdentifier(metadataTableName), metaId, recordsCount);
+
+    public static String quoteIdentifier(String colName) {
+        return "`" + colName.replace("`", "``") + "`";
+    }
+
+    public static PreparedStatement getInsertIntoMetadataQuery(Connection conn, String metadataTableName, String metaId, Integer recordsCount) throws SQLException {
+        PreparedStatement stmt = conn.prepareStatement(
+                String.format("INSERT INTO %s (id, count) VALUES (?, ?)", quoteIdentifier(metadataTableName))
+        );
+        stmt.setString(1, metaId);
+        stmt.setInt(2, recordsCount);
+        return stmt;
     }
 
     public static String getKafkaMetadataSchema() {
         return "(\n  id VARCHAR(255) PRIMARY KEY,\n  count INT NOT NULL,\n  createdAt TIMESTAMP DEFAULT NOW()\n)";
     }
 
-    public static String quoteIdentifier(String colName) {
-        return "`" + colName + "`";
-    }
-
-    public static String showExtendedTables(String database, String table) {
-        return String.format("USING %s SHOW TABLES EXTENDED LIKE %s", quoteIdentifier(database), quoteIdentifier(table));
+    public static PreparedStatement showExtendedTables(Connection conn, String database, String table) throws SQLException {
+        PreparedStatement stmt = conn.prepareStatement(
+                String.format("USING %s SHOW TABLES EXTENDED LIKE ?", quoteIdentifier(database))
+        );
+        stmt.setString(1, table.replace("\\", "\\\\"));
+        return stmt;
     }
 
     public static String getTableExistsQuery(String table) {
         return String.format("SELECT * FROM %s WHERE 1=0", quoteIdentifier(table));
     }
 
-    public static String getMetadataRecordExistsQuery(String metadataTableName, String id) {
-        return String.format("SELECT * FROM %s WHERE `id` = '%s'", quoteIdentifier(metadataTableName), id);
+    public static PreparedStatement getMetadataRecordExistsQuery(Connection conn, String metadataTableName, String id) throws SQLException {
+        PreparedStatement stmt = conn.prepareStatement(
+                String.format("SELECT * FROM %s WHERE `id` = ?", quoteIdentifier(metadataTableName))
+        );
+        stmt.setString(1, id);
+        return stmt;
     }
 
     public static String getDefaultColumnName(Schema schema) {

@@ -30,7 +30,7 @@ public class AvroDbWriter implements DbWriter {
 
         List<String> avroSchemaParts = new ArrayList<>();
         for (Schema.Field field: avroSchema.getFields()) {
-            String avroSchemaPart = MemSQLDialect.quoteIdentifier(field.name()) +  " <- %::" + field.name();
+            String avroSchemaPart = MemSQLDialect.quoteIdentifier(field.name()) +  " <- %::" + MemSQLDialect.quoteIdentifier(field.name());
             if (field.schema().isNullable()) {
                 avroSchemaPart += "::"+AvroSchemaConverter.resolveNullableType(field.schema()).getType().getName();
             }

@@ -6,7 +6,9 @@ import com.memsql.kafka.sink.writer.DbWriter;
 import com.memsql.kafka.utils.DataExtension;
 import com.memsql.kafka.utils.DataFormat;
 import com.memsql.kafka.utils.JdbcHelper;
-import com.mysql.jdbc.Statement;
+
+import java.sql.PreparedStatement;
+import java.sql.Statement;
 import net.jpountz.lz4.LZ4FrameOutputStream;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.sink.SinkRecord;
@@ -41,7 +43,7 @@ public class MemSQLDbWriter {
             try (Connection connection = JdbcHelper.isReferenceTable(config, table)
                     ? JdbcHelper.getDDLConnection(config)
                     : JdbcHelper.getDMLConnection(config);
-                 com.mysql.jdbc.Statement stmt = (com.mysql.jdbc.Statement) connection.createStatement()) {
+                 Statement stmt = connection.createStatement()) {
 
                 if (config.metadataTableAllow) {
                     String metaId = String.format("%s-%s-%s", first.topic(), first.kafkaPartition(), first.kafkaOffset());
@@ -51,12 +53,13 @@ public class MemSQLDbWriter {
                     }
                     connection.setAutoCommit(false);
                     Integer recordsCount = records.size();
-                    String metadataQuery = MemSQLDialect.getInsertIntoMetadataQuery(config.metadataTableName, metaId, recordsCount);
-                    log.trace("Executing SQL:\n{}", metadataQuery);
-                    stmt.executeUpdate(metadataQuery);
+                    try (PreparedStatement metadataStmt = MemSQLDialect.getInsertIntoMetadataQuery(connection, config.metadataTableName, metaId, recordsCount)) {
+                        log.trace("Executing SQL:\n{}", metadataStmt);
+                        metadataStmt.executeUpdate();
+                    }
                 }
 
-                stmt.setLocalInfileInputStream(inputStream);
+                ((org.mariadb.jdbc.MariaDbStatement)stmt).setLocalInfileInputStream(inputStream);
 
                 DataExtension dataExtension = getDataExtension(baseStream);
                 try (OutputStream outputStream = dataExtension.getOutputStream()) {

@@ -33,7 +33,7 @@ public class JdbcHelper {
         }
     }
 
-    private static boolean tableExists(Connection connection, String table) {
+    public static boolean tableExists(Connection connection, String table) {
         String query = MemSQLDialect.getTableExistsQuery(table);
         log.trace("Executing SQL:\n{}", query);
         try (Statement stmt = connection.createStatement()) {
@@ -44,10 +44,9 @@ public class JdbcHelper {
     }
 
     public static boolean metadataRecordExists(Connection connection, String id, MemSQLSinkConfig config) {
-        String query = MemSQLDialect.getMetadataRecordExistsQuery(config.metadataTableName, id);
-        log.trace("Executing SQL:\n{}", query);
-        try (Statement stmt = connection.createStatement()) {
-            ResultSet resultSet = stmt.executeQuery(query);
+        try (PreparedStatement stmt = MemSQLDialect.getMetadataRecordExistsQuery(connection, config.metadataTableName, id)) {
+            log.trace("Executing SQL:\n{}", stmt);
+            ResultSet resultSet = stmt.executeQuery();
             return resultSet.next();
         } catch (SQLException ex) {
             return false;
@@ -68,11 +67,10 @@ public class JdbcHelper {
 
     public static boolean isReferenceTable(MemSQLSinkConfig config, String table) {
         String database = config.database;
-        String sql = MemSQLDialect.showExtendedTables(database, table);
-        log.trace("Executing SQL:\n{}", sql);
         try (Connection connection = getDDLConnection(config);
-             Statement stmt = connection.createStatement()) {
-            ResultSet resultSet = stmt.executeQuery(sql);
+             PreparedStatement stmt = MemSQLDialect.showExtendedTables(connection, database, table)) {
+            log.trace("Executing SQL:\n{}", stmt);
+            ResultSet resultSet = stmt.executeQuery();
             if (resultSet.next()) {
                 return !resultSet.getBoolean("distributed");
             } else {
@@ -104,7 +102,7 @@ public class JdbcHelper {
         connectionProps.put("allowLoadLocalInfile", "true");
         connectionProps.putAll(config.sqlParams);
         try {
-            Class.forName("com.mysql.jdbc.Driver");
+            Class.forName("org.mariadb.jdbc.Driver");
             return DriverManager.getConnection(
                     getJDBCUrl(hosts, config.database),
                     connectionProps);
