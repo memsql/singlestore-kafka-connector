@@ -142,7 +142,7 @@ fi
 
 kafka-connect-start
 
-echo -n "Building project..."
+echo -n "Building project (this make take some time)..."
 docker build -t memsql-kafka-connect . >/dev/null 2>/dev/null
 docker run \
     --rm \
@@ -162,6 +162,11 @@ memsql-start() {
     -p 3306:3306 \
     --net=confluent \
     memsql/cluster-in-a-box >/dev/null
+  if [[ $? -ne 0 ]] ; then
+    echo "Failed to start 'memsql-kafka' container"
+    echo "Aborting..."
+    exit 1
+  fi
 
   docker start memsql-kafka >/dev/null
   echo ". Success!"
@@ -180,7 +185,7 @@ memsql-start
 memsql-wait-start() {
   echo -n "Waiting for MemSQL to start..."
   while true; do
-      if mysql -u root -h 127.0.0.1 -P 3306 -e "select 1" >/dev/null 2>/dev/null; then
+      if docker exec memsql-kafka memsql -e "select 1" >/dev/null 2>/dev/null; then
           break
       fi
       echo -n "."

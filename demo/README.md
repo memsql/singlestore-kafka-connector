@@ -28,7 +28,7 @@ This script will start all required components:
 * kafka-connect
 * memsql
 
-And start kafka-connect job with such configuration:
+Then start kafka-connect job with such a configuration:
 
 ```
 {
@@ -47,10 +47,10 @@ And start kafka-connect job with such configuration:
 This job will read `memsql-json-songs` topic 
 and then write all records to MemSQL `test.memsql-json-songs` table
 
+## Ingest data
+
 To ingest some data to `memsql-json-songs` topic you can execute `ingest-data.sh` script, 
 which will add some example data to kafka.
-
-## Ingest data
 
 ```
 ./ingest-data.sh
