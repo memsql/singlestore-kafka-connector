@@ -18,9 +18,14 @@ commands:
 
 
 jobs:
-  build:
+  test:
+    parameters:
+      memsql_image:
+        type: string
     working_directory: ~/memsql-kafka-connector
     machine: true
+    environment:
+      MEMSQL_IMAGE: << parameters.memsql_image >>
     steps:
       - setup_environment
       - checkout
@@ -43,3 +48,18 @@ jobs:
           # Upload test summary for display in Artifacts: https://circleci.com/docs/2.0/artifacts/
           path: target/memsql-kafka-connector-1.0-SNAPSHOT.jar
       # See https://circleci.com/docs/2.0/deployment-integrations/ for deploy examples
+
+
+workflows:
+  test:
+    jobs:
+      - test:
+          filters:
+            tags:
+              only: /^v.*/
+          matrix:
+            parameters:
+              memsql_image:
+                - memsql/cluster-in-a-box:centos-7.0.15-619d118712-1.9.5-1.5.0
+                - memsql/cluster-in-a-box:centos-6.8.15-029542cbf3-1.9.3-1.4.1
+                - memsql/cluster-in-a-box:6.7.18-db1caffe94-1.6.1-1.1.1
