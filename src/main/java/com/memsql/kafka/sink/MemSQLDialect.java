@@ -76,7 +76,7 @@ public class MemSQLDialect {
                     .map(field -> quoteIdentifier(field.name()))
                     .collect(Collectors.joining(", "));
         } else {
-            return getDefaultColumnName(schema);
+            return quoteIdentifier(getDefaultColumnName(schema));
         }
     }
 
@@ -91,15 +91,24 @@ public class MemSQLDialect {
                 .map(field -> formatSchemaField(field.name(), field.schema()))
                 .collect(Collectors.toList());
 
-        boolean containShardKey = false;
+        boolean allKeysAreShard = true;
         for (TableKey key:keys) {
-            if (key.type == TableKey.Type.SHARD) {
-                containShardKey = true;
+            if (key.type != TableKey.Type.SHARD) {
+                allKeysAreShard = false;
                 break;
             }
         }
-        if (containShardKey) {
-            keys.add(new TableKey(TableKey.Type.COLUMNSTORE, "", fields.get(0).name()));
+
+        // if all the keys are shard keys it means there are no other keys so we can default to columnstore
+        // in 6.8 and below you *must* specify a sort key for this
+        // so we just pick the first primitive column arbitrarily for now
+        if (allKeysAreShard) {
+            for (Field field:fields) {
+                if (field.schema().type().isPrimitive()) {
+                    keys.add(new TableKey(TableKey.Type.COLUMNSTORE, "", MemSQLDialect.quoteIdentifier(field.name())));
+                    break;
+                }
+            }
         }
 
         List<String> keysSql= keys.stream().map(TableKey::toString)

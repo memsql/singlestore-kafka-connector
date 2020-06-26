@@ -37,6 +37,7 @@ public class EscapingTest extends IntegrationBase {
 
             Map<String, String> props = ConfigHelper.getMinimalRequiredParameters();
             props.put(MemSQLSinkConfig.METADATA_TABLE_NAME, weirdMetadataName);
+            props.put("tableKey.primary."+weirdName, MemSQLDialect.quoteIdentifier(weirdName));
             conf = new MemSQLSinkConfig(props);
 
             List<SinkRecord> records = new ArrayList<>();

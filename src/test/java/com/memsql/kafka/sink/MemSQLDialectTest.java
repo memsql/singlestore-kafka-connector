@@ -7,116 +7,123 @@ import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 public class MemSQLDialectTest {
 
+    protected static final Logger log = LoggerFactory.getLogger(MemSQLDialectTest.class);
+
     @Test
-    public void toJSON() throws IOException {
-        assertEquals(MemSQLDialect.toJSON(Schema.INT8_SCHEMA, null), "null");
+    public void toJSON() {
+        try {
+            assertEquals(MemSQLDialect.toJSON(Schema.INT8_SCHEMA, null), "null");
 
-        assertEquals(MemSQLDialect.toJSON(Schema.INT8_SCHEMA, Byte.MIN_VALUE), "-128");
-        assertEquals(MemSQLDialect.toJSON(Schema.INT8_SCHEMA, Byte.MAX_VALUE), "127");
+            assertEquals(MemSQLDialect.toJSON(Schema.INT8_SCHEMA, Byte.MIN_VALUE), "-128");
+            assertEquals(MemSQLDialect.toJSON(Schema.INT8_SCHEMA, Byte.MAX_VALUE), "127");
 
-        assertEquals(MemSQLDialect.toJSON(Schema.INT16_SCHEMA, Short.MIN_VALUE), "-32768");
-        assertEquals(MemSQLDialect.toJSON(Schema.INT16_SCHEMA, Short.MAX_VALUE), "32767");
+            assertEquals(MemSQLDialect.toJSON(Schema.INT16_SCHEMA, Short.MIN_VALUE), "-32768");
+            assertEquals(MemSQLDialect.toJSON(Schema.INT16_SCHEMA, Short.MAX_VALUE), "32767");
 
-        assertEquals(MemSQLDialect.toJSON(Schema.INT32_SCHEMA, Integer.MIN_VALUE), "-2147483648");
-        assertEquals(MemSQLDialect.toJSON(Schema.INT32_SCHEMA, Integer.MAX_VALUE), "2147483647");
+            assertEquals(MemSQLDialect.toJSON(Schema.INT32_SCHEMA, Integer.MIN_VALUE), "-2147483648");
+            assertEquals(MemSQLDialect.toJSON(Schema.INT32_SCHEMA, Integer.MAX_VALUE), "2147483647");
 
-        assertEquals(MemSQLDialect.toJSON(Schema.INT64_SCHEMA, Long.MIN_VALUE), "-9223372036854775808");
-        assertEquals(MemSQLDialect.toJSON(Schema.INT64_SCHEMA, Long.MAX_VALUE), "9223372036854775807");
+            assertEquals(MemSQLDialect.toJSON(Schema.INT64_SCHEMA, Long.MIN_VALUE), "-9223372036854775808");
+            assertEquals(MemSQLDialect.toJSON(Schema.INT64_SCHEMA, Long.MAX_VALUE), "9223372036854775807");
 
-        assertEquals(MemSQLDialect.toJSON(Schema.FLOAT32_SCHEMA, Float.MIN_VALUE), "1.4E-45");
-        assertEquals(MemSQLDialect.toJSON(Schema.FLOAT32_SCHEMA, Float.MAX_VALUE), "3.4028235E38");
+            assertEquals(MemSQLDialect.toJSON(Schema.FLOAT32_SCHEMA, Float.MIN_VALUE), "1.4E-45");
+            assertEquals(MemSQLDialect.toJSON(Schema.FLOAT32_SCHEMA, Float.MAX_VALUE), "3.4028235E38");
 
-        assertEquals(MemSQLDialect.toJSON(Schema.FLOAT64_SCHEMA, Double.MIN_VALUE), "4.9E-324");
-        assertEquals(MemSQLDialect.toJSON(Schema.FLOAT64_SCHEMA, Double.MAX_VALUE), "1.7976931348623157E308");
+            assertEquals(MemSQLDialect.toJSON(Schema.FLOAT64_SCHEMA, Double.MIN_VALUE), "4.9E-324");
+            assertEquals(MemSQLDialect.toJSON(Schema.FLOAT64_SCHEMA, Double.MAX_VALUE), "1.7976931348623157E308");
 
-        assertEquals(MemSQLDialect.toJSON(Schema.BOOLEAN_SCHEMA, true), "true");
-        assertEquals(MemSQLDialect.toJSON(Schema.BOOLEAN_SCHEMA, false), "false");
+            assertEquals(MemSQLDialect.toJSON(Schema.BOOLEAN_SCHEMA, true), "true");
+            assertEquals(MemSQLDialect.toJSON(Schema.BOOLEAN_SCHEMA, false), "false");
 
-        assertEquals(MemSQLDialect.toJSON(Schema.BYTES_SCHEMA, "some random bytes".getBytes(StandardCharsets.UTF_8)), "\"c29tZSByYW5kb20gYnl0ZXM=\"");
+            assertEquals(MemSQLDialect.toJSON(Schema.BYTES_SCHEMA, "some random bytes".getBytes(StandardCharsets.UTF_8)), "\"c29tZSByYW5kb20gYnl0ZXM=\"");
 
-        assertEquals(MemSQLDialect.toJSON(Schema.STRING_SCHEMA, "some random string"), "\"some random string\"");
+            assertEquals(MemSQLDialect.toJSON(Schema.STRING_SCHEMA, "some random string"), "\"some random string\"");
 
-        Schema schema = SchemaBuilder.struct()
-                .field("name", Schema.STRING_SCHEMA)
-                .build();
-        assertEquals(MemSQLDialect.toJSON(schema, new Struct(schema).put("name", "Archie")), "{\"name\":\"Archie\"}");
+            Schema schema = SchemaBuilder.struct()
+                    .field("name", Schema.STRING_SCHEMA)
+                    .build();
+            assertEquals(MemSQLDialect.toJSON(schema, new Struct(schema).put("name", "Archie")), "{\"name\":\"Archie\"}");
 
-        assertEquals(MemSQLDialect.toJSON(SchemaBuilder.array(Schema.STRING_SCHEMA),
-                new ArrayList<>(Arrays.asList("Bob", "Alice"))),
-                "[\"Bob\",\"Alice\"]");
+            assertEquals(MemSQLDialect.toJSON(SchemaBuilder.array(Schema.STRING_SCHEMA),
+                    new ArrayList<>(Arrays.asList("Bob", "Alice"))),
+                    "[\"Bob\",\"Alice\"]");
 
-        assertEquals(MemSQLDialect.toJSON(SchemaBuilder.map(
-                Schema.STRING_SCHEMA,
-                Schema.INT32_SCHEMA
-                ),
-                new HashMap<String, Integer>() {{
-                    put("Alice", 1);
-                    put("Bob", 2);
-                }}),
-                "[{\"key\":\"Bob\",\"value\":2},{\"key\":\"Alice\",\"value\":1}]");
+            assertEquals(MemSQLDialect.toJSON(SchemaBuilder.map(
+                    Schema.STRING_SCHEMA,
+                    Schema.INT32_SCHEMA
+                    ),
+                    new HashMap<String, Integer>() {{
+                        put("Alice", 1);
+                        put("Bob", 2);
+                    }}),
+                    "[{\"key\":\"Bob\",\"value\":2},{\"key\":\"Alice\",\"value\":1}]");
 
-        assertEquals(MemSQLDialect.toJSON(SchemaBuilder.map(
-                schema,
-                SchemaBuilder.array(Schema.STRING_SCHEMA)
-                ),
-                new HashMap<Struct, List<String>>() {{
-                    put(new Struct(schema).put("name", "Archie"), new ArrayList<>(Arrays.asList("Bob", "Alice")));
-                }}),
-                "[{\"key\":{\"name\":\"Archie\"},\"value\":[\"Bob\",\"Alice\"]}]");
+            assertEquals(MemSQLDialect.toJSON(SchemaBuilder.map(
+                    schema,
+                    SchemaBuilder.array(Schema.STRING_SCHEMA)
+                    ),
+                    new HashMap<Struct, List<String>>() {{
+                        put(new Struct(schema).put("name", "Archie"), new ArrayList<>(Arrays.asList("Bob", "Alice")));
+                    }}),
+                    "[{\"key\":{\"name\":\"Archie\"},\"value\":[\"Bob\",\"Alice\"]}]");
 
-        assertEquals(MemSQLDialect.toJSON(SchemaBuilder.array(
-                SchemaBuilder.array(Schema.STRING_SCHEMA)
-                ),
-                new ArrayList<>(Arrays.asList(
-                        new ArrayList<>(Arrays.asList("Bob", "Alice")),
-                        new ArrayList<>(Arrays.asList("Alice", "Bob"))
-                ))
-                ),
-                "[[\"Bob\",\"Alice\"],[\"Alice\",\"Bob\"]]");
+            assertEquals(MemSQLDialect.toJSON(SchemaBuilder.array(
+                    SchemaBuilder.array(Schema.STRING_SCHEMA)
+                    ),
+                    new ArrayList<>(Arrays.asList(
+                            new ArrayList<>(Arrays.asList("Bob", "Alice")),
+                            new ArrayList<>(Arrays.asList("Alice", "Bob"))
+                    ))
+                    ),
+                    "[[\"Bob\",\"Alice\"],[\"Alice\",\"Bob\"]]");
 
-        assertEquals(MemSQLDialect.toJSON(
-                SchemaBuilder.map(
-                        SchemaBuilder.map(
-                                Schema.STRING_SCHEMA,
-                                Schema.STRING_SCHEMA
-                        ),
-                        Schema.STRING_SCHEMA
-                ),
-                new HashMap<Map<String, String>, String>() {{
-                    put(
-                            new HashMap<String, String>() {{
-                                put("nestedKey", "nestedValue");
-                            }},
-                            "value"
-                    );
-                }}),
-                "[{\"key\":[{\"key\":\"nestedKey\",\"value\":\"nestedValue\"}],\"value\":\"value\"}]");
+            assertEquals(MemSQLDialect.toJSON(
+                    SchemaBuilder.map(
+                            SchemaBuilder.map(
+                                    Schema.STRING_SCHEMA,
+                                    Schema.STRING_SCHEMA
+                            ),
+                            Schema.STRING_SCHEMA
+                    ),
+                    new HashMap<Map<String, String>, String>() {{
+                        put(
+                                new HashMap<String, String>() {{
+                                    put("nestedKey", "nestedValue");
+                                }},
+                                "value"
+                        );
+                    }}),
+                    "[{\"key\":[{\"key\":\"nestedKey\",\"value\":\"nestedValue\"}],\"value\":\"value\"}]");
 
-        Schema nestedSchema = SchemaBuilder.struct()
-                .field("struct", schema)
-                .build();
+            Schema nestedSchema = SchemaBuilder.struct()
+                    .field("struct", schema)
+                    .build();
 
-        assertEquals(MemSQLDialect.toJSON(
-                nestedSchema,
-                new Struct(nestedSchema).put(
-                        "struct",
-                        new Struct(schema).put("name", "Archie")
-                )),
-                "{\"struct\":{\"name\":\"Archie\"}}");
+            assertEquals(MemSQLDialect.toJSON(
+                    nestedSchema,
+                    new Struct(nestedSchema).put(
+                            "struct",
+                            new Struct(schema).put("name", "Archie")
+                    )),
+                    "{\"struct\":{\"name\":\"Archie\"}}");
+        } catch (Exception e) {
+            log.error("", e);
+            fail("Should not have thrown any exception");
+        }
     }
 
     @Test
-    public void successGetRecordValueStruct() throws IOException {
+    public void successGetRecordValueStruct() {
         Schema schema = SchemaBuilder.struct().name("NAME")
                 .field("name", Schema.STRING_SCHEMA)
                 .field("age", Schema.INT32_SCHEMA)
@@ -133,7 +140,7 @@ public class MemSQLDialectTest {
     }
 
     @Test
-    public void successGetRecordValueStructWithJson() throws IOException {
+    public void successGetRecordValueStructWithJson() {
         Schema nestedSchema = SchemaBuilder.struct().name("nestedSchema")
                 .field("key1", Schema.STRING_SCHEMA)
                 .field("key2", Schema.INT32_SCHEMA);
@@ -156,7 +163,7 @@ public class MemSQLDialectTest {
     }
 
     @Test
-    public void successGetRecordValueArray() throws IOException {
+    public void successGetRecordValueArray() {
         Schema schema = SchemaBuilder.array(
                 Schema.STRING_SCHEMA
         );
@@ -172,7 +179,7 @@ public class MemSQLDialectTest {
     }
 
     @Test
-    public void successGetRecordValueArrayComplex() throws IOException {
+    public void successGetRecordValueArrayComplex() {
         Schema schema = SchemaBuilder.array(
                 SchemaBuilder.map(
                         Schema.STRING_SCHEMA,
@@ -193,7 +200,7 @@ public class MemSQLDialectTest {
     }
 
     @Test
-    public void successGetRecordValueMap() throws IOException {
+    public void successGetRecordValueMap() {
         Schema schema = SchemaBuilder.map(
                 Schema.STRING_SCHEMA,
                 Schema.STRING_SCHEMA
@@ -210,7 +217,7 @@ public class MemSQLDialectTest {
     }
 
     @Test
-    public void successGetRecordValueMapComplex() throws IOException {
+    public void successGetRecordValueMapComplex() {
         Schema schema = SchemaBuilder.map(
                 SchemaBuilder.map(
                         Schema.STRING_SCHEMA,
@@ -236,7 +243,7 @@ public class MemSQLDialectTest {
     }
 
     @Test
-    public void successGetRecordValueBoolean() throws IOException {
+    public void successGetRecordValueBoolean() {
         Schema schema = SchemaBuilder.bool().name("schema").build();
 
         SinkRecord record = SinkRecordCreator.createRecord(schema, true);
@@ -247,7 +254,7 @@ public class MemSQLDialectTest {
     }
 
     @Test
-    public void successGetRecordValueString() throws IOException {
+    public void successGetRecordValueString() {
         Schema schema = SchemaBuilder.string().name("schema").build();
 
         String value = "Some name";
@@ -260,7 +267,7 @@ public class MemSQLDialectTest {
     }
 
     @Test
-    public void successGetRecordValueInt8() throws IOException {
+    public void successGetRecordValueInt8() {
         Schema schema = SchemaBuilder.int8().name("schema").build();
         byte value = -128;
         SinkRecord record = SinkRecordCreator.createRecord(schema, (int) value);
@@ -272,7 +279,7 @@ public class MemSQLDialectTest {
     }
 
     @Test
-    public void successGetRecordValueInt16() throws IOException {
+    public void successGetRecordValueInt16() {
         Schema schema = SchemaBuilder.int16().name("schema").build();
         short value = 32767;
         SinkRecord record = SinkRecordCreator.createRecord(schema, value);
@@ -284,7 +291,7 @@ public class MemSQLDialectTest {
     }
 
     @Test
-    public void successGetRecordValueInt32() throws IOException {
+    public void successGetRecordValueInt32() {
         Schema schema = SchemaBuilder.int32().name("schema").build();
         int value = 1000000000;
         SinkRecord record = SinkRecordCreator.createRecord(schema, value);
@@ -296,7 +303,7 @@ public class MemSQLDialectTest {
     }
 
     @Test
-    public void successGetRecordValueInt64() throws IOException {
+    public void successGetRecordValueInt64() {
         Schema schema = SchemaBuilder.int64().name("schema").build();
         long value = 1000000000000000000L;
         SinkRecord record = SinkRecordCreator.createRecord(schema, value);
@@ -308,7 +315,7 @@ public class MemSQLDialectTest {
     }
 
     @Test
-    public void successGetRecordValueFloat32() throws IOException {
+    public void successGetRecordValueFloat32() {
         Schema schema = SchemaBuilder.float32().name("schema").build();
         float value = 15.14f;
         SinkRecord record = SinkRecordCreator.createRecord(schema, value);
@@ -320,7 +327,7 @@ public class MemSQLDialectTest {
     }
 
     @Test
-    public void successGetRecordValueFloat64() throws IOException {
+    public void successGetRecordValueFloat64() {
         Schema schema = SchemaBuilder.float64().name("schema").build();
         double value = 15.14d;
         SinkRecord record = SinkRecordCreator.createRecord(schema, value);
@@ -331,9 +338,14 @@ public class MemSQLDialectTest {
         testGetRecord(record, Double.toString(value));
     }
 
-    private void testGetRecord(SinkRecord record, String expectedValue) throws IOException {
-        String value = MemSQLDialect.getRecordValueCSV(record);
-        assertEquals(expectedValue, value);
+    private void testGetRecord(SinkRecord record, String expectedValue) {
+        try {
+            String value = MemSQLDialect.getRecordValueCSV(record);
+            assertEquals(expectedValue, value);
+        } catch (Exception e) {
+            log.error("", e);
+            fail("Should not have thrown any exception");
+        }
     }
 
     @Test
@@ -366,10 +378,26 @@ public class MemSQLDialectTest {
                 "UNIQUE KEY `n2`(f2, f1),\n" +
                 "PRIMARY KEY `n3`(f3),\n" +
                 "SHARD KEY `n4`(f4),\n" +
-                "KEY (f5),\n" +
-                "KEY (f1) USING CLUSTERED COLUMNSTORE\n" +
+                "KEY (f5)\n" +
                 ")");
     }
+
+    @Test
+    public void getSchemaForCrateTableColumnstore() {
+        Schema schema = SchemaBuilder.struct()
+                .field("f1", SchemaBuilder.map(Schema.STRING_SCHEMA, Schema.STRING_SCHEMA))
+                .field("f2", Schema.STRING_SCHEMA)
+                .build();
+
+        List<TableKey> keys = new ArrayList<>(Collections.emptyList());
+
+        assertEquals(MemSQLDialect.getSchemaForCrateTableQuery(schema, keys), "(\n" +
+                "`f1` JSON NOT NULL,\n" +
+                "`f2` TEXT NOT NULL,\n" +
+                "KEY (`f2`) USING CLUSTERED COLUMNSTORE\n" +
+                ")");
+    }
+
 
     @Test
     public void getSchemaForCrateTableQueryNotStruct() {
@@ -392,12 +420,13 @@ public class MemSQLDialectTest {
         List<TableKey> keys = new ArrayList<>();
 
         assertEquals(MemSQLDialect.getSchemaForCrateTableQuery(schema, keys), "(\n" +
-                "`data` TEXT NOT NULL\n" +
+                "`data` TEXT NOT NULL,\n" +
+                "KEY (`data`) USING CLUSTERED COLUMNSTORE\n" +
                 ")");
     }
 
     @Test
-    public void successGetRecordsValueStruct() throws IOException {
+    public void successGetRecordsValueStruct() {
         Schema schema = SchemaBuilder.struct().name("NAME")
                 .field("name", Schema.STRING_SCHEMA)
                 .field("age", Schema.INT32_SCHEMA)
@@ -409,12 +438,11 @@ public class MemSQLDialectTest {
                 .put("age", 75);
 
         SinkRecord record = SinkRecordCreator.createRecord(schema, struct);
-        String expectedValue = "Barbara Liskov\t75\tfalse";
         testGetRecords(record, Arrays.asList("Barbara Liskov", 75, false));
     }
 
     @Test
-    public void successGetRecordsValueStructWithJson() throws IOException {
+    public void successGetRecordsValueStructWithJson() {
         Schema nestedSchema = SchemaBuilder.struct().name("nestedSchema")
                 .field("key1", Schema.STRING_SCHEMA)
                 .field("key2", Schema.INT32_SCHEMA);
@@ -436,7 +464,7 @@ public class MemSQLDialectTest {
     }
 
     @Test
-    public void successGetRecordsValueArray() throws IOException {
+    public void successGetRecordsValueArray() {
         Schema schema = SchemaBuilder.array(
                 Schema.STRING_SCHEMA
         );
@@ -452,7 +480,7 @@ public class MemSQLDialectTest {
     }
 
     @Test
-    public void successGetRecordsValueArrayComplex() throws IOException {
+    public void successGetRecordsValueArrayComplex() {
         Schema schema = SchemaBuilder.array(
                 SchemaBuilder.map(
                         Schema.STRING_SCHEMA,
@@ -473,7 +501,7 @@ public class MemSQLDialectTest {
     }
 
     @Test
-    public void successGetRecordsValueMap() throws IOException {
+    public void successGetRecordsValueMap() {
         Schema schema = SchemaBuilder.map(
                 Schema.STRING_SCHEMA,
                 Schema.STRING_SCHEMA
@@ -490,7 +518,7 @@ public class MemSQLDialectTest {
     }
 
     @Test
-    public void successGetRecordsValueMapComplex() throws IOException {
+    public void successGetRecordsValueMapComplex() {
         Schema schema = SchemaBuilder.map(
                 SchemaBuilder.map(
                         Schema.STRING_SCHEMA,
@@ -516,7 +544,7 @@ public class MemSQLDialectTest {
     }
 
     @Test
-    public void successGetRecordsValueBoolean() throws IOException {
+    public void successGetRecordsValueBoolean() {
         Schema schema = SchemaBuilder.bool().name("schema").build();
 
         SinkRecord record = SinkRecordCreator.createRecord(schema, true);
@@ -527,7 +555,7 @@ public class MemSQLDialectTest {
     }
 
     @Test
-    public void successGetRecordsValueString() throws IOException {
+    public void successGetRecordsValueString() {
         Schema schema = SchemaBuilder.string().name("schema").build();
 
         String value = "Some name";
@@ -540,7 +568,7 @@ public class MemSQLDialectTest {
     }
 
     @Test
-    public void successGetRecordsValueInt8() throws IOException {
+    public void successGetRecordsValueInt8() {
         Schema schema = SchemaBuilder.int8().name("schema").build();
         byte value = 127;
         SinkRecord record = SinkRecordCreator.createRecord(schema, value);
@@ -552,7 +580,7 @@ public class MemSQLDialectTest {
     }
 
     @Test
-    public void successGetRecordsValueInt16() throws IOException {
+    public void successGetRecordsValueInt16() {
         Schema schema = SchemaBuilder.int16().name("schema").build();
         short value = 32767;
         SinkRecord record = SinkRecordCreator.createRecord(schema, value);
@@ -564,7 +592,7 @@ public class MemSQLDialectTest {
     }
 
     @Test
-    public void successGetRecordsValueInt32() throws IOException {
+    public void successGetRecordsValueInt32() {
         Schema schema = SchemaBuilder.int32().name("schema").build();
         int value = 15;
         SinkRecord record = SinkRecordCreator.createRecord(schema, value);
@@ -576,7 +604,7 @@ public class MemSQLDialectTest {
     }
 
     @Test
-    public void successGetRecordsValueInt64() throws IOException {
+    public void successGetRecordsValueInt64() {
         Schema schema = SchemaBuilder.int64().name("schema").build();
         long value = 1000000000000000000L;
         SinkRecord record = SinkRecordCreator.createRecord(schema, value);
@@ -588,7 +616,7 @@ public class MemSQLDialectTest {
     }
 
     @Test
-    public void successGetRecordsValueFloat32() throws IOException {
+    public void successGetRecordsValueFloat32() {
         Schema schema = SchemaBuilder.float32().name("schema").build();
         float value = 15.14f;
         SinkRecord record = SinkRecordCreator.createRecord(schema, value);
@@ -600,7 +628,7 @@ public class MemSQLDialectTest {
     }
 
     @Test
-    public void successGetRecordsValueFloat64() throws IOException {
+    public void successGetRecordsValueFloat64() {
         Schema schema = SchemaBuilder.float64().name("schema").build();
         double value = 15.14d;
         SinkRecord record = SinkRecordCreator.createRecord(schema, value);
@@ -611,18 +639,23 @@ public class MemSQLDialectTest {
         testGetRecords(record, Collections.singletonList(value));
     }
 
-    private void testIntRecords(Schema schema) throws IOException {
-        int value = 15;
-        SinkRecord record = SinkRecordCreator.createRecord(schema, value);
-        testGetRecords(record, Collections.singletonList(value));
-
-        value = 555;
-        record = SinkRecordCreator.createRecord(schema, value);
-        testGetRecords(record, Collections.singletonList(value));
+    @Test
+    public void getColumnNames() {
+        assertEquals(MemSQLDialect.getColumnNames(SchemaBuilder.struct().field("qwe-rty", Schema.INT32_SCHEMA).field("`\\\\", Schema.STRING_SCHEMA)),
+                "`qwe-rty`, ```\\\\`");
+        assertEquals(MemSQLDialect.getColumnNames(Schema.STRING_SCHEMA),
+                "`data`");
+        assertEquals(MemSQLDialect.getColumnNames(SchemaBuilder.string().name("qwe-rty")),
+                "`qwe-rty`");
     }
 
-    private void testGetRecords(SinkRecord record, List<Object> expectedValues) throws IOException {
-        List<Object> values = MemSQLDialect.getRecordValues(record);
-        assertArrayEquals(expectedValues.toArray(), values.toArray());
+    private void testGetRecords(SinkRecord record, List<Object> expectedValues) {
+        try {
+            List<Object> values = MemSQLDialect.getRecordValues(record);
+            assertArrayEquals(expectedValues.toArray(), values.toArray());
+        } catch (Exception e) {
+            log.error("", e);
+            fail("Should not have thrown any exception");
+        }
     }
 }
