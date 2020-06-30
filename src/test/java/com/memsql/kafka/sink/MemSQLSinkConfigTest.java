@@ -3,7 +3,6 @@ package com.memsql.kafka.sink;
 import com.memsql.kafka.utils.DataCompression;
 import com.memsql.kafka.utils.DataFormat;
 import com.memsql.kafka.utils.TableKey;
-import javafx.scene.control.Tab;
 import org.apache.kafka.common.config.ConfigException;
 import org.junit.Test;
 

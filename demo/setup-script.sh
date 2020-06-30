@@ -127,7 +127,6 @@ kafka-connect-start() {
     -e CONNECT_PLUGIN_PATH=/usr/share/java \
     -e CONNECT_REST_HOST_NAME="kafka-connect" \
     -v /tmp/quickstart/file:/tmp/quickstart \
-    -v /tmp/quickstart/connect/:/usr/share/java/kafka \
     confluentinc/cp-kafka-connect:5.0.0 >/dev/null
     echo ". Started!"
 }
@@ -144,14 +143,25 @@ kafka-connect-start
 
 echo -n "Building project (this make take some time)..."
 docker build -t memsql-kafka-connect . >/dev/null 2>/dev/null
+
+if docker ps -a | grep memsql-kafka-connect ;
+  then
+    echo -n "Docker container 'memsql-kafka-connect' already exists, stopping it..."
+    docker stop memsql-kafka-connect >/dev/null
+    docker rm memsql-kafka-connect >/dev/null
+    echo ". Stopped!"
+fi
 docker run \
+    -d \
     --rm \
     --net=confluent \
     --name memsql-kafka-connect \
     -v /tmp/quickstart/connect:/tmp/quickstart/connect \
     memsql-kafka-connect \
-    cp /home/app/target/memsql-kafka-connector-1.0-SNAPSHOT-jar-with-dependencies.jar /tmp/quickstart/connect >/dev/null 2>/dev/null
-
+    tail -f /dev/null >/dev/null 2>/dev/null
+docker exec memsql-kafka-connect cp /home/app/target/memsql-kafka-connector-1.0.0-SNAPSHOT-jar-with-dependencies.jar /tmp/quickstart/connect
+docker cp /tmp/quickstart/connect/* kafka-connect:/usr/share/java/kafka
+docker stop memsql-kafka-connect >/dev/null 2>/dev/null
 echo ". Success!"
 
 memsql-start() {

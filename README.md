@@ -1,7 +1,10 @@
 # MemSQL Kafka Connector
-## Version: 0.0.1 [![Continuous Integration](https://circleci.com/gh/memsql/memsql-kafka-connector/tree/master.svg?style=shield)](https://circleci.com/gh/memsql/memsql-kafka-connector) [![License](http://img.shields.io/:license-Apache%202-brightgreen.svg)](http://www.apache.org/licenses/LICENSE-2.0.txt)
+## Version: 1.0.0 [![Continuous Integration](https://circleci.com/gh/memsql/memsql-kafka-connector/tree/master.svg?style=shield)](https://circleci.com/gh/memsql/memsql-kafka-connector) [![License](http://img.shields.io/:license-Apache%202-brightgreen.svg)](http://www.apache.org/licenses/LICENSE-2.0.txt)
 
 ## Getting Started
+
+MemSQL Kafka Connector is a [kafka-connector](http://kafka.apache.org/documentation.html#connect)
+for loading data from Kafka to MemSQL.
 
 ## Configuration
 
@@ -43,4 +46,54 @@ specified before starting kafka-connect job.
         "memsql.loadDataCompression" : "LZ4"
     }
 }
+```
+
+## Data Types
+
+`memsql-kafka-connector` makes such conversions from Kafka types to MemSQL types:
+
+| Kafka Type    | MemSQL Type
+| -             | -
+| STRUCT        | JSON
+| MAP           | JSON
+| ARRAY         | JSON
+| INT8          | TINYINT
+| INT16         | SMALLINT
+| INT32         | INT
+| INT64         | BIGINT
+| FLOAT32       | FLOAT
+| FLOAT64       | DOUBLE
+| BOOLEAN       | TINYINT
+| BYTES         | TEXT
+| STRING        | VARBINARY(1024)
+
+## Table keys
+
+To be able to add some column as a key in MemSQL you could use `tableKey` parameter like this:
+
+Suppose you have an entity 
+```
+{
+    "id" : 123,
+    "name" : "Alice"
+}
+```
+
+and you want to add `id` column as a `PRIMARY KEY` to your MemSQL table. Then you could add
+`"tableKey.primary": "id"` to your configuration. It will create such query during creating a table:
+```
+    CREATE TABLE IF NOT EXISTS `table` (
+        `id` INT NOT NULL,
+        `name` TEXT NOT NULL,
+        PRIMARY KEY (`id`)
+    )
+```
+You can also specify the name of a key by providing it like this
+`"tableKey.primary.someName" : "id"`. It will create a key with a name.
+```
+    CREATE TABLE IF NOT EXISTS `table` (
+        `id` INT NOT NULL,
+        `name` TEXT NOT NULL,
+        PRIMARY KEY `someName`(`id`)
+    )
 ```

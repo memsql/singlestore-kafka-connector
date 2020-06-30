@@ -6,7 +6,7 @@
 
     <groupId>com.memsql</groupId>
     <artifactId>memsql-kafka-connector</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0.0-SNAPSHOT</version>
 
     <properties>
         <java.version>1.8</java.version>
@@ -78,19 +78,21 @@
                             <goal>kafka-connect</goal>
                         </goals>
                         <configuration>
-                            <title>MemSQL Kafka Connect</title>
+                            <title>MemSQL Kafka Connector</title>
                             <description>
-                                The JDBC sink connectors allow you to exchange data between MemSQL and Kafka.
+                                The MemSQL sink connector allow you to exchange data from Kafka to MemSQL.
                             </description>
+                            <logo>logos/memsql.png</logo>
 
                             <supportProviderName>MemSQL, Inc.</supportProviderName>
 
                             <ownerUsername>memsql</ownerUsername>
                             <ownerType>organization</ownerType>
                             <ownerName>MemSQL, Inc.</ownerName>
+                            <ownerLogo>logos/memsql.png</ownerLogo>
 
-                            <dockerNamespace>memsqlinc</dockerNamespace>
-                            <dockerName>memsql-kafka-connect</dockerName>
+                            <dockerNamespace>memsql</dockerNamespace>
+                            <dockerName>memsql-kafka-connector</dockerName>
                             <dockerTag>${project.version}</dockerTag>
 
                             <componentTypes>
@@ -98,12 +100,12 @@
                             </componentTypes>
 
                             <tags>
-                                <tag>jdbc</tag>
+                                <tag>memsql</tag>
                                 <tag>database</tag>
                                 <tag>dbms</tag>
                                 <tag>rdbms</tag>
                                 <tag>sql</tag>
-                                <tag>memsql</tag>
+                                <tag>jdbc</tag>
                             </tags>
                         </configuration>
                     </execution>
