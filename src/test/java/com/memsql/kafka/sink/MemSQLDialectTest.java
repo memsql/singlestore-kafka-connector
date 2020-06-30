@@ -360,11 +360,11 @@ public class MemSQLDialectTest {
                 .build();
 
         List<TableKey> keys = new ArrayList<>(Arrays.asList(
-                new TableKey(TableKey.Type.COLUMNSTORE, "n1", "f1"),
-                new TableKey(TableKey.Type.UNIQUE, "n2", "f2, f1"),
-                new TableKey(TableKey.Type.PRIMARY, "n3", "f3"),
-                new TableKey(TableKey.Type.SHARD, "n4", "f4"),
-                new TableKey(TableKey.Type.KEY, "", "f5")
+                new TableKey(TableKey.Type.COLUMNSTORE, "n1", Collections.singletonList("f1")),
+                new TableKey(TableKey.Type.UNIQUE, "n2", new ArrayList<>(Arrays.asList("f2", "f1"))),
+                new TableKey(TableKey.Type.PRIMARY, "n3", Collections.singletonList("f3")),
+                new TableKey(TableKey.Type.SHARD, "n4", Collections.singletonList("f4")),
+                new TableKey(TableKey.Type.KEY, "", Collections.singletonList("f5"))
                 ));
 
         assertEquals(MemSQLDialect.getSchemaForCrateTableQuery(schema, keys), "(\n" +
@@ -374,11 +374,11 @@ public class MemSQLDialectTest {
                 "`f4` TEXT NOT NULL,\n" +
                 "`f5` TEXT NOT NULL,\n" +
                 "`f6` TEXT NOT NULL,\n" +
-                "KEY `n1`(f1) USING CLUSTERED COLUMNSTORE,\n" +
-                "UNIQUE KEY `n2`(f2, f1),\n" +
-                "PRIMARY KEY `n3`(f3),\n" +
-                "SHARD KEY `n4`(f4),\n" +
-                "KEY (f5)\n" +
+                "KEY `n1`(`f1`) USING CLUSTERED COLUMNSTORE,\n" +
+                "UNIQUE KEY `n2`(`f2`, `f1`),\n" +
+                "PRIMARY KEY `n3`(`f3`),\n" +
+                "SHARD KEY `n4`(`f4`),\n" +
+                "KEY (`f5`)\n" +
                 ")");
     }
 
@@ -404,12 +404,12 @@ public class MemSQLDialectTest {
         Schema schema = Schema.STRING_SCHEMA;
 
         List<TableKey> keys = new ArrayList<>(Collections.singletonList(
-                new TableKey(TableKey.Type.COLUMNSTORE, "", "data")
+                new TableKey(TableKey.Type.COLUMNSTORE, "", Collections.singletonList("data"))
         ));
 
         assertEquals(MemSQLDialect.getSchemaForCrateTableQuery(schema, keys), "(\n" +
                 "`data` TEXT NOT NULL,\n" +
-                "KEY (data) USING CLUSTERED COLUMNSTORE\n" +
+                "KEY (`data`) USING CLUSTERED COLUMNSTORE\n" +
                 ")");
     }
 

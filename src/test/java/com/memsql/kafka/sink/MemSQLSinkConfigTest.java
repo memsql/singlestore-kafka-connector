@@ -3,10 +3,12 @@ package com.memsql.kafka.sink;
 import com.memsql.kafka.utils.DataCompression;
 import com.memsql.kafka.utils.DataFormat;
 import com.memsql.kafka.utils.TableKey;
+import javafx.scene.control.Tab;
 import org.apache.kafka.common.config.ConfigException;
 import org.junit.Test;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static com.memsql.kafka.utils.ConfigHelper.getMinimalRequiredParameters;
 import static org.junit.Assert.*;
@@ -184,22 +186,23 @@ public class MemSQLSinkConfigTest {
             put("tableKey.uniQUE", "column3");
             put("tableKey.shaRd", "another-column");
             put("tableKey.key.SOME-name", "weIrD_ColUMN");
+            put("tableKey.key", "`col1 ,,,```   ,      ```,`, asd");
+            put("tableKey.key.name1.name2", "`col1 ,,,```   ,      ```,`, asd");
         }};
         props.putAll(tableKeys);
         MemSQLSinkConfig config = new MemSQLSinkConfig(props);
-        assertEquals(config.tableKeys.size(), tableKeys.size());
-        for (int i = 0; i < config.tableKeys.size(); i++) {
-            TableKey tableKey = config.tableKeys.get(i);
-            tableKeys.keySet().forEach(key -> {
-                String[] keyParts = key.split("\\.");
-                if (keyParts[1].toUpperCase().equals(tableKey.type.name())) {
-                    assertEquals(tableKeys.get(key), tableKey.columns);
-                    if (!tableKey.name.isEmpty()) {
-                        assertEquals(tableKey.name, key.split("\\.")[2]);
-                    }
-                }
-            });
-        }
+
+        Set<String> keys = config.tableKeys.stream().map(TableKey::toString).collect(Collectors.toSet());
+        assertEquals(keys,
+                new HashSet<>(Arrays.asList(
+                        "PRIMARY KEY (`column1`)",
+                        "SHARD KEY (`another-column`)",
+                        "KEY `name`(`column2`) USING CLUSTERED COLUMNSTORE",
+                        "KEY (`col1 ,,,```, ```,`, `asd`)",
+                        "KEY `name1.name2`(`col1 ,,,```, ```,`, `asd`)",
+                        "KEY `SOME-name`(`weIrD_ColUMN`)",
+                        "UNIQUE KEY (`column3`)"
+                )));
     }
 
     @Test

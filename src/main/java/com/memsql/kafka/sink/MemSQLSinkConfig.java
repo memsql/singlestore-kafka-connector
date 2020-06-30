@@ -9,6 +9,7 @@ import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.config.types.Password;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class MemSQLSinkConfig extends AbstractConfig {
     private static final String CONNECTION_GROUP = "Connection";
@@ -44,7 +45,7 @@ public class MemSQLSinkConfig extends AbstractConfig {
     private static final String SQL_PARAMETERS_DISPLAY = "Additional SQL Parameters";
 
     public static final String TABLE_KEY = "tableKey.<index_type>[.<name>]";
-    private static final String TABLE_KEY_DOCS = "Specify additional keys to add to tables created by the connector";
+    private static final String TABLE_KEY_DOCS = "Specify additional keys to add to tables created by the connector; value of this property is the comma separated list with names of the columns to apply key; <index_type> one of (`PRIMARY`, `COLUMNSTORE`, `UNIQUE`, `SHARD`, `KEY`)";
     private static final String TABLE_KEY_DISPLAY = "Table key";
 
     public static final String MAX_RETRIES = "max.retries";
@@ -142,7 +143,7 @@ public class MemSQLSinkConfig extends AbstractConfig {
                     SQL_PARAMETERS_DISPLAY
             )
             .define(TABLE_KEY,
-                    ConfigDef.Type.STRING,
+                    ConfigDef.Type.LIST,
                     null,
                     ConfigDef.Importance.LOW,
                     TABLE_KEY_DOCS,
@@ -265,6 +266,42 @@ public class MemSQLSinkConfig extends AbstractConfig {
         return sqlParams;
     }
 
+    private String unescapeColumnName(String column) {
+        if (column.length() < 2 || !column.startsWith("`") || !column.endsWith("`")) {
+            throw new ConfigException(String.format("Configuration \"tableKey\" is wrong. Column name %s is escaped incorrectly", column));
+        }
+
+        return column.substring(1, column.length() -1).replace("``", "`");
+    }
+
+    private List<String> splitColumnNames(String columns) {
+        List<String> res = new ArrayList<>();
+        StringBuilder column = new StringBuilder();
+        boolean insideOfBackticks = false;
+        for (int i = 0; i < columns.length(); i++) {
+            if (columns.charAt(i) == '`') {
+                insideOfBackticks = !insideOfBackticks;
+                column.append(columns.charAt(i));
+            } else if (columns.charAt(i) == ',' && !insideOfBackticks) {
+                res.add(column.toString());
+                column = new StringBuilder();
+            } else {
+                column.append(columns.charAt(i));
+            }
+        }
+        res.add(column.toString());
+
+        res = res.stream().map(x -> {
+            String trimmed = x.trim();
+            if (!trimmed.isEmpty() && trimmed.charAt(0) == '`') {
+                return unescapeColumnName(trimmed);
+            }
+            return trimmed;
+        }).collect(Collectors.toList());
+
+        return res;
+    }
+
     private List<TableKey> getTableKeys(Map<String, String> props) {
         String tableKeysPrefix = "tableKey.";
         List<TableKey> tableKeys = new ArrayList<>();
@@ -272,7 +309,7 @@ public class MemSQLSinkConfig extends AbstractConfig {
                 .filter(key -> key.startsWith(tableKeysPrefix))
                 .forEach(
                         key -> {
-                            String[]keyParts = key.split("\\.");
+                            String[]keyParts = key.split("\\.", 3);
                             if (keyParts.length < 2) {
                                 throw new ConfigException(
                                         String.format("Options starting with '%s.' must be formatted correctly. The key should be in the form `%s<index_type>[.<name>]`.", tableKeysPrefix, tableKeysPrefix)
@@ -293,7 +330,7 @@ public class MemSQLSinkConfig extends AbstractConfig {
                                 name = keyParts[2];
                             }
 
-                            tableKeys.add(new TableKey(keyType, name, props.get(key)));
+                            tableKeys.add(new TableKey(keyType, name, splitColumnNames(props.get(key))));
                         }
                 );
         return tableKeys;

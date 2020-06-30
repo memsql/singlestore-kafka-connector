@@ -105,7 +105,7 @@ public class MemSQLDialect {
         if (allKeysAreShard) {
             for (Field field:fields) {
                 if (field.schema().type().isPrimitive()) {
-                    keys.add(new TableKey(TableKey.Type.COLUMNSTORE, "", MemSQLDialect.quoteIdentifier(field.name())));
+                    keys.add(new TableKey(TableKey.Type.COLUMNSTORE, "", Collections.singletonList(field.name())));
                     break;
                 }
             }
