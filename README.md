@@ -25,7 +25,7 @@ specified before starting kafka-connect job.
 | `memsql.loadDataCompression`         | Compress data on load; one of (`GZip`, `LZ4`, `Skip`) (default: GZip)
 | `memsql.loadDataFormat`              | Serialize data on load; one of (`Avro`, `CSV`) (default: CSV)
 | `memsql.metadata.allow`              | Allows or denies the use of an additional meta-table to save the recording results (default: true)
-| `memsql.metadata.table`              | Specify the name of the table to save kafka transaction metadata (default: `kafka-connect-transaction-metadata`) 
+| `memsql.metadata.table`              | Specify the name of the table to save kafka transaction metadata (default: `kafka-connect-transaction-metadata`)
 
 ### Config example
 ```
@@ -47,6 +47,25 @@ specified before starting kafka-connect job.
     }
 }
 ```
+
+##Auto-creation of tables
+
+If the table does not exist, it will be created using the information from the first record.
+
+The table name is the name of the topic. The table schema is taken from record valueSchema.
+if valueSchema is not a struct, then a single column with name `data` will be created with the schema of the record.
+Table keys are taken from tableKey option.
+
+If the table already exists, all records will be loaded directly into it.
+The auto-evolution of the table is not supported yet (all records should have the same schema).
+
+##Exactly once delivery
+
+To achieve exactly once delivery you could set `memsql.metadata.allow` to true.
+Then `kafka-connect-transaction-metadata` table will be created.
+This table contains an identifier, count of records, and time of each transaction.
+
+The name of this table could be overwritten with `memsql.metadata.table` option.
 
 ## Data Types
 
@@ -71,7 +90,7 @@ specified before starting kafka-connect job.
 
 To be able to add some column as a key in MemSQL you could use `tableKey` parameter like this:
 
-Suppose you have an entity 
+Suppose you have an entity
 ```
 {
     "id" : 123,
