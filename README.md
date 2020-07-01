@@ -115,3 +115,14 @@ You can also specify the name of a key by providing it like this
         PRIMARY KEY `someName`(`id`)
     )
 ```
+
+## Setting up development environment
+
+ * clone the repository https://github.com/memsql/memsql-kafka-connector.git
+ * open a project with Intellij IDEA
+ * to run unit tests use the `unit-tests` run configuration
+ * before running integration tests, start [MemSQL CIAB](https://hub.docker.com/r/memsql/cluster-in-a-box) cluster using one of the following run configurations:
+   - `ensure-test-memsql-cluster`
+   - `ensure-test-memsql-cluster-6-7`
+   - `ensure-test-memsql-cluster-6-8`
+ * to run integration tests use the `integration-tests` run configuration
