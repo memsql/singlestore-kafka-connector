@@ -64,8 +64,9 @@ jobs:
       - run:
           name: Publish
           command: |
-            mvn release:prepare
-            mvn release:perform
+            mvn clean deploy
+            # mvn release:prepare
+            # mvn release:perform
 
 workflows:
   publish:
