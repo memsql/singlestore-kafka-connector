@@ -29,7 +29,6 @@ public class MemSQLSinkTaskTest {
         String version = new MemSQLSinkTask().version();
         assertNotNull(version);
         assertFalse(version.isEmpty());
-        assertEquals(version, "1.0.0-SNAPSHOT");
     }
 
     @Test

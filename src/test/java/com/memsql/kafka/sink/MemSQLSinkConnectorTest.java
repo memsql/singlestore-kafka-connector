@@ -14,7 +14,6 @@ public class MemSQLSinkConnectorTest {
         String version = new MemSQLSinkConnector().version();
         assertNotNull(version);
         assertFalse(version.isEmpty());
-        assertEquals(version, "1.0.0-SNAPSHOT");
     }
 
     @Test

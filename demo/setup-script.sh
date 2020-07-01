@@ -159,7 +159,7 @@ docker run \
     -v /tmp/quickstart/connect:/tmp/quickstart/connect \
     memsql-kafka-connect \
     tail -f /dev/null >/dev/null 2>/dev/null
-docker exec memsql-kafka-connect cp /home/app/target/memsql-kafka-connector-1.0.0-SNAPSHOT-jar-with-dependencies.jar /tmp/quickstart/connect
+docker exec memsql-kafka-connect cp /home/app/target/memsql-kafka-connector-0.0.1-beta1-jar-with-dependencies.jar /tmp/quickstart/connect
 docker cp /tmp/quickstart/connect/* kafka-connect:/usr/share/java/kafka
 docker stop memsql-kafka-connect >/dev/null 2>/dev/null
 echo ". Success!"
