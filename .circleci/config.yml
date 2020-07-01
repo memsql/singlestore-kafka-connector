@@ -62,38 +62,16 @@ jobs:
             openssl enc -d -aes-256-cbc -K ${ENCRYPTION_KEY} -iv ${ENCRYPTION_IV} -in ci/secring.asc.enc -out ci/secring.asc
             gpg --import ci/secring.asc
       - run:
+          name: Maven Settings
+          command: |
+            mkdir -p ~/.m2
+            cp ci/settings.xml ~/.m2/settings.xml
+      - run:
           name: Publish
           command: |
-            mvn release:prepare
-            mvn release:perform
+            mvn clean deploy -DskipTests
 
 workflows:
-  test:
-    jobs:
-      - test:
-          filters:
-            tags:
-              only: /^v.*/
-          matrix:
-            parameters:
-              memsql_image:
-                - memsql/cluster-in-a-box:centos-7.0.15-619d118712-1.9.5-1.5.0
-                - memsql/cluster-in-a-box:centos-6.8.15-029542cbf3-1.9.3-1.4.1
-                - memsql/cluster-in-a-box:6.7.18-db1caffe94-1.6.1-1.1.1
   publish:
     jobs:
-      - approve-publish:
-          type: approval
-          filters:
-            tags:
-              only: /^v.*/
-            branches:
-              ignore: /.*/
-      - publish:
-          requires:
-            - approve-publish
-          filters:
-            tags:
-              only: /^v.*/
-            branches:
-              ignore: /.*/
+      - publish

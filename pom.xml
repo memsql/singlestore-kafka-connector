@@ -4,7 +4,31 @@
 
     <groupId>com.memsql</groupId>
     <artifactId>memsql-kafka-connector</artifactId>
+
+    <name>memsql-kafka-connector</name>
     <version>0.0.1-beta1</version>
+    <description>
+        The official MemSQL connector for Kafka Confluent Connect.
+    </description>
+    <url>https://github.com/memsql/memsql-kafka-connector</url>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <id>memsql</id>
+            <name>MemSQL</name>
+            <email>team@memsql.com</email>
+            <organization>MemSQL</organization>
+            <organizationUrl>https://www.memsql.com/</organizationUrl>
+        </developer>
+    </developers>
 
     <properties>
         <java.version>1.8</java.version>
@@ -27,8 +51,8 @@
         <url>git://git@github.com:memsql/memsql-kafka-connector.git</url>
         <connection>scm:git:git@github.com:memsql/memsql-kafka-connector.git</connection>
         <developerConnection>scm:git:git@github.com:memsql/memsql-kafka-connector.git</developerConnection>
-      <tag>memsql-kafka-connector-0.0.1-beta1</tag>
-  </scm>
+        <tag>memsql-kafka-connector-0.0.1-beta1</tag>
+    </scm>
 
     <dependencies>
         <dependency>
@@ -152,22 +176,6 @@
                 <version>${maven-compiler-plugin.version}</version>
             </plugin>
             <plugin>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>single</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <descriptorRefs>
-                        <descriptorRef>jar-with-dependencies</descriptorRef>
-                    </descriptorRefs>
-                </configuration>
-            </plugin>
-            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
                 <version>2.2.1</version>
@@ -201,7 +209,7 @@
                 <configuration>
                     <serverId>ossrh</serverId>
                     <nexusUrl>https://oss.sonatype.org/</nexusUrl>
-                    <autoReleaseAfterClose>true</autoReleaseAfterClose>
+                    <autoReleaseAfterClose>false</autoReleaseAfterClose>
                 </configuration>
             </plugin>
         </plugins>
