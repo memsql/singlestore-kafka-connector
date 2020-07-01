@@ -16,7 +16,6 @@ commands:
             sudo apt-get clean
             sudo apt-get autoclean
 
-
 jobs:
   test:
     parameters:
