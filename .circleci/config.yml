@@ -64,7 +64,7 @@ jobs:
       - run:
           name: Publish
           command: |
-            mvn clean deploy
+            mvn clean deploy -DskipTests
             # mvn release:prepare
             # mvn release:perform
 
