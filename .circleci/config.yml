@@ -70,8 +70,6 @@ jobs:
           name: Publish
           command: |
             mvn clean deploy -DskipTests
-            # mvn release:prepare
-            # mvn release:perform
 
 workflows:
   publish:
