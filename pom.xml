@@ -30,16 +30,6 @@
         <tag>memsql-kafka-connector-0.0.1-beta1</tag>
     </scm>
 
-    <settings>
-        <servers>
-            <server>
-                <id>ossrh</id>
-                <username>memsql</username>
-                <password>${env.SONATYPE_PASSWORD}</password>
-            </server>
-        </servers>
-    </settings>
-
     <dependencies>
         <dependency>
             <groupId>org.apache.kafka</groupId>

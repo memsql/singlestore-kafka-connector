@@ -62,6 +62,11 @@ jobs:
             openssl enc -d -aes-256-cbc -K ${ENCRYPTION_KEY} -iv ${ENCRYPTION_IV} -in ci/secring.asc.enc -out ci/secring.asc
             gpg --import ci/secring.asc
       - run:
+          name: Maven Settings
+          command: |
+            mkdir -p ~/.m2
+            cp ci/settings.xml ~/.m2/settings.xml
+      - run:
           name: Publish
           command: |
             mvn clean deploy -DskipTests
