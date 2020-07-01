@@ -12,7 +12,6 @@ import org.apache.kafka.connect.sink.SinkRecord;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -165,39 +164,6 @@ public class MemSQLDialect {
         }
 
         return String.join("\t", fields);
-    }
-
-    private static Object toAvroSupportedObject(Schema schema, Object value) throws IOException {
-        if (schema.type().isPrimitive()) {
-            if (value == null) {
-                return null;
-            } else switch(schema.type()) {
-                case INT8:
-                    return ((Byte)value).intValue();
-                case INT16:
-                    return ((Short)value).intValue();
-                case BYTES:
-                    return ByteBuffer.wrap((byte[])value);
-                default:
-                    return value;
-            }
-        }
-        return toJSON(schema, value);
-    }
-
-    public static List<Object> getRecordValues(SinkRecord record) throws IOException {
-        if (record.valueSchema().type() != Schema.Type.STRUCT) {
-            return Collections.singletonList(toAvroSupportedObject(record.valueSchema(), record.value()));
-        }
-
-        List<Object> fields = new ArrayList<>();
-        Struct struct = (Struct) record.value();
-        Schema structSchema = struct.schema();
-        for (Field field:structSchema.fields()) {
-            fields.add(toAvroSupportedObject(field.schema(), struct.get(field.name())));
-        }
-
-        return fields;
     }
 
     public static String toJSON(Schema schema, Object value) throws IOException {

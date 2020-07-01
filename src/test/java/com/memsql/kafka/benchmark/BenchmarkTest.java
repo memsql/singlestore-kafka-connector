@@ -3,8 +3,6 @@ package com.memsql.kafka.benchmark;
 import com.memsql.kafka.sink.MemSQLDbWriter;
 import com.memsql.kafka.sink.MemSQLSinkConfig;
 import com.memsql.kafka.utils.SinkRecordCreator;
-import org.apache.kafka.connect.data.Schema;
-import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -29,15 +27,9 @@ public class BenchmarkTest {
 
         List<SinkRecord> records = SinkRecordCreator.createRecords(1000000);
 
-        props.put(MemSQLSinkConfig.LOAD_DATA_FORMAT, "avro");
-        long startTimeAvro = System.nanoTime();
+        long startTime = System.nanoTime();
         writer.write(records);
-        System.out.println("Avro time: " + (System.nanoTime() - startTimeAvro));
-
-        props.put(MemSQLSinkConfig.LOAD_DATA_FORMAT, "csv");
-        long startTimeCsv = System.nanoTime();
-        writer.write(records);
-        System.out.println("CSV time:  " + (System.nanoTime() - startTimeCsv));
+        System.out.println("Time:  " + (System.nanoTime() - startTime));
     }
 
     @Ignore
@@ -65,29 +57,6 @@ public class BenchmarkTest {
 
         props.put(MemSQLSinkConfig.LOAD_DATA_COMPRESSION, "lz4");
         write(iterations, writer, records, "LZ4 time:  ");
-    }
-
-    @Ignore
-    @Test
-    public void avroTest() throws Exception {
-        Map<String, String> props = new HashMap<String, String>() {{
-            put(MemSQLSinkConfig.DDL_ENDPOINT, "localhost:5506");
-            put(MemSQLSinkConfig.CONNECTION_DATABASE, "testdb");
-            put(MemSQLSinkConfig.CONNECTION_USER, "root");
-            put(MemSQLSinkConfig.METADATA_TABLE_ALLOW, "false");
-            put(MemSQLSinkConfig.LOAD_DATA_FORMAT, "Avro");
-        }};
-        MemSQLSinkConfig config = new MemSQLSinkConfig(props);
-        MemSQLDbWriter writer = new MemSQLDbWriter(config);
-        Schema schema = SchemaBuilder.array(
-                Schema.STRING_SCHEMA
-        );
-        List<String> values = new ArrayList<String>() {{
-            add("Name");
-            add("Age");
-        }};
-        List<SinkRecord> records = Collections.nCopies(100, SinkRecordCreator.createRecord(schema, values, "topicArray"));
-        writer.write(records);
     }
 
     private void write(int n, MemSQLDbWriter writer, List<SinkRecord> records, String message) throws SQLException {

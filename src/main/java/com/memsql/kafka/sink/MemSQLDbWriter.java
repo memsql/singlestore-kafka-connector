@@ -1,10 +1,6 @@
 package com.memsql.kafka.sink;
 
-import com.memsql.kafka.sink.writer.AvroDbWriter;
-import com.memsql.kafka.sink.writer.CsvDbWriter;
-import com.memsql.kafka.sink.writer.DbWriter;
 import com.memsql.kafka.utils.DataExtension;
-import com.memsql.kafka.utils.DataFormat;
 import com.memsql.kafka.utils.JdbcHelper;
 
 import java.sql.PreparedStatement;
@@ -63,7 +59,7 @@ public class MemSQLDbWriter {
 
                 DataExtension dataExtension = getDataExtension(baseStream);
                 try (OutputStream outputStream = dataExtension.getOutputStream()) {
-                    write(config.dataFormat, first, dataExtension, table, outputStream, records, stmt);
+                    write(first, dataExtension, table, outputStream, records, stmt);
                     if (config.metadataTableAllow) {
                         connection.commit();
                     }
@@ -74,14 +70,9 @@ public class MemSQLDbWriter {
         }
     }
 
-    private void write(DataFormat dataFormat, SinkRecord record, DataExtension dataCompression, String table,
+    private void write(SinkRecord record, DataExtension dataCompression, String table,
                          OutputStream outputStream, Collection<SinkRecord> records, Statement stmt) throws IOException, SQLException {
-        DbWriter dbWriter;
-        if (dataFormat == DataFormat.CSV) {
-            dbWriter = new CsvDbWriter(record);
-        } else {
-            dbWriter = new AvroDbWriter(record);
-        }
+        CsvDbWriter dbWriter = new CsvDbWriter(record);
         String dataQuery = dbWriter.generateQuery(dataCompression.getExt(), table);
         dbWriter.writeData(outputStream, records);
         outputStream.close();

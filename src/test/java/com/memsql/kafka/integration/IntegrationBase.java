@@ -51,17 +51,9 @@ public class IntegrationBase {
 
         executeQuery(String.format("DROP TABLE IF EXISTS testdb.%s", MemSQLDialect.quoteIdentifier(records.iterator().next().topic())));
 
-        MemSQLSinkTask taskCSV = new MemSQLSinkTask();
-        taskCSV.start(props);
-        taskCSV.put(records);
-        taskCSV.stop();
-
-        executeQuery(String.format("DROP TABLE IF EXISTS testdb.%s", MemSQLDialect.quoteIdentifier(records.iterator().next().topic())));
-
-        props.put(MemSQLSinkConfig.LOAD_DATA_FORMAT, "avro");
-        MemSQLSinkTask taskAvro = new MemSQLSinkTask();
-        taskAvro.start(props);
-        taskAvro.put(records);
-        taskAvro.stop();
+        MemSQLSinkTask task = new MemSQLSinkTask();
+        task.start(props);
+        task.put(records);
+        task.stop();
     }
 }

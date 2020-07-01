@@ -23,7 +23,6 @@ specified before starting kafka-connect job.
 | `retry.backoff.ms`                   | The time in milliseconds to wait following an error before a retry attempt is made. (default 3000)
 | `tableKey.<index_type>[.name]`       | Specify additional keys to add to tables created by the connector; value of this property is the comma separated list with names of the columns to apply key; <index_type> one of (`PRIMARY`, `COLUMNSTORE`, `UNIQUE`, `SHARD`, `KEY`);
 | `memsql.loadDataCompression`         | Compress data on load; one of (`GZip`, `LZ4`, `Skip`) (default: GZip)
-| `memsql.loadDataFormat`              | Serialize data on load; one of (`Avro`, `CSV`) (default: CSV)
 | `memsql.metadata.allow`              | Allows or denies the use of an additional meta-table to save the recording results (default: true)
 | `memsql.metadata.table`              | Specify the name of the table to save kafka transaction metadata (default: `kafka-connect-transaction-metadata`)
 

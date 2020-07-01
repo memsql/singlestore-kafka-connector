@@ -1,7 +1,6 @@
 package com.memsql.kafka.sink;
 
 import com.memsql.kafka.utils.DataCompression;
-import com.memsql.kafka.utils.DataFormat;
 import com.memsql.kafka.utils.TableKey;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
@@ -59,10 +58,6 @@ public class MemSQLSinkConfig extends AbstractConfig {
     public static final String LOAD_DATA_COMPRESSION = "memsql.loadDataCompression";
     private static final String LOAD_DATA_COMPRESSION_DOC = "Compress data on load; one of (GZip, LZ4, Skip) (default: GZip)";
     private static final String LOAD_DATA_COMPRESSION_DISPLAY = "MemSQL Load Data Compression";
-
-    public static final String LOAD_DATA_FORMAT = "memsql.loadDataFormat";
-    private static final String LOAD_DATA_FORMAT_DOC = "Serialize data on load; one of (Avro, CSV) (default: CSV)";
-    private static final String LOAD_DATA_FORMAT_DISPLAY = "MemSQL Load Data Format";
 
     public static final String METADATA_TABLE_ALLOW = "memsql.metadata.allow";
     private static final String METADATA_TABLE_ALLOW_DOCS = "Allows or denies the use of an additional meta-table to save the recording results (default: true)";
@@ -181,22 +176,13 @@ public class MemSQLSinkConfig extends AbstractConfig {
                     1,
                     ConfigDef.Width.MEDIUM,
                     LOAD_DATA_COMPRESSION_DISPLAY)
-            .define(LOAD_DATA_FORMAT,
-                    ConfigDef.Type.STRING,
-                    "CSV",
-                    ConfigDef.Importance.LOW,
-                    LOAD_DATA_FORMAT_DOC,
-                    MEMSQL_GROUP,
-                    2,
-                    ConfigDef.Width.MEDIUM,
-                    LOAD_DATA_FORMAT_DISPLAY)
             .define(METADATA_TABLE_ALLOW,
                     ConfigDef.Type.BOOLEAN,
                     true,
                     ConfigDef.Importance.MEDIUM,
                     METADATA_TABLE_ALLOW_DOCS,
                     MEMSQL_GROUP,
-                    3,
+                    2,
                     ConfigDef.Width.MEDIUM,
                     METADATA_TABLE_ALLOW_DISPLAY)
             .define(METADATA_TABLE_NAME,
@@ -205,7 +191,7 @@ public class MemSQLSinkConfig extends AbstractConfig {
                     ConfigDef.Importance.LOW,
                     METADATA_TABLE_NAME_DOCS,
                     MEMSQL_GROUP,
-                    4,
+                    3,
                     ConfigDef.Width.MEDIUM,
                     METADATA_TABLE_NAME_DISPLAY,
                     Collections.singletonList(METADATA_TABLE_ALLOW));
@@ -220,7 +206,6 @@ public class MemSQLSinkConfig extends AbstractConfig {
     public final int retryBackoffMs;
     public final List<TableKey> tableKeys;
     public final DataCompression dataCompression;
-    public final DataFormat dataFormat;
     public final boolean metadataTableAllow;
     public final String metadataTableName;
 
@@ -236,7 +221,6 @@ public class MemSQLSinkConfig extends AbstractConfig {
         this.retryBackoffMs = getInt(RETRY_BACKOFF_MS);
         this.tableKeys = getTableKeys(props);
         this.dataCompression = getDataCompression();
-        this.dataFormat = getDataFormat();
         this.metadataTableAllow = getBoolean(METADATA_TABLE_ALLOW);
         this.metadataTableName = getString(METADATA_TABLE_NAME);
     }
@@ -246,14 +230,6 @@ public class MemSQLSinkConfig extends AbstractConfig {
             return DataCompression.valueOf(getString(LOAD_DATA_COMPRESSION).toLowerCase());
         } catch (IllegalArgumentException ex) {
             throw new ConfigException("Configuration \"memsql.loadDataCompression\" is wrong. Available options: Gzip, LZ4, Skip");
-        }
-    }
-
-    private DataFormat getDataFormat() {
-        try {
-            return DataFormat.valueOf(getString(LOAD_DATA_FORMAT).toUpperCase());
-        } catch (IllegalArgumentException ex) {
-            throw new ConfigException("Configuration \"memsql.loadDataFormat\" is wrong. Available options: CSV, Avro");
         }
     }
 

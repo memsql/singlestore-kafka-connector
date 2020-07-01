@@ -52,7 +52,7 @@ public class MemSQLSinkTaskTest {
             try {
                 task.put(records);
                 fail("RetriableException should be thrown");
-            } catch (RetriableException ex) {}
+            } catch (RetriableException ignored) {}
             catch (Exception ex) {
                 fail("RetriableException should be thrown");
             }
@@ -60,7 +60,7 @@ public class MemSQLSinkTaskTest {
         try {
             task.put(records);
             fail("ConnectException should be thrown");
-        } catch (ConnectException ex) {}
+        } catch (ConnectException ignored) {}
         catch (Exception ex) {
             fail("ConnectException should be thrown");
         }

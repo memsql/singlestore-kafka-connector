@@ -49,13 +49,6 @@ public class EscapingTest extends IntegrationBase {
             // create table, create metadata table, insert row into table, insert row into metadata table
             task.put(records);
             task.stop();
-
-            // insert row one more time but with Avro format
-            props.put(MemSQLSinkConfig.LOAD_DATA_FORMAT, "avro");
-            task = new MemSQLSinkTask();
-            task.start(props);
-            task.put(records);
-            task.stop();
         } catch (Exception e) {
             log.error("", e);
             fail("Should not have thrown any exception");

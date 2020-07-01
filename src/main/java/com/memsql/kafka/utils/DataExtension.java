@@ -4,8 +4,8 @@ import java.io.OutputStream;
 
 public class DataExtension {
 
-    private String ext;
-    private OutputStream outputStream;
+    private final String ext;
+    private final OutputStream outputStream;
 
     public DataExtension(String ext, OutputStream outputStream) {
         this.ext = ext;
