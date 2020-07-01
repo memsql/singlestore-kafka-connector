@@ -27,8 +27,18 @@
         <url>git://git@github.com:memsql/memsql-kafka-connector.git</url>
         <connection>scm:git:git@github.com:memsql/memsql-kafka-connector.git</connection>
         <developerConnection>scm:git:git@github.com:memsql/memsql-kafka-connector.git</developerConnection>
-      <tag>memsql-kafka-connector-0.0.1-beta1</tag>
-  </scm>
+        <tag>memsql-kafka-connector-0.0.1-beta1</tag>
+    </scm>
+
+    <settings>
+        <servers>
+            <server>
+                <id>ossrh</id>
+                <username>memsql</username>
+                <password>${env.SONATYPE_PASSWORD}</password>
+            </server>
+        </servers>
+    </settings>
 
     <dependencies>
         <dependency>
