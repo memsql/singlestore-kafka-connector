@@ -38,7 +38,6 @@
         <confluent-maven-plugin.version>0.11.3</confluent-maven-plugin.version>
         <mariadb-java-client.version>2.3.0</mariadb-java-client.version>
         <lz4.version>1.7.1</lz4.version>
-        <avro.version>1.9.2</avro.version>
         <jackson-databind.version>2.9.8</jackson-databind.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!--Testing-->
@@ -74,11 +73,6 @@
             <groupId>org.lz4</groupId>
             <artifactId>lz4-java</artifactId>
             <version>${lz4.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.avro</groupId>
-            <artifactId>avro</artifactId>
-            <version>${avro.version}</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
