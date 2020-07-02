@@ -47,7 +47,7 @@ specified before starting kafka-connect job.
 }
 ```
 
-##Auto-creation of tables
+## Auto-creation of tables
 
 If the table does not exist, it will be created using the information from the first record.
 
@@ -58,7 +58,7 @@ Table keys are taken from tableKey option.
 If the table already exists, all records will be loaded directly into it.
 The auto-evolution of the table is not supported yet (all records should have the same schema).
 
-##Exactly once delivery
+## Exactly once delivery
 
 To achieve exactly once delivery you could set `memsql.metadata.allow` to true.
 Then `kafka-connect-transaction-metadata` table will be created.
