@@ -101,6 +101,18 @@ fi
 
 kafka-rest-start
 
+echo -n "Building project (this may take some time)..."
+docker build -t memsql-kafka-connect . >/dev/null 2>/dev/null
+
+if docker ps -a | grep memsql-kafka-connect ;
+  then
+    echo -n "Docker container 'memsql-kafka-connect' already exists, stopping it..."
+    docker stop memsql-kafka-connect >/dev/null
+    docker rm memsql-kafka-connect >/dev/null
+    echo ". Stopped!"
+fi
+echo ". Success!"
+
 kafka-connect-start() {
   echo -n "Starting 'kafka-connect' docker container..."
   docker run -d \
@@ -141,16 +153,11 @@ fi
 
 kafka-connect-start
 
-echo -n "Building project (this make take some time)..."
-docker build -t memsql-kafka-connect . >/dev/null 2>/dev/null
+echo -n "Copying 'mariadb connector'..."
+docker exec kafka-connect wget -O /usr/share/java/kafka/mariadb-java-client-2.3.0.jar https://downloads.mariadb.com/Connectors/java/connector-java-2.3.0/mariadb-java-client-2.3.0.jar >/dev/null 2>/dev/null
+echo ". Success!"
 
-if docker ps -a | grep memsql-kafka-connect ;
-  then
-    echo -n "Docker container 'memsql-kafka-connect' already exists, stopping it..."
-    docker stop memsql-kafka-connect >/dev/null
-    docker rm memsql-kafka-connect >/dev/null
-    echo ". Stopped!"
-fi
+echo -n "Copying 'memsql-kafka-connector'..."
 docker run \
     -d \
     --rm \
@@ -159,8 +166,8 @@ docker run \
     -v /tmp/quickstart/connect:/tmp/quickstart/connect \
     memsql-kafka-connect \
     tail -f /dev/null >/dev/null 2>/dev/null
-docker exec memsql-kafka-connect cp /home/app/target/memsql-kafka-connector-0.0.1-beta1-jar-with-dependencies.jar /tmp/quickstart/connect
-docker cp /tmp/quickstart/connect/* kafka-connect:/usr/share/java/kafka
+docker exec memsql-kafka-connect cp /home/app/target/memsql-kafka-connector-0.0.1-beta1.jar /tmp/quickstart/connect
+docker cp /tmp/quickstart/connect/memsql-kafka-connector-0.0.1-beta1.jar kafka-connect:/usr/share/java/kafka
 docker stop memsql-kafka-connect >/dev/null 2>/dev/null
 echo ". Success!"
 
@@ -168,7 +175,7 @@ memsql-start() {
   echo -n "Starting 'memsql-kafka' docker container..."
   docker run -i --init \
     --name memsql-kafka \
-    -e LICENSE_KEY=$LICENSE_KEY \
+    -e LICENSE_KEY="$LICENSE_KEY" \
     -p 3306:3306 \
     --net=confluent \
     memsql/cluster-in-a-box >/dev/null
@@ -245,7 +252,7 @@ kafka-connect-job-start() {
 echo -n "Starting 'memsql-kafka-connect' job..."
 while true; do
       kafka-connect-job-start
-      if [[ $(docker exec kafka-connect curl -s -X GET http://kafka-connect:8082/connectors/memsql-sink-connector | grep 404 | wc -l) -eq 0 ]] ; then
+      if [[ $(docker exec kafka-connect curl -s -X GET http://kafka-connect:8082/connectors/memsql-sink-connector | grep -c 404) -eq 0 ]] ; then
         break;
       fi
       echo -n "."

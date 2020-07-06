@@ -91,8 +91,8 @@ public class MemSQLDialect {
                 .collect(Collectors.toList());
 
         boolean allKeysAreShard = true;
-        for (TableKey key:keys) {
-            if (key.type != TableKey.Type.SHARD) {
+        for (TableKey key: keys) {
+            if (key.getType() != TableKey.Type.SHARD) {
                 allKeysAreShard = false;
                 break;
             }
@@ -102,17 +102,15 @@ public class MemSQLDialect {
         // in 6.8 and below you *must* specify a sort key for this
         // so we just pick the first primitive column arbitrarily for now
         if (allKeysAreShard) {
-            for (Field field:fields) {
+            for (Field field: fields) {
                 if (field.schema().type().isPrimitive()) {
                     keys.add(new TableKey(TableKey.Type.COLUMNSTORE, "", Collections.singletonList(field.name())));
                     break;
                 }
             }
         }
-
-        List<String> keysSql= keys.stream().map(TableKey::toString)
+        List<String> keysSql = keys.stream().map(TableKey::toString)
                 .collect(Collectors.toList());
-
         fieldsSql.addAll(keysSql);
         return "(\n"+ String.join(",\n", fieldsSql) +"\n)";
     }
@@ -159,10 +157,9 @@ public class MemSQLDialect {
         List<String> fields = new ArrayList<>();
         Struct struct = (Struct) record.value();
         Schema structSchema = struct.schema();
-        for (Field field:structSchema.fields()) {
+        for (Field field: structSchema.fields()) {
             fields.add(escapeCSV(field.schema(), struct.get(field.name())));
         }
-
         return String.join("\t", fields);
     }
 
@@ -170,7 +167,6 @@ public class MemSQLDialect {
         ByteArrayOutputStream stream = new ByteArrayOutputStream();
         JsonGenerator jGenerator = new JsonFactory()
                 .createGenerator(stream, JsonEncoding.UTF8);
-
         generateJSON(jGenerator, schema, value);
         jGenerator.close();
         return new String(stream.toByteArray(), StandardCharsets.UTF_8);
@@ -181,7 +177,6 @@ public class MemSQLDialect {
             jGenerator.writeNull();
             return;
         }
-
         try {
             switch(schema.type()) {
                 case INT8:
@@ -206,14 +201,14 @@ public class MemSQLDialect {
                     jGenerator.writeBoolean((boolean) value);
                     break;
                 case BYTES:
-                    jGenerator.writeBinary((byte[])value);
+                    jGenerator.writeBinary((byte[]) value);
                     break;
                 case STRING:
-                    jGenerator.writeString((String)value);
+                    jGenerator.writeString((String) value);
                     break;
                 case ARRAY:
                     jGenerator.writeStartArray();
-                    for(Object element:(List<?>)value) {
+                    for(Object element: (List<?>) value) {
                         generateJSON(jGenerator, schema.valueSchema(), element);
                     }
                     jGenerator.writeEndArray();
@@ -222,7 +217,6 @@ public class MemSQLDialect {
                     jGenerator.writeStartArray();
                     for (Map.Entry<?, ?> entry : ((Map<?,?>)value).entrySet()) {
                         jGenerator.writeStartObject();
-
                         jGenerator.writeFieldName("key");
                         generateJSON(jGenerator, schema.keySchema(), entry.getKey());
 
@@ -235,7 +229,7 @@ public class MemSQLDialect {
                     break;
                 case STRUCT:
                     jGenerator.writeStartObject();
-                    for (Field field:schema.fields()) {
+                    for (Field field: schema.fields()) {
                         jGenerator.writeFieldName(field.name());
                         generateJSON(jGenerator, field.schema(), ((Struct)value).get(field.name()));
                     }

@@ -15,9 +15,9 @@ public class TableKey {
         KEY
     }
 
-    public Type type;
-    public String name;
-    public List<String> columns;
+    private Type type;
+    private String name;
+    private List<String> columns;
 
     public TableKey(Type t, String n, List<String> c) {
         type = t;
@@ -25,12 +25,24 @@ public class TableKey {
         columns = c;
     }
 
+    public Type getType() {
+        return type;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public List<String> getColumns() {
+        return columns;
+    }
+
     @Override
     public String toString() {
-        String columnsSql = "("+columns.stream().map(MemSQLDialect::quoteIdentifier).collect(Collectors.joining(", "))+")";
-        String nameSql = name.isEmpty() ? "" : MemSQLDialect.quoteIdentifier(name);
+        String columnsSql = "(" + this.columns.stream().map(MemSQLDialect::quoteIdentifier).collect(Collectors.joining(", ")) + ")";
+        String nameSql = this.name == null || this.name.isEmpty() ? "" : MemSQLDialect.quoteIdentifier(this.name);
 
-        switch(type) {
+        switch(this.type) {
             case PRIMARY:
                 return String.format("PRIMARY KEY %s%s", nameSql, columnsSql);
             case COLUMNSTORE:
