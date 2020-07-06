@@ -182,63 +182,67 @@ public class MemSQLDialect {
             return;
         }
 
-        switch(schema.type()) {
-            case INT8:
-                jGenerator.writeNumber((byte) value);
-                break;
-            case INT16:
-                jGenerator.writeNumber((short) value);
-                break;
-            case INT32:
-                jGenerator.writeNumber((int) value);
-                break;
-            case INT64:
-                jGenerator.writeNumber((long) value);
-                break;
-            case FLOAT32:
-                jGenerator.writeNumber((float) value);
-                break;
-            case FLOAT64:
-                jGenerator.writeNumber((double) value);
-                break;
-            case BOOLEAN:
-                jGenerator.writeBoolean((boolean) value);
-                break;
-            case BYTES:
-                jGenerator.writeBinary((byte[])value);
-                break;
-            case STRING:
-                jGenerator.writeString((String)value);
-                break;
-            case ARRAY:
-                jGenerator.writeStartArray();
-                for(Object element:(List<?>)value) {
-                    generateJSON(jGenerator, schema.valueSchema(), element);
-                }
-                jGenerator.writeEndArray();
-                break;
-            case MAP:
-                jGenerator.writeStartArray();
-                for (Map.Entry<?, ?> entry : ((Map<?,?>)value).entrySet()) {
+        try {
+            switch(schema.type()) {
+                case INT8:
+                    jGenerator.writeNumber((byte) value);
+                    break;
+                case INT16:
+                    jGenerator.writeNumber((short) value);
+                    break;
+                case INT32:
+                    jGenerator.writeNumber((int) value);
+                    break;
+                case INT64:
+                    jGenerator.writeNumber((long) value);
+                    break;
+                case FLOAT32:
+                    jGenerator.writeNumber((float) value);
+                    break;
+                case FLOAT64:
+                    jGenerator.writeNumber((double) value);
+                    break;
+                case BOOLEAN:
+                    jGenerator.writeBoolean((boolean) value);
+                    break;
+                case BYTES:
+                    jGenerator.writeBinary((byte[])value);
+                    break;
+                case STRING:
+                    jGenerator.writeString((String)value);
+                    break;
+                case ARRAY:
+                    jGenerator.writeStartArray();
+                    for(Object element:(List<?>)value) {
+                        generateJSON(jGenerator, schema.valueSchema(), element);
+                    }
+                    jGenerator.writeEndArray();
+                    break;
+                case MAP:
+                    jGenerator.writeStartArray();
+                    for (Map.Entry<?, ?> entry : ((Map<?,?>)value).entrySet()) {
+                        jGenerator.writeStartObject();
+
+                        jGenerator.writeFieldName("key");
+                        generateJSON(jGenerator, schema.keySchema(), entry.getKey());
+
+                        jGenerator.writeFieldName("value");
+                        generateJSON(jGenerator, schema.valueSchema(), entry.getValue());
+
+                        jGenerator.writeEndObject();
+                    }
+                    jGenerator.writeEndArray();
+                    break;
+                case STRUCT:
                     jGenerator.writeStartObject();
-
-                    jGenerator.writeFieldName("key");
-                    generateJSON(jGenerator, schema.keySchema(), entry.getKey());
-
-                    jGenerator.writeFieldName("value");
-                    generateJSON(jGenerator, schema.valueSchema(), entry.getValue());
-
+                    for (Field field:schema.fields()) {
+                        jGenerator.writeFieldName(field.name());
+                        generateJSON(jGenerator, field.schema(), ((Struct)value).get(field.name()));
+                    }
                     jGenerator.writeEndObject();
-                }
-                jGenerator.writeEndArray();
-                break;
-            case STRUCT:
-                jGenerator.writeStartObject();
-                for (Field field:schema.fields()) {
-                    jGenerator.writeFieldName(field.name());
-                    generateJSON(jGenerator, field.schema(), ((Struct)value).get(field.name()));
-                }
-                jGenerator.writeEndObject();
+            }
+        } catch (ClassCastException ex) {
+            throw new ConnectException(String.format("The object '%s' has an incorrect schema (%s)", value, schema.type()), ex);
         }
     }
 

@@ -5,11 +5,13 @@ import com.memsql.kafka.utils.TableKey;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
@@ -119,6 +121,15 @@ public class MemSQLDialectTest {
         } catch (Exception e) {
             log.error("", e);
             fail("Should not have thrown any exception");
+        }
+
+        try {
+            MemSQLDialect.toJSON(Schema.INT8_SCHEMA, true);
+            fail("Exception should be thrown");
+        } catch(ConnectException ex) {
+            assertEquals(ex.getLocalizedMessage(), "The object 'true' has an incorrect schema (INT8)");
+        } catch(IOException ignored) {
+            fail("ConnectException should be thrown");
         }
     }
 
