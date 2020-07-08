@@ -1,5 +1,6 @@
-package com.memsql.kafka.sink;
+package com.memsql.kafka.integration;
 
+import com.memsql.kafka.sink.MemSQLSinkConfig;
 import com.memsql.kafka.utils.DataCompression;
 import com.memsql.kafka.utils.TableKey;
 import org.apache.kafka.common.config.ConfigException;
@@ -11,7 +12,7 @@ import java.util.stream.Collectors;
 import static com.memsql.kafka.utils.ConfigHelper.getMinimalRequiredParameters;
 import static org.junit.Assert.*;
 
-public class MemSQLSinkConfigTest {
+public class MemSQLSinkConfigTest extends IntegrationBase {
 
     @Test
     public void failWithEmptyMap() {
@@ -36,6 +37,19 @@ public class MemSQLSinkConfigTest {
     }
 
     @Test
+    public void failWithWrongDdlEndpoint() {
+        try {
+            Map<String, String> props = new HashMap<>();
+            props.put(MemSQLSinkConfig.CONNECTION_DATABASE, "testDatabase");
+            props.put(MemSQLSinkConfig.DDL_ENDPOINT, "wrong_host:5506");
+            new MemSQLSinkConfig(props);
+            fail("Exception should be thrown");
+        } catch (ConfigException ex) {
+            assertEquals(ex.getLocalizedMessage(), "Could not connect to address=(host=wrong_host)(port=5506)(type=master) : wrong_host");
+        }
+    }
+
+    @Test
     public void failWithoutDatabase() {
         try {
             Map<String, String> props = new HashMap<>();
@@ -44,6 +58,18 @@ public class MemSQLSinkConfigTest {
             fail("Exception should be thrown");
         } catch (ConfigException ex) {
             assertEquals(ex.getLocalizedMessage(), "Missing required configuration \"connection.database\" which has no default value.");
+        }
+    }
+
+    @Test
+    public void failWithWrongDatabase() {
+        try {
+            Map<String, String> props = getMinimalRequiredParameters();
+            props.put(MemSQLSinkConfig.CONNECTION_DATABASE, "wrongDatabase");
+            new MemSQLSinkConfig(props);
+            fail("Exception should be thrown");
+        } catch (ConfigException ex) {
+            assertEquals(ex.getLocalizedMessage(), "Unknown database 'wrongDatabase'");
         }
     }
 
@@ -59,12 +85,27 @@ public class MemSQLSinkConfigTest {
     public void successDmlEndpointsParameter() {
         Map<String, String> props = getMinimalRequiredParameters();
         List<String> dmlEndpoints = new ArrayList<String>() {{
-            add("host1:3306");
-            add("host2");
+            add("localhost:5507");
+            add("localhost:5506");
         }};
         props.put(MemSQLSinkConfig.DML_ENDPOINTS, String.join(",", dmlEndpoints));
         MemSQLSinkConfig config = new MemSQLSinkConfig(props);
         assertEquals(config.dmlEndpoints, dmlEndpoints);
+    }
+
+    @Test
+    public void failWithWrongDmlEndpointsParameter() {
+        try {
+            Map<String, String> props = getMinimalRequiredParameters();
+            List<String> dmlEndpoints = new ArrayList<String>() {{
+                add("wrong_host:5506");
+            }};
+            props.put(MemSQLSinkConfig.DML_ENDPOINTS, String.join(",", dmlEndpoints));
+            new MemSQLSinkConfig(props);
+            fail("Exception should be thrown");
+        } catch(ConfigException ex) {
+            assertEquals(ex.getLocalizedMessage(), "Could not connect to address=(host=wrong_host)(port=5506)(type=master) : wrong_host");
+        }
     }
 
     @Test
@@ -76,18 +117,66 @@ public class MemSQLSinkConfigTest {
 
     @Test
     public void successUserParameter() {
-        Map<String, String> props = getMinimalRequiredParameters();
-        props.put(MemSQLSinkConfig.CONNECTION_USER, "testUser123");
-        MemSQLSinkConfig config = new MemSQLSinkConfig(props);
-        assertEquals(config.user, props.get(MemSQLSinkConfig.CONNECTION_USER));
+        try {
+            executeQuery("DROP USER IF EXISTS test_user");
+            executeQuery("CREATE USER test_user");
+            executeQuery("GRANT ALL PRIVILEGES ON testdb.* TO test_user");
+
+            Map<String, String> props = getMinimalRequiredParameters();
+            props.put(MemSQLSinkConfig.CONNECTION_USER, "test_user");
+            MemSQLSinkConfig config = new MemSQLSinkConfig(props);
+            assertEquals(config.user, props.get(MemSQLSinkConfig.CONNECTION_USER));
+        } catch(Exception ex) {
+            log.error("", ex);
+            fail("Should not have thrown any exception");
+        }
+    }
+
+    @Test
+    public void failWrongUserParameter() {
+        try {
+            Map<String, String> props = getMinimalRequiredParameters();
+            props.put(MemSQLSinkConfig.CONNECTION_USER, "wrong_user");
+            new MemSQLSinkConfig(props);
+            fail("Exception should be thrown");
+        } catch(Exception ex) {
+            assertEquals(ex.getLocalizedMessage(), "Access denied for user 'wrong_user'@'172.17.0.1' (using password: NO)");
+        }
     }
 
     @Test
     public void successPasswordParameter() {
-        Map<String, String> props = getMinimalRequiredParameters();
-        props.put(MemSQLSinkConfig.CONNECTION_PASSWORD, "SuPerSECRETpASSWORD123");
-        MemSQLSinkConfig config = new MemSQLSinkConfig(props);
-        assertEquals(config.password, props.get(MemSQLSinkConfig.CONNECTION_PASSWORD));
+        try {
+            executeQuery("DROP USER IF EXISTS test_user");
+            executeQuery("CREATE USER test_user IDENTIFIED BY 'SuPerSECRETpASSWORD123'");
+            executeQuery("GRANT ALL PRIVILEGES ON testdb.* TO test_user");
+
+            Map<String, String> props = getMinimalRequiredParameters();
+            props.put(MemSQLSinkConfig.CONNECTION_USER, "test_user");
+            props.put(MemSQLSinkConfig.CONNECTION_PASSWORD, "SuPerSECRETpASSWORD123");
+            MemSQLSinkConfig config = new MemSQLSinkConfig(props);
+            assertEquals(config.password, props.get(MemSQLSinkConfig.CONNECTION_PASSWORD));
+        } catch(Exception ex) {
+            log.error("", ex);
+            fail("Should not have thrown any exception");
+        }
+    }
+
+    @Test
+    public void failWrongPasswordParameter() {
+        try {
+            executeQuery("DROP USER IF EXISTS test_user");
+            executeQuery("CREATE USER test_user IDENTIFIED BY 'SuPerSECRETpASSWORD123'");
+            executeQuery("GRANT ALL PRIVILEGES ON testdb.* TO test_user");
+
+            Map<String, String> props = getMinimalRequiredParameters();
+            props.put(MemSQLSinkConfig.CONNECTION_USER, "test_user");
+            props.put(MemSQLSinkConfig.CONNECTION_PASSWORD, "wRongSuPerSECRETpASSWORD123");
+            new MemSQLSinkConfig(props);
+            fail("Exception should be thrown");
+        } catch(Exception ex) {
+            assertEquals(ex.getLocalizedMessage(), "Access denied for user 'test_user'@'172.17.0.1' (using password: YES)");
+        }
     }
 
     @Test

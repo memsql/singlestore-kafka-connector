@@ -1,12 +1,14 @@
 package com.memsql.kafka.sink;
 
 import com.memsql.kafka.utils.DataCompression;
+import com.memsql.kafka.utils.JdbcHelper;
 import com.memsql.kafka.utils.TableKey;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.config.types.Password;
 
+import java.sql.SQLException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -223,6 +225,13 @@ public class MemSQLSinkConfig extends AbstractConfig {
         this.dataCompression = getDataCompression();
         this.metadataTableAllow = getBoolean(METADATA_TABLE_ALLOW);
         this.metadataTableName = getString(METADATA_TABLE_NAME);
+
+        try {
+            JdbcHelper.getDDLConnection(this);
+            JdbcHelper.getDMLConnection(this);
+        } catch (SQLException ex) {
+            throw new ConfigException(ex.getLocalizedMessage());
+        }
     }
 
     private DataCompression getDataCompression() {
