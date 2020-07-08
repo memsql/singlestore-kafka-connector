@@ -24,7 +24,7 @@ specified before starting kafka-connect job.
 | `tableKey.<index_type>[.name]`       | Specify additional keys to add to tables created by the connector; value of this property is the comma separated list with names of the columns to apply key; <index_type> one of (`PRIMARY`, `COLUMNSTORE`, `UNIQUE`, `SHARD`, `KEY`);
 | `memsql.loadDataCompression`         | Compress data on load; one of (`GZip`, `LZ4`, `Skip`) (default: GZip)
 | `memsql.metadata.allow`              | Allows or denies the use of an additional meta-table to save the recording results (default: true)
-| `memsql.metadata.table`              | Specify the name of the table to save kafka transaction metadata (default: `kafka-connect-transaction-metadata`)
+| `memsql.metadata.table`              | Specify the name of the table to save kafka transaction metadata (default: `kafka_connect_transaction_metadata`)
 
 ### Config example
 ```
@@ -61,7 +61,7 @@ The auto-evolution of the table is not supported yet (all records should have th
 ## Exactly once delivery
 
 To achieve exactly once delivery you could set `memsql.metadata.allow` to true.
-Then `kafka-connect-transaction-metadata` table will be created.
+Then `kafka_connect_transaction_metadata` table will be created.
 This table contains an identifier, count of records, and time of each transaction.
 
 The name of this table could be overwritten with `memsql.metadata.table` option.

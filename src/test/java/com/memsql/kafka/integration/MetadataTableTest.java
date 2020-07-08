@@ -21,7 +21,7 @@ public class MetadataTableTest extends IntegrationBase {
     @Test
     public void checkValues() {
         try {
-            executeQuery("USING testdb DROP TABLE IF EXISTS `kafka-connect-transaction-metadata`");
+            executeQuery("USING testdb DROP TABLE IF EXISTS `kafka_connect_transaction_metadata`");
 
             Map<String, String> props = ConfigHelper.getMinimalRequiredParameters();
             List<SinkRecord> records = new ArrayList<>();
@@ -39,7 +39,7 @@ public class MetadataTableTest extends IntegrationBase {
             LocalDateTime end = LocalDateTime.now();
             task.stop();
 
-            ResultSet res = SQLHelper.executeQuery(new MemSQLSinkConfig(props), "USING testdb SELECT * FROM `kafka-connect-transaction-metadata`");
+            ResultSet res = SQLHelper.executeQuery(new MemSQLSinkConfig(props), "USING testdb SELECT * FROM `kafka_connect_transaction_metadata`");
             while(res.next()) {
                 LocalDateTime created = LocalDateTime.parse(res.getString("createdAt"),
                         DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.0"));

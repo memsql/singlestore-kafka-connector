@@ -248,9 +248,9 @@ public class MemSQLSinkConfigTest {
     public void successMetadataTableNameParameter() {
         Map<String, String> props = getMinimalRequiredParameters();
         MemSQLSinkConfig config = new MemSQLSinkConfig(props);
-        assertEquals(config.metadataTableName, "kafka-connect-transaction-metadata");
+        assertEquals(config.metadataTableName, "kafka_connect_transaction_metadata");
 
-        props.put(MemSQLSinkConfig.METADATA_TABLE_NAME, "kafka-connect-new-table-name");
+        props.put(MemSQLSinkConfig.METADATA_TABLE_NAME, "kafka_connect_new_table_name");
         config = new MemSQLSinkConfig(props);
         assertEquals(config.metadataTableName, props.get(MemSQLSinkConfig.METADATA_TABLE_NAME));
     }

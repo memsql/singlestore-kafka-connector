@@ -187,7 +187,7 @@ public class MemSQLSinkConfig extends AbstractConfig {
                     METADATA_TABLE_ALLOW_DISPLAY)
             .define(METADATA_TABLE_NAME,
                     ConfigDef.Type.STRING,
-                    "kafka-connect-transaction-metadata",
+                    "kafka_connect_transaction_metadata",
                     ConfigDef.Importance.LOW,
                     METADATA_TABLE_NAME_DOCS,
                     MEMSQL_GROUP,

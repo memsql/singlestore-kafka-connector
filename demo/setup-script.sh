@@ -240,7 +240,7 @@ kafka-connect-job-start() {
           "config": {
                   "connector.class":"com.memsql.kafka.MemSQLSinkConnector",
                   "tasks.max":"1",
-                  "topics":"memsql-json-songs",
+                  "topics":"memsql_json_songs",
                   "connection.ddlEndpoint" : "memsql-kafka:3306",
                   "connection.database" : "test",
                   "connection.user" : "root"
