@@ -62,7 +62,18 @@ The auto-evolution of the table is not supported yet (all records should have th
 
 To achieve exactly once delivery, set `memsql.metadata.allow` to true.
 Then `kafka_connect_transaction_metadata` table will be created.
+
 This table contains an identifier, count of records, and time of each transaction.
+The identifier consists of kafka-topic, kafka-partition and kafka-offset. This combination
+gives a unique identifier that prevents duplication of data in the MemSQL database.
+Kafka saves offsets and increases them only if the kafka-connect job succeeds.
+If the job failed, Kafka will restart the job with the same offset. This means that if the data
+were written to the database, but the operation failed, Kafka will try to write data with the same
+offset and metadata identifier prevent duplication of existing data and simply complete
+work successfully. 
+
+Data is written to the table and to the `kafka_connect_transaction_metadata` table in one transaction. 
+Because of this, if some error occurred, no data will be actually added to the database.
 
 To overwrite the name of this table, use `memsql.metadata.table` option.
 

@@ -36,7 +36,7 @@ Then start kafka-connect job with such a configuration:
     "config": {
         "connector.class":"com.memsql.kafka.MemSQLSinkConnector",
         "tasks.max":"1",
-        "topics":"memsql-json-songs",
+        "topics":"memsql_json_songs",
         "connection.ddlEndpoint" : "memsql-kafka:3306",
         "connection.database" : "test",
         "connection.user" : "root"
@@ -44,12 +44,12 @@ Then start kafka-connect job with such a configuration:
  }
 ```
 
-This job will read `memsql-json-songs` topic 
-and then write all records to MemSQL `test.memsql-json-songs` table
+This job will read `memsql_json_songs` topic 
+and then write all records to MemSQL `test.memsql_json_songs` table
 
 ## Ingest data
 
-To ingest some data to `memsql-json-songs` topic you can execute `ingest-data.sh` script, 
+To ingest some data to `memsql_json_songs` topic you can execute `ingest-data.sh` script, 
 which will add some example data to kafka.
 
 ```
@@ -64,5 +64,5 @@ memsql
 
 use test;
 show tables;
-select * from `memsql-json-songs`;
+select * from memsql_json_songs;
 ```
