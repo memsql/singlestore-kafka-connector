@@ -60,11 +60,11 @@ The auto-evolution of the table is not supported yet (all records should have th
 
 ## Exactly once delivery
 
-To achieve exactly once delivery you could set `memsql.metadata.allow` to true.
+To achieve exactly once delivery, set `memsql.metadata.allow` to true.
 Then `kafka_connect_transaction_metadata` table will be created.
 This table contains an identifier, count of records, and time of each transaction.
 
-The name of this table could be overwritten with `memsql.metadata.table` option.
+To overwrite the name of this table, use `memsql.metadata.table` option.
 
 ## Data Types
 
@@ -87,7 +87,7 @@ The name of this table could be overwritten with `memsql.metadata.table` option.
 
 ## Table keys
 
-To be able to add some column as a key in MemSQL you could use `tableKey` parameter like this:
+To add some column as a key in MemSQL, use `tableKey` parameter like this:
 
 Suppose you have an entity
 ```
@@ -97,7 +97,7 @@ Suppose you have an entity
 }
 ```
 
-and you want to add `id` column as a `PRIMARY KEY` to your MemSQL table. Then you could add
+and you want to add `id` column as a `PRIMARY KEY` to your MemSQL table. Then add
 `"tableKey.primary": "id"` to your configuration. It will create such query during creating a table:
 ```
     CREATE TABLE IF NOT EXISTS `table` (
