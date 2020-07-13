@@ -85,24 +85,13 @@ public class MemSQLSinkConfig extends AbstractConfig {
                     DDL_ENDPOINT_DISPLAY
             )
             .define(
-                    DML_ENDPOINTS,
-                    ConfigDef.Type.LIST,
-                    null,
-                    ConfigDef.Importance.MEDIUM,
-                    DML_ENDPOINTS_DOC,
-                    CONNECTION_GROUP,
-                    2,
-                    ConfigDef.Width.LONG,
-                    DML_ENDPOINTS_DISPLAY
-            )
-            .define(
                     CONNECTION_DATABASE,
                     ConfigDef.Type.STRING,
                     ConfigDef.NO_DEFAULT_VALUE,
                     ConfigDef.Importance.HIGH,
                     CONNECTION_DATABASE_DOC,
                     CONNECTION_GROUP,
-                    3,
+                    2,
                     ConfigDef.Width.MEDIUM,
                     CONNECTION_DATABASE_DISPLAY
             )
@@ -113,7 +102,7 @@ public class MemSQLSinkConfig extends AbstractConfig {
                     ConfigDef.Importance.HIGH,
                     CONNECTION_USER_DOC,
                     CONNECTION_GROUP,
-                    4,
+                    3,
                     ConfigDef.Width.MEDIUM,
                     CONNECTION_USER_DISPLAY
             )
@@ -124,9 +113,20 @@ public class MemSQLSinkConfig extends AbstractConfig {
                     ConfigDef.Importance.HIGH,
                     CONNECTION_PASSWORD_DOC,
                     CONNECTION_GROUP,
-                    5,
+                    4,
                     ConfigDef.Width.MEDIUM,
                     CONNECTION_PASSWORD_DISPLAY
+            )
+            .define(
+                    DML_ENDPOINTS,
+                    ConfigDef.Type.LIST,
+                    null,
+                    ConfigDef.Importance.MEDIUM,
+                    DML_ENDPOINTS_DOC,
+                    CONNECTION_GROUP,
+                    5,
+                    ConfigDef.Width.LONG,
+                    DML_ENDPOINTS_DISPLAY
             )
             .define(
                     SQL_PARAMETERS,
@@ -169,22 +169,13 @@ public class MemSQLSinkConfig extends AbstractConfig {
                     2,
                     ConfigDef.Width.MEDIUM,
                     RETRY_BACKOFF_MS_DISPLAY)
-            .define(LOAD_DATA_COMPRESSION,
-                    ConfigDef.Type.STRING,
-                    "GZip",
-                    ConfigDef.Importance.LOW,
-                    LOAD_DATA_COMPRESSION_DOC,
-                    MEMSQL_GROUP,
-                    1,
-                    ConfigDef.Width.MEDIUM,
-                    LOAD_DATA_COMPRESSION_DISPLAY)
             .define(METADATA_TABLE_ALLOW,
                     ConfigDef.Type.BOOLEAN,
                     true,
                     ConfigDef.Importance.MEDIUM,
                     METADATA_TABLE_ALLOW_DOCS,
                     MEMSQL_GROUP,
-                    2,
+                    1,
                     ConfigDef.Width.MEDIUM,
                     METADATA_TABLE_ALLOW_DISPLAY)
             .define(METADATA_TABLE_NAME,
@@ -193,10 +184,19 @@ public class MemSQLSinkConfig extends AbstractConfig {
                     ConfigDef.Importance.LOW,
                     METADATA_TABLE_NAME_DOCS,
                     MEMSQL_GROUP,
-                    3,
+                    2,
                     ConfigDef.Width.MEDIUM,
                     METADATA_TABLE_NAME_DISPLAY,
-                    Collections.singletonList(METADATA_TABLE_ALLOW));
+                    Collections.singletonList(METADATA_TABLE_ALLOW))
+            .define(LOAD_DATA_COMPRESSION,
+                    ConfigDef.Type.STRING,
+                    "GZip",
+                    ConfigDef.Importance.LOW,
+                    LOAD_DATA_COMPRESSION_DOC,
+                    MEMSQL_GROUP,
+                    3,
+                    ConfigDef.Width.MEDIUM,
+                    LOAD_DATA_COMPRESSION_DISPLAY);
 
     public final String ddlEndpoint;
     public final List<String> dmlEndpoints;
