@@ -32,6 +32,10 @@ public class MemSQLSinkTask extends SinkTask {
     public void put(Collection<SinkRecord> records) {
         if (!records.isEmpty()) {
             SinkRecord first = records.iterator().next();
+            if (first.valueSchema() == null) {
+                log.error("No value schema was provided for the data record: {}", first);
+                throw new ConnectException(String.format("No value schema was provided for the data record: %s", first.toString()));
+            }
             log.debug(
                     "Received {} records. First record kafka coordinates:({}-{}-{}). Writing them to the "
                             + "database",
@@ -50,6 +54,7 @@ public class MemSQLSinkTask extends SinkTask {
                 }
 
                 if (this.retriesLeft == 0) {
+                    log.error(sqlExceptions);
                     throw new ConnectException(new SQLException(sqlExceptions));
                 }
                 this.retriesLeft -= 1;

@@ -25,11 +25,12 @@ public class BenchmarkTest {
         MemSQLSinkConfig config = new MemSQLSinkConfig(props);
         MemSQLDbWriter writer = new MemSQLDbWriter(config);
 
-        List<SinkRecord> records = SinkRecordCreator.createRecords(1000000);
+        int numberOfRecords = 1000000;
+        List<SinkRecord> records = SinkRecordCreator.createRecords(numberOfRecords);
 
         long startTime = System.nanoTime();
         writer.write(records);
-        System.out.println("Time:  " + (System.nanoTime() - startTime));
+        System.out.println(String.format("Time to write %s records: %s ns", numberOfRecords, (System.nanoTime() - startTime)));
     }
 
     @Ignore

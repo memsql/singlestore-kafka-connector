@@ -6,6 +6,8 @@
 MemSQL Kafka Connector is a [kafka-connector](http://kafka.apache.org/documentation.html#connect)
 for loading data from Kafka to MemSQL.
 
+Quickstart guide can be found [here](https://github.com/memsql/memsql-kafka-connector/blob/master/demo/README.md)
+
 ## Configuration
 
 The `memsql-kafka-connector` is configurable via property file that should be

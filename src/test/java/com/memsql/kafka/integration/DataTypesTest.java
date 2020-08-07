@@ -268,7 +268,6 @@ public class DataTypesTest extends IntegrationBase {
                     .field("data", schema)
                     .build();
 
-
             Map<String, String> props = new HashMap<>();
             List<SinkRecord> records = new ArrayList<>();
             records.add(createRecord(mainSchema,
