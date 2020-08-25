@@ -6,7 +6,7 @@
     <artifactId>memsql-kafka-connector</artifactId>
 
     <name>memsql-kafka-connector</name>
-    <version>0.0.1-beta1</version>
+    <version>1.0.0</version>
     <description>
         The official MemSQL connector for Kafka Confluent Connect.
     </description>
@@ -50,7 +50,7 @@
         <url>git://git@github.com:memsql/memsql-kafka-connector.git</url>
         <connection>scm:git:git@github.com:memsql/memsql-kafka-connector.git</connection>
         <developerConnection>scm:git:git@github.com:memsql/memsql-kafka-connector.git</developerConnection>
-        <tag>memsql-kafka-connector-0.0.1-beta1</tag>
+        <tag>memsql-kafka-connector-1.0.0</tag>
     </scm>
 
     <dependencies>

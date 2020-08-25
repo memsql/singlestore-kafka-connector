@@ -1,5 +1,5 @@
 # MemSQL Kafka Connector
-## Version: 0.0.1-beta1 [![Continuous Integration](https://circleci.com/gh/memsql/memsql-kafka-connector/tree/master.svg?style=shield)](https://circleci.com/gh/memsql/memsql-kafka-connector) [![License](http://img.shields.io/:license-Apache%202-brightgreen.svg)](http://www.apache.org/licenses/LICENSE-2.0.txt)
+## Version: 1.0.0 [![Continuous Integration](https://circleci.com/gh/memsql/memsql-kafka-connector/tree/master.svg?style=shield)](https://circleci.com/gh/memsql/memsql-kafka-connector) [![License](http://img.shields.io/:license-Apache%202-brightgreen.svg)](http://www.apache.org/licenses/LICENSE-2.0.txt)
 
 ## Getting Started
 
@@ -72,9 +72,9 @@ Kafka saves offsets and increases them only if the kafka-connect job succeeds.
 If the job failed, Kafka will restart the job with the same offset. This means that if the data
 were written to the database, but the operation failed, Kafka will try to write data with the same
 offset and metadata identifier prevent duplication of existing data and simply complete
-work successfully. 
+work successfully.
 
-Data is written to the table and to the `kafka_connect_transaction_metadata` table in one transaction. 
+Data is written to the table and to the `kafka_connect_transaction_metadata` table in one transaction.
 Because of this, if some error occurred, no data will be actually added to the database.
 
 To overwrite the name of this table, use `memsql.metadata.table` option.
