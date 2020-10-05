@@ -53,6 +53,10 @@ public class JdbcHelper {
         }
     }
 
+    public static String getTableName(String topic, MemSQLSinkConfig config) {
+        return config.topicToTableMap.getOrDefault(topic, topic);
+    }
+
     private static void createTable(Connection connection, String table, Schema schema, List<TableKey> keys) throws SQLException {
         createTable(connection, table, MemSQLDialect.getSchemaForCrateTableQuery(schema, keys));
     }

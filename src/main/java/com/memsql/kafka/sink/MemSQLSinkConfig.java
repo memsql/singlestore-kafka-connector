@@ -70,6 +70,10 @@ public class MemSQLSinkConfig extends AbstractConfig {
                                                             "(default: `kafka-connect-transaction-metadata`)";
     private static final String METADATA_TABLE_NAME_DISPLAY = "Metadata table name";
 
+    public static final String TABLE_NAME = "memsql.tableName.<topicName>";
+    private static final String TABLE_NAME_DOC = "Specify a mapping between Kafka topic name and Memsql table name";
+    private static final String TABLE_NAME_DISPLAY = "Memsql table name specifying";
+
     private static final ConfigDef.Range NON_NEGATIVE_INT_VALIDATOR = ConfigDef.Range.atLeast(0);
 
     public static final ConfigDef CONFIG_DEF = new ConfigDef()
@@ -196,7 +200,16 @@ public class MemSQLSinkConfig extends AbstractConfig {
                     MEMSQL_GROUP,
                     3,
                     ConfigDef.Width.MEDIUM,
-                    LOAD_DATA_COMPRESSION_DISPLAY);
+                    LOAD_DATA_COMPRESSION_DISPLAY)
+            .define(TABLE_NAME,
+                    ConfigDef.Type.STRING,
+                    null,
+                    ConfigDef.Importance.LOW,
+                    TABLE_NAME_DOC,
+                    MEMSQL_GROUP,
+                    4,
+                    ConfigDef.Width.MEDIUM,
+                    TABLE_NAME_DISPLAY);
 
     public final String ddlEndpoint;
     public final List<String> dmlEndpoints;
@@ -210,6 +223,7 @@ public class MemSQLSinkConfig extends AbstractConfig {
     public final DataCompression dataCompression;
     public final boolean metadataTableAllow;
     public final String metadataTableName;
+    public final Map<String, String> topicToTableMap;
 
     public MemSQLSinkConfig(Map<String, String> props) {
         super(CONFIG_DEF, props);
@@ -225,6 +239,7 @@ public class MemSQLSinkConfig extends AbstractConfig {
         this.dataCompression = getDataCompression();
         this.metadataTableAllow = getBoolean(METADATA_TABLE_ALLOW);
         this.metadataTableName = getString(METADATA_TABLE_NAME);
+        this.topicToTableMap = getTopicToTableMap(props);
 
         try {
             JdbcHelper.getDDLConnection(this);
@@ -240,6 +255,15 @@ public class MemSQLSinkConfig extends AbstractConfig {
         } catch (IllegalArgumentException ex) {
             throw new ConfigException("Configuration \"memsql.loadDataCompression\" is wrong. Available options: Gzip, LZ4, Skip");
         }
+    }
+
+    private Map<String, String> getTopicToTableMap(Map<String, String> props) {
+        Map<String, String> topicToTableMap = new HashMap<>();
+        String tablePrefix = "memsql.tableName.";
+        props.keySet().stream()
+                .filter(key -> key.startsWith(tablePrefix))
+                .forEach(key -> topicToTableMap.put(key.substring(tablePrefix.length()), props.get(key)));
+        return topicToTableMap;
     }
 
     private Map<String, String> getSqlParams(Map<String, String> props) {

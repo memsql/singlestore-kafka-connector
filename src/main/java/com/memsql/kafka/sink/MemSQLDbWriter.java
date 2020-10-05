@@ -30,7 +30,7 @@ public class MemSQLDbWriter {
 
     public void write(Collection<SinkRecord> records) throws SQLException {
         SinkRecord first = records.iterator().next();
-        String table = first.topic();
+        String table = JdbcHelper.getTableName(first.topic(), config);
 
         JdbcHelper.createTableIfNeeded(config, table, first.valueSchema());
         try (PipedOutputStream baseStream  = new PipedOutputStream();

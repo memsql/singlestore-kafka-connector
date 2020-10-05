@@ -13,20 +13,21 @@ Quickstart guide can be found [here](https://github.com/memsql/memsql-kafka-conn
 The `memsql-kafka-connector` is configurable via property file that should be
 specified before starting kafka-connect job.
 
-| Option                               | Description
-| -                                    | -
-| `connection.ddlEndpoint`  (required) | Hostname or IP address of the MemSQL Master Aggregator in the format `host[:port]` (port is optional). Ex. `master-agg.foo.internal:3308` or `master-agg.foo.internal`
-| `connection.dmlEndpoints`            | Hostname or IP address of MemSQL Aggregator nodes to run queries against in the format `host[:port],host[:port],...` (port is optional, multiple hosts separated by comma). Ex. `child-agg:3308,child-agg2` (default: `ddlEndpoint`)
-| `connection.database`     (required) | If set, all connections will default to using this database (default: empty)
-| `connection.user`                    | MemSQL username (default: `root`)
-| `connection.password`                | MemSQL password (default: no password)
-| `params.<name>`                      | Specify a specific MySQL or JDBC parameter which will be injected into the connection URI (default: empty)
-| `max.retries`                        | The maximum number of times to retry on errors before failing the task. (default: 10)
-| `retry.backoff.ms`                   | The time in milliseconds to wait following an error before a retry attempt is made. (default 3000)
-| `tableKey.<index_type>[.name]`       | Specify additional keys to add to tables created by the connector; value of this property is the comma separated list with names of the columns to apply key; <index_type> one of (`PRIMARY`, `COLUMNSTORE`, `UNIQUE`, `SHARD`, `KEY`);
-| `memsql.loadDataCompression`         | Compress data on load; one of (`GZip`, `LZ4`, `Skip`) (default: GZip)
-| `memsql.metadata.allow`              | Allows or denies the use of an additional meta-table to save the recording results (default: true)
-| `memsql.metadata.table`              | Specify the name of the table to save kafka transaction metadata (default: `kafka_connect_transaction_metadata`)
+| Option                                    | Description
+| -                                         | -
+| `connection.ddlEndpoint`  (required)      | Hostname or IP address of the MemSQL Master Aggregator in the format `host[:port]` (port is optional). Ex. `master-agg.foo.internal:3308` or `master-agg.foo.internal`
+| `connection.dmlEndpoints`                 | Hostname or IP address of MemSQL Aggregator nodes to run queries against in the format `host[:port],host[:port],...` (port is optional, multiple hosts separated by comma). Ex. `child-agg:3308,child-agg2` (default: `ddlEndpoint`)
+| `connection.database`     (required)      | If set, all connections will default to using this database (default: empty)
+| `connection.user`                         | MemSQL username (default: `root`)
+| `connection.password`                     | MemSQL password (default: no password)
+| `params.<name>`                           | Specify a specific MySQL or JDBC parameter which will be injected into the connection URI (default: empty)
+| `max.retries`                             | The maximum number of times to retry on errors before failing the task. (default: 10)
+| `retry.backoff.ms`                        | The time in milliseconds to wait following an error before a retry attempt is made. (default 3000)
+| `tableKey.<index_type>[.name]`            | Specify additional keys to add to tables created by the connector; value of this property is the comma separated list with names of the columns to apply key; <index_type> one of (`PRIMARY`, `COLUMNSTORE`, `UNIQUE`, `SHARD`, `KEY`);
+| `memsql.loadDataCompression`              | Compress data on load; one of (`GZip`, `LZ4`, `Skip`) (default: GZip)
+| `memsql.metadata.allow`                   | Allows or denies the use of an additional meta-table to save the recording results (default: true)
+| `memsql.metadata.table`                   | Specify the name of the table to save kafka transaction metadata (default: `kafka_connect_transaction_metadata`)
+| `memsql.tableName.<topicName>=<tableName>`| Specify an explicit table name to use for the specified topic
 
 ### Config example
 ```
@@ -44,7 +45,8 @@ specified before starting kafka-connect job.
         "params.ssl" : "false",
         "tableKey.primary.keyName" : "id",
         "tableKey.key.keyName" : "`col1`, col2, `col3`",
-        "memsql.loadDataCompression" : "LZ4"
+        "memsql.loadDataCompression" : "LZ4",
+        "memsql.tableName.kafka-topic-example" : "memsql-table-name"
     }
 }
 ```
@@ -127,6 +129,35 @@ You can also specify the name of a key by providing it like this
         `name` TEXT NOT NULL,
         PRIMARY KEY `someName`(`id`)
     )
+```
+
+## Table names
+
+By default the `memsql-kafka-connector` maps data from topics into MemSQL tables by matching the topic name to the table name.
+For example, if the kafka topic is called `kafka-example-topic` then the `memsql-kafka-connector` will load it into the MemSQL 
+table called `kafka-example-topic` (the table will be created if it doesn't already exist).
+
+To specify a custom table name, you can use the `memsql.tableName.<topicName>` parameter.
+
+```
+{
+    ...
+    "memsql.tableName.foo" : "bar",
+    ...
+}
+```
+
+In this example, data from the kafka topic `foo` will be written to the MemSQL table called `bar`.
+
+You can use this method to specify custom table names for multiple topics:
+
+```
+{
+    ...
+    "memsql.tableName.kafka-example-topic-1" : "memsql-table-name-1",
+    "memsql.tableName.kafka-example-topic-2" : "memsql-table-name-2",
+    ...
+}
 ```
 
 ## Setting up development environment
