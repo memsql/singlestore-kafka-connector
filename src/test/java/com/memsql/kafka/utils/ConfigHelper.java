@@ -11,6 +11,7 @@ public class ConfigHelper {
         return new HashMap<String, String>() {{
             put(MemSQLSinkConfig.DDL_ENDPOINT, "localhost:5506");
             put(MemSQLSinkConfig.CONNECTION_DATABASE, "testdb");
+            put(MemSQLSinkConfig.CONNECTION_PASSWORD, System.getenv("MEMSQL_PASSWORD"));
         }};
     }
 }

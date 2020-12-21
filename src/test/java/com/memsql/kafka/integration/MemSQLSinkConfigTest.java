@@ -123,6 +123,7 @@ public class MemSQLSinkConfigTest extends IntegrationBase {
             executeQuery("GRANT ALL PRIVILEGES ON testdb.* TO test_user");
 
             Map<String, String> props = getMinimalRequiredParameters();
+            props.remove(MemSQLSinkConfig.CONNECTION_PASSWORD);
             props.put(MemSQLSinkConfig.CONNECTION_USER, "test_user");
             MemSQLSinkConfig config = new MemSQLSinkConfig(props);
             assertEquals(config.user, props.get(MemSQLSinkConfig.CONNECTION_USER));
@@ -140,7 +141,7 @@ public class MemSQLSinkConfigTest extends IntegrationBase {
             new MemSQLSinkConfig(props);
             fail("Exception should be thrown");
         } catch(Exception ex) {
-            assertEquals(ex.getLocalizedMessage(), "Access denied for user 'wrong_user'@'172.17.0.1' (using password: NO)");
+            assertTrue(ex.getLocalizedMessage().startsWith("Access denied for user 'wrong_user'@'172.17.0.1'"));
         }
     }
 

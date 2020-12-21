@@ -21,16 +21,28 @@ jobs:
     parameters:
       memsql_image:
         type: string
+      memsql_password:
+        type: string
+      machine_class:
+        type: string
     working_directory: ~/memsql-kafka-connector
     machine: true
+    resource_class: << parameters.machine_class >>
     environment:
       MEMSQL_IMAGE: << parameters.memsql_image >>
+      MEMSQL_PASSWORD: << parameters.memsql_password >>
     steps:
       - setup_environment
       - checkout
       - run:
           name: Setup test cluster
-          command: ./scripts/ensure-test-memsql-cluster.sh
+          command: |
+            if [ "$MEMSQL_PASSWORD" = "" ]
+            then
+              ./scripts/ensure-test-memsql-cluster.sh
+            else
+              ./scripts/ensure-test-memsql-cluster-password.sh
+            fi
       - restore_cache: # restore the saved cache after the first run or if `pom.xml` has changed
           # Read about caching dependencies: https://circleci.com/docs/2.0/caching/
           key: memsql-kafka-connector-{{ checksum "pom.xml" }}
@@ -79,10 +91,27 @@ workflows:
               only: /^v.*/
           matrix:
             parameters:
+              machine_class:
+                - medium
+              memsql_password:
+                - ""
               memsql_image:
                 - memsql/cluster-in-a-box:centos-7.0.15-619d118712-1.9.5-1.5.0
                 - memsql/cluster-in-a-box:centos-6.8.15-029542cbf3-1.9.3-1.4.1
                 - memsql/cluster-in-a-box:6.7.18-db1caffe94-1.6.1-1.1.1
+      - test:
+          filters:
+            tags:
+              only: /^v.*/
+          matrix:
+            parameters:
+              machine_class:
+                - large
+              memsql_password:
+                - password
+              memsql_image:
+                - memsql/cluster-in-a-box:centos-7.3.2-a364d4b31f-3.0.0-1.9.3
+                - memsql/cluster-in-a-box:centos-7.1.13-11ddea2a3a-3.0.0-1.9.3
   publish:
     jobs:
       - approve-publish:
