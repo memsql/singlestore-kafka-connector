@@ -141,10 +141,7 @@ public class MemSQLSinkConfigTest extends IntegrationBase {
             new MemSQLSinkConfig(props);
             fail("Exception should be thrown");
         } catch(Exception ex) {
-            if (System.getenv("MEMSQL_PASSWORD") != null)
-                assertEquals(ex.getLocalizedMessage(), "Access denied for user 'wrong_user'@'172.17.0.1' (using password: YES)");
-            else
-                assertEquals(ex.getLocalizedMessage(), "Access denied for user 'wrong_user'@'172.17.0.1' (using password: NO)");
+            assertTrue(ex.getLocalizedMessage().startsWith("Access denied for user 'wrong_user'@'172.17.0.1'"));
         }
     }
 
