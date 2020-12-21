@@ -6,6 +6,9 @@
     <option name="METHOD_NAME" value="" />
     <option name="TEST_OBJECT" value="directory" />
     <option name="PARAMETERS" value="" />
+    <envs>
+      <env name="MEMSQL_PASSWORD" value="password" />
+    </envs>
     <dir value="$PROJECT_DIR$/src/test/java/com/memsql/kafka/integration" />
     <method v="2">
       <option name="Make" enabled="true" />

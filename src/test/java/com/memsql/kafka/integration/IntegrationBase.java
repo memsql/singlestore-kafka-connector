@@ -27,7 +27,11 @@ public class IntegrationBase {
 
         Properties connProperties = new Properties();
         connProperties.put("user", "root");
-        jdbcConnection = DriverManager.getConnection("jdbc:mysql://localhost:5506",
+        String password;
+        if ((password = System.getenv("MEMSQL_PASSWORD")) != null) {
+            connProperties.put("password", password);
+        }
+        jdbcConnection = DriverManager.getConnection("jdbc:mysql://localhost:5506/memsql",
                 connProperties);
 
         // make memsql use less memory
@@ -47,6 +51,10 @@ public class IntegrationBase {
     public static void put(Map<String, String> props, List<SinkRecord> records) throws SQLException {
         props.put(MemSQLSinkConfig.DDL_ENDPOINT, "localhost:5506");
         props.put(MemSQLSinkConfig.CONNECTION_DATABASE, "testdb");
+        String password;
+        if ((password = System.getenv("MEMSQL_PASSWORD")) != null) {
+            props.put(MemSQLSinkConfig.CONNECTION_PASSWORD, password);
+        }
         props.put(MemSQLSinkConfig.METADATA_TABLE_ALLOW, "false");
 
         executeQuery(String.format("DROP TABLE IF EXISTS testdb.%s", MemSQLDialect.quoteIdentifier(records.iterator().next().topic())));
