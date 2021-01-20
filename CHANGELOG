@@ -1,0 +1,7 @@
+2021-01-20 Version 1.0.1
+    * Rebranded MemSQL to SingleStore
+        !!Breaking changes:
+            1.  Before: "connector.class":"com.memsql.kafka.MemSQLSinkConnector"
+                After:  "connector.class":"com.singlestore.kafka.SingleStoreSinkConnector"
+            2.  Before: "memsql.<configName>"
+                After:  "singlestore.<configName>"
