@@ -1,6 +1,6 @@
-# Quickstart memsql-kafka-connector guide
+# Quickstart singlestore-kafka-connector guide
 
-This guide will show basic functionality of `memsql-kafka-connector`
+This guide will show basic functionality of `singlestore-kafka-connector`
 
 ## Requirements
 
@@ -8,10 +8,10 @@ This guide will show basic functionality of `memsql-kafka-connector`
 
 ## Set up environment
 
-To be able to run the setup script, you must first export your MemSQL license key as follows:
+To be able to run the setup script, you must first export your SingleStore license key as follows:
 
 ```
-export LICENSE_KEY=<memsql_license_key>
+export LICENSE_KEY=<singlestore_license_key>
 ```
 
 Then run the setup script:
@@ -26,30 +26,30 @@ This script will start all the required components:
 * schema-registry 
 * kafka-rest
 * kafka-connect
-* memsql
+* singlestore
 
 Then the kafka-connect job will be launched with this configuration:
 
 ```
 {
-    "name": "memsql-sink-connector",
+    "name": "singlestore-sink-connector",
     "config": {
-        "connector.class":"com.memsql.kafka.MemSQLSinkConnector",
+        "connector.class":"com.singlestore.kafka.SingleStoreSinkConnector",
         "tasks.max":"1",
-        "topics":"memsql_json_songs",
-        "connection.ddlEndpoint" : "memsql-kafka:3306",
+        "topics":"singlestore_json_songs",
+        "connection.ddlEndpoint" : "singlestore-kafka:3306",
         "connection.database" : "test",
         "connection.user" : "root"
     }
  }
 ```
 
-This job will read `memsql_json_songs` topic 
-and then write all records to MemSQL `test.memsql_json_songs` table
+This job will read `singlestore_json_songs` topic 
+and then write all records to SingleStore `test.singlestore_json_songs` table
 
 ## Ingest data
 
-To ingest some data to `memsql_json_songs` topic you can execute `ingest-data.sh` script, 
+To ingest some data to `singlestore_json_songs` topic you can execute `ingest-data.sh` script, 
 which will add some sample data to kafka.
 
 ```
@@ -59,10 +59,10 @@ which will add some sample data to kafka.
 After that, you will see that the data has been added to the database.
 
 ```
-docker exec -it memsql-kafka bash
+docker exec -it singlestore-kafka bash
 memsql
 
 use test;
 show tables;
-select * from memsql_json_songs;
+select * from singlestore_json_songs;
 ```

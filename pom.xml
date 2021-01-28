@@ -2,15 +2,15 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.memsql</groupId>
-    <artifactId>memsql-kafka-connector</artifactId>
+    <groupId>com.singlestore</groupId>
+    <artifactId>singlestore-kafka-connector</artifactId>
 
-    <name>memsql-kafka-connector</name>
-    <version>1.0.0</version>
+    <name>singlestore-kafka-connector</name>
+    <version>1.0.1</version>
     <description>
-        The official MemSQL connector for Kafka Confluent Connect.
+        The official SingleStore connector for Kafka Confluent Connect.
     </description>
-    <url>https://github.com/memsql/memsql-kafka-connector</url>
+    <url>https://github.com/memsql/singlestore-kafka-connector</url>
 
     <licenses>
         <license>
@@ -22,11 +22,11 @@
 
     <developers>
         <developer>
-            <id>memsql</id>
-            <name>MemSQL</name>
-            <email>team@memsql.com</email>
-            <organization>MemSQL</organization>
-            <organizationUrl>https://www.memsql.com/</organizationUrl>
+            <id>singlestore</id>
+            <name>SingleStore</name>
+            <email>team@singlestore.com</email>
+            <organization>SingleStore</organization>
+            <organizationUrl>https://www.singlestore.com/</organizationUrl>
         </developer>
     </developers>
 
@@ -47,10 +47,10 @@
     </properties>
 
     <scm>
-        <url>git://git@github.com:memsql/memsql-kafka-connector.git</url>
-        <connection>scm:git:git@github.com:memsql/memsql-kafka-connector.git</connection>
-        <developerConnection>scm:git:git@github.com:memsql/memsql-kafka-connector.git</developerConnection>
-        <tag>memsql-kafka-connector-1.0.0</tag>
+        <url>git://git@github.com:memsql/singlestore-kafka-connector.git</url>
+        <connection>scm:git:git@github.com:memsql/singlestore-kafka-connector.git</connection>
+        <developerConnection>scm:git:git@github.com:memsql/singlestore-kafka-connector.git</developerConnection>
+        <tag>singlestore-kafka-connector-1.0.1</tag>
     </scm>
 
     <dependencies>
@@ -127,21 +127,21 @@
                             <goal>kafka-connect</goal>
                         </goals>
                         <configuration>
-                            <title>MemSQL Kafka Connector</title>
+                            <title>SingleStore Kafka Connector</title>
                             <description>
-                                The MemSQL sink connector allow you to exchange data from Kafka to MemSQL.
+                                The SingleStore sink connector allow you to exchange data from Kafka to SingleStore.
                             </description>
                             <logo>logos/memsql.png</logo>
 
-                            <supportProviderName>MemSQL, Inc.</supportProviderName>
+                            <supportProviderName>SingleStore, Inc.</supportProviderName>
 
-                            <ownerUsername>memsql</ownerUsername>
+                            <ownerUsername>singlestore</ownerUsername>
                             <ownerType>organization</ownerType>
-                            <ownerName>MemSQL, Inc.</ownerName>
+                            <ownerName>SingleStore, Inc.</ownerName>
                             <ownerLogo>logos/memsql.png</ownerLogo>
 
-                            <dockerNamespace>memsql</dockerNamespace>
-                            <dockerName>memsql-kafka-connector</dockerName>
+                            <dockerNamespace>singlestore</dockerNamespace>
+                            <dockerName>singlestore-kafka-connector</dockerName>
                             <dockerTag>${project.version}</dockerTag>
 
                             <componentTypes>
@@ -149,6 +149,7 @@
                             </componentTypes>
 
                             <tags>
+                                <tag>singlestore</tag>
                                 <tag>memsql</tag>
                                 <tag>database</tag>
                                 <tag>dbms</tag>
