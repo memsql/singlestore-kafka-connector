@@ -166,8 +166,8 @@ docker run \
     -v /tmp/quickstart/connect:/tmp/quickstart/connect \
     singlestore-kafka-connect \
     tail -f /dev/null >/dev/null 2>/dev/null
-docker exec singlestore-kafka-connect cp /home/app/target/singlestore-kafka-connector-1.0.0.jar /tmp/quickstart/connect
-docker cp /tmp/quickstart/connect/singlestore-kafka-connector-1.0.0.jar kafka-connect:/usr/share/java/kafka
+docker exec singlestore-kafka-connect cp /home/app/target/singlestore-kafka-connector-1.0.1.jar /tmp/quickstart/connect
+docker cp /tmp/quickstart/connect/singlestore-kafka-connector-1.0.1.jar kafka-connect:/usr/share/java/kafka
 docker stop singlestore-kafka-connect >/dev/null 2>/dev/null
 echo ". Success!"
 
@@ -176,6 +176,7 @@ singlestore-start() {
   docker run -i --init \
     --name singlestore-kafka \
     -e LICENSE_KEY="$LICENSE_KEY" \
+    -e ROOT_PASSWORD=root \
     -p 3306:3306 \
     --net=confluent \
     memsql/cluster-in-a-box >/dev/null
@@ -202,7 +203,7 @@ singlestore-start
 singlestore-wait-start() {
   echo -n "Waiting for SingleStore to start..."
   while true; do
-      if docker exec singlestore-kafka memsql -e "select 1" >/dev/null 2>/dev/null; then
+      if docker exec singlestore-kafka memsql -u root -proot -e "select 1" >/dev/null 2>/dev/null; then
           break
       fi
       echo -n "."
@@ -214,7 +215,7 @@ singlestore-wait-start() {
 singlestore-wait-start
 
 echo -n "Creating 'test' SingleStore database..."
-docker exec singlestore-kafka memsql -u root -e "create database if not exists test;"
+docker exec singlestore-kafka memsql -u root -proot -e "create database if not exists test;"
 echo ". Success!"
 
 kafka-connect-wait-start() {
@@ -243,7 +244,8 @@ kafka-connect-job-start() {
                   "topics":"singlestore_json_songs",
                   "connection.ddlEndpoint" : "singlestore-kafka:3306",
                   "connection.database" : "test",
-                  "connection.user" : "root"
+                  "connection.user" : "root",
+                  "connection.password" : "root"
           }
     }' \
     http://kafka-connect:8082/connectors >/dev/null 2>/dev/null

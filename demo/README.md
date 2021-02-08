@@ -26,7 +26,7 @@ This script will start all the required components:
 * schema-registry 
 * kafka-rest
 * kafka-connect
-* singlestore
+* singlestore (with user `root` and password `root`)
 
 Then the kafka-connect job will be launched with this configuration:
 
@@ -60,7 +60,7 @@ After that, you will see that the data has been added to the database.
 
 ```
 docker exec -it singlestore-kafka bash
-memsql
+memsql -u root -proot
 
 use test;
 show tables;
