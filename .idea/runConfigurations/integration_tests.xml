@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="integration-tests" type="JUnit" factoryName="JUnit">
-    <module name="memsql-kafka-connector" />
+    <module name="singlestore-kafka-connector" />
     <useClassPathOnly />
     <option name="MAIN_CLASS_NAME" value="" />
     <option name="METHOD_NAME" value="" />
@@ -9,7 +9,7 @@
     <envs>
       <env name="MEMSQL_PASSWORD" value="password" />
     </envs>
-    <dir value="$PROJECT_DIR$/src/test/java/com/memsql/kafka/integration" />
+    <dir value="$PROJECT_DIR$/src/test/java/com/singlestore/kafka/integration" />
     <method v="2">
       <option name="Make" enabled="true" />
     </method>
