@@ -14,7 +14,6 @@ import org.junit.Test;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
-import java.util.concurrent.ExecutionException;
 
 import static com.singlestore.kafka.utils.SinkRecordCreator.createRecord;
 import static org.junit.Assert.fail;

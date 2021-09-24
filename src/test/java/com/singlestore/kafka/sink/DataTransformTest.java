@@ -7,6 +7,7 @@ import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.util.*;
 
@@ -23,6 +24,12 @@ public class DataTransformTest {
         SinkRecord record2 = createRecord(schema, new Struct(schema).put("id", 2).put("age", 30).put("name", "Mary").put("job", "teacher"), "topic");
 
         records = Arrays.asList(record1, record2);
+    }
+
+    @Test
+    public void EmptyCollection() {
+        Collection<SinkRecord> updatedRecords = new DataTransform(Arrays.asList("age", "name", "nonexisting")).selectWhitelistedFields(new ArrayList<>());
+        assertEquals(updatedRecords.size(), 0);
     }
 
     @Test

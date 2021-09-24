@@ -18,7 +18,7 @@ public class DataTransform {
     }
 
     public Collection<SinkRecord> selectWhitelistedFields(Collection<SinkRecord> records) {
-        if (this.fieldsWhitelist.size() == 0) {
+        if (this.fieldsWhitelist.size() == 0 || records.size() == 0) {
             return records;
         }
 

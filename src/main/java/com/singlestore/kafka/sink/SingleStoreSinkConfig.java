@@ -51,7 +51,7 @@ public class SingleStoreSinkConfig extends AbstractConfig {
     private static final String TABLE_KEY_DISPLAY = "Table key";
 
     public static final String FIELDS_WHITELIST = "fields.whitelist";
-    private static final String FIELDS_WHITELIST_DOCS = "Specify only part of the fields to be inserted to the database. By default all keys will be used; value of this property is the comma separated list with names of the columns`)";
+    private static final String FIELDS_WHITELIST_DOCS = "Specify fields to be inserted to the database. By default all keys will be used; value of this property is the comma separated list with names of the columns`)";
     private static final String FIELDS_WHITELIST_DISPLAY = "Fields whitelist";
 
     public static final String MAX_RETRIES = "max.retries";
