@@ -108,7 +108,7 @@ public class EscapingTest extends IntegrationBase {
     }
 
     @Test
-    public void isRefereceTable() {
+    public void isReferenceTable() {
         try {
             assertFalse(JdbcHelper.isReferenceTable(conf, weirdName));
             assertFalse(JdbcHelper.isReferenceTable(conf, weirdMetadataName));

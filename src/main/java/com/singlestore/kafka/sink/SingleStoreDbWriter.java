@@ -1,6 +1,7 @@
 package com.singlestore.kafka.sink;
 
 import com.singlestore.kafka.utils.DataExtension;
+import com.singlestore.kafka.utils.DataTransform;
 import com.singlestore.kafka.utils.JdbcHelper;
 
 import java.sql.PreparedStatement;
@@ -28,7 +29,8 @@ public class SingleStoreDbWriter {
         this.config = config;
     }
 
-    public void write(Collection<SinkRecord> records) throws SQLException {
+    public void write(Collection<SinkRecord> rawRecords) throws SQLException {
+        Collection<SinkRecord> records = new DataTransform(config.fieldsWhitelist).selectWhitelistedFields(rawRecords);
         SinkRecord first = records.iterator().next();
         String table = JdbcHelper.getTableName(first.topic(), config);
 

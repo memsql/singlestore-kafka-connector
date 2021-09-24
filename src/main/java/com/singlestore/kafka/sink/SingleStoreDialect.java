@@ -79,7 +79,7 @@ public class SingleStoreDialect {
         }
     }
 
-    public static String getSchemaForCrateTableQuery(Schema schema, List<TableKey> keys) {
+    public static String getSchemaForCreateTableQuery(Schema schema, List<TableKey> keys) {
         List<Field> fields;
         if (schema.type() == Schema.Type.STRUCT) {
             fields = schema.fields();

@@ -22,6 +22,7 @@ specified before starting kafka-connect job.
 | `connection.password`                          | SingleStore password (default: no password)
 | `params.<name>`                                | Specify a specific MySQL or JDBC parameter which will be injected into the connection URI (default: empty)
 | `max.retries`                                  | The maximum number of times to retry on errors before failing the task. (default: 10)
+| `fields.whitelist`                             | Specify fields to be inserted to the database. (default: all keys will be used)
 | `retry.backoff.ms`                             | The time in milliseconds to wait following an error before a retry attempt is made. (default 3000)
 | `tableKey.<index_type>[.name]`                 | Specify additional keys to add to tables created by the connector; value of this property is the comma separated list with names of the columns to apply key; <index_type> one of (`PRIMARY`, `COLUMNSTORE`, `UNIQUE`, `SHARD`, `KEY`);
 | `singlestore.loadDataCompression`              | Compress data on load; one of (`GZip`, `LZ4`, `Skip`) (default: GZip)
