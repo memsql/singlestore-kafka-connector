@@ -343,7 +343,7 @@ public class SingleStoreDialectTest {
                 new TableKey(TableKey.Type.KEY, "", Collections.singletonList("f5"))
                 ));
 
-        assertEquals(SingleStoreDialect.getSchemaForCrateTableQuery(schema, keys), "(\n" +
+        assertEquals(SingleStoreDialect.getSchemaForCreateTableQuery(schema, keys), "(\n" +
                 "`f1` TEXT NOT NULL,\n" +
                 "`f2` TEXT NOT NULL,\n" +
                 "`f3` TEXT NOT NULL,\n" +
@@ -367,7 +367,7 @@ public class SingleStoreDialectTest {
 
         List<TableKey> keys = new ArrayList<>(Collections.emptyList());
 
-        assertEquals(SingleStoreDialect.getSchemaForCrateTableQuery(schema, keys), "(\n" +
+        assertEquals(SingleStoreDialect.getSchemaForCreateTableQuery(schema, keys), "(\n" +
                 "`f1` JSON NOT NULL,\n" +
                 "`f2` TEXT NOT NULL,\n" +
                 "KEY (`f2`) USING CLUSTERED COLUMNSTORE\n" +
@@ -383,7 +383,7 @@ public class SingleStoreDialectTest {
                 new TableKey(TableKey.Type.COLUMNSTORE, "", Collections.singletonList("data"))
         ));
 
-        assertEquals(SingleStoreDialect.getSchemaForCrateTableQuery(schema, keys), "(\n" +
+        assertEquals(SingleStoreDialect.getSchemaForCreateTableQuery(schema, keys), "(\n" +
                 "`data` TEXT NOT NULL,\n" +
                 "KEY (`data`) USING CLUSTERED COLUMNSTORE\n" +
                 ")");
@@ -395,7 +395,7 @@ public class SingleStoreDialectTest {
 
         List<TableKey> keys = new ArrayList<>();
 
-        assertEquals(SingleStoreDialect.getSchemaForCrateTableQuery(schema, keys), "(\n" +
+        assertEquals(SingleStoreDialect.getSchemaForCreateTableQuery(schema, keys), "(\n" +
                 "`data` TEXT NOT NULL,\n" +
                 "KEY (`data`) USING CLUSTERED COLUMNSTORE\n" +
                 ")");

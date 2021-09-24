@@ -16,6 +16,7 @@ public class SingleStoreSinkConfig extends AbstractConfig {
     private static final String CONNECTION_GROUP = "Connection";
     private static final String RETRY_GROUP = "Retry";
     private static final String SINGLESTORE_GROUP = "SingleStore";
+    private static final String DATAMAPPING_GROUP = "Data Mapping";
 
     public static final String DDL_ENDPOINT = "connection.ddlEndpoint";
     private static final String DDL_ENDPOINT_DOC =
@@ -48,6 +49,10 @@ public class SingleStoreSinkConfig extends AbstractConfig {
     public static final String TABLE_KEY = "tableKey.<index_type>[.<name>]";
     private static final String TABLE_KEY_DOCS = "Specify additional keys to add to tables created by the connector; value of this property is the comma separated list with names of the columns to apply key; <index_type> one of (`PRIMARY`, `COLUMNSTORE`, `UNIQUE`, `SHARD`, `KEY`)";
     private static final String TABLE_KEY_DISPLAY = "Table key";
+
+    public static final String FIELDS_WHITELIST = "fields.whitelist";
+    private static final String FIELDS_WHITELIST_DOCS = "Specify only part of the fields to be inserted to the database. By default all keys will be used; value of this property is the comma separated list with names of the columns`)";
+    private static final String FIELDS_WHITELIST_DISPLAY = "Fields whitelist";
 
     public static final String MAX_RETRIES = "max.retries";
     private static final String MAX_RETRIES_DOC = "The maximum number of times to retry on errors before failing the task.";
@@ -153,6 +158,16 @@ public class SingleStoreSinkConfig extends AbstractConfig {
                     ConfigDef.Width.MEDIUM,
                     TABLE_KEY_DISPLAY
             )
+            .define(FIELDS_WHITELIST,
+                    ConfigDef.Type.LIST,
+                    null,
+                    ConfigDef.Importance.MEDIUM,
+                    FIELDS_WHITELIST_DOCS,
+                    DATAMAPPING_GROUP,
+                    1,
+                    ConfigDef.Width.MEDIUM,
+                    FIELDS_WHITELIST_DISPLAY
+            )
             .define(MAX_RETRIES,
                     ConfigDef.Type.INT,
                     10,
@@ -224,6 +239,7 @@ public class SingleStoreSinkConfig extends AbstractConfig {
     public final boolean metadataTableAllow;
     public final String metadataTableName;
     public final Map<String, String> topicToTableMap;
+    public final List<String> fieldsWhitelist;
 
     public SingleStoreSinkConfig(Map<String, String> props) {
         super(CONFIG_DEF, props);
@@ -240,6 +256,7 @@ public class SingleStoreSinkConfig extends AbstractConfig {
         this.metadataTableAllow = getBoolean(METADATA_TABLE_ALLOW);
         this.metadataTableName = getString(METADATA_TABLE_NAME);
         this.topicToTableMap = getTopicToTableMap(props);
+        this.fieldsWhitelist = getList(FIELDS_WHITELIST);
 
         try {
             JdbcHelper.getDDLConnection(this);

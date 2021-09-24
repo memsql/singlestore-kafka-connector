@@ -58,7 +58,7 @@ public class JdbcHelper {
     }
 
     private static void createTable(Connection connection, String table, Schema schema, List<TableKey> keys) throws SQLException {
-        createTable(connection, table, SingleStoreDialect.getSchemaForCrateTableQuery(schema, keys));
+        createTable(connection, table, SingleStoreDialect.getSchemaForCreateTableQuery(schema, keys));
     }
 
     private static void createTable(Connection connection, String table, String schema) throws SQLException {
