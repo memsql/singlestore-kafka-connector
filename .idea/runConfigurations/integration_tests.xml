@@ -8,6 +8,7 @@
     <option name="PARAMETERS" value="" />
     <envs>
       <env name="MEMSQL_PASSWORD" value="password" />
+      <env name="SINGLESTORE_PASSWORD" value="password" />
     </envs>
     <dir value="$PROJECT_DIR$/src/test/java/com/singlestore/kafka/integration" />
     <method v="2">
