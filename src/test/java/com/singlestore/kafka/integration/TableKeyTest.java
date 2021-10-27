@@ -47,6 +47,8 @@ public class TableKeyTest extends IntegrationBase {
             records.add(createRecord(schema, new Struct(schema).put("id", 1), "keys"));
 
             executeQuery("DROP TABLE IF EXISTS testdb.keys");
+            // This is needed because key types may mismatch for columnstore tables, please see DB-50840 and
+            // https://docs.singlestore.com/db/v7.5/en/create-your-database/physical-database-schema-design/procedures-for-physical-database-schema-design/creating-a-columnstore-table.html
             ensureTableType();
 
             SingleStoreSinkTask task = new SingleStoreSinkTask();
