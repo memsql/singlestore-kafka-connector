@@ -33,6 +33,7 @@ public class TableKeyTest extends IntegrationBase {
             records.add(createRecord(schema, new Struct(schema).put("id", 1), "keys"));
 
             executeQuery("DROP TABLE IF EXISTS testdb.keys");
+            executeQuery("SET GLOBAL default_table_type=rowstore");
 
             SingleStoreSinkTask task = new SingleStoreSinkTask();
             task.start(props);
