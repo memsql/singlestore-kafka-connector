@@ -12,6 +12,7 @@ import org.apache.kafka.connect.sink.SinkRecord;
 import org.junit.Test;
 
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -22,6 +23,19 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 public class TableKeyTest extends IntegrationBase {
+    private void ensureTableType() throws SQLException {
+        boolean supportDefaultTableTypeVariable = true;
+        try {
+            executeQuery("SELECT @@default_table_type");
+        } catch (Exception e) {
+            supportDefaultTableTypeVariable = false;
+        }
+
+        if (supportDefaultTableTypeVariable) {
+            executeQuery("SET GLOBAL default_table_type=rowstore");
+        }
+    }
+
     public void testKey(Map<String, String> keys, TableKey.Type type) {
         try {
             Map<String, String> props = ConfigHelper.getMinimalRequiredParameters();
@@ -33,7 +47,7 @@ public class TableKeyTest extends IntegrationBase {
             records.add(createRecord(schema, new Struct(schema).put("id", 1), "keys"));
 
             executeQuery("DROP TABLE IF EXISTS testdb.keys");
-            executeQuery("SET GLOBAL default_table_type=rowstore");
+            ensureTableType();
 
             SingleStoreSinkTask task = new SingleStoreSinkTask();
             task.start(props);
