@@ -23,7 +23,7 @@ import static com.singlestore.kafka.utils.SinkRecordCreator.createRecord;
 import static org.junit.Assert.*;
 
 public class EscapingTest extends IntegrationBase {
-    private static final String weirdName = "\\....1234567890,,,\\\\\t!@#$%^&*()-+=;;```~`[]{};:\"\"qwerty";
+    private static final String weirdName = "\\....1234567890,,,\\\\\t!@#$%^&*()-+=;;~[]{};:\"\"qwerty";
     private static final String weirdMetadataName = "metadata" + weirdName;
     private static final String weirdReferenceName = "ref" + weirdName;
     private static SingleStoreSinkConfig conf;

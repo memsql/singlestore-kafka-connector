@@ -9,9 +9,12 @@ import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.sink.SinkRecord;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -22,6 +25,37 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 public class TableKeyTest extends IntegrationBase {
+
+    public static String defaultTableType = "";
+
+    // This is needed because key types may mismatch for columnstore tables, please see DB-50840 and
+    // https://docs.singlestore.com/db/v7.5/en/create-your-database/physical-database-schema-design/procedures-for-physical-database-schema-design/creating-a-columnstore-table.html
+    @BeforeClass
+    public static void ensureTableType() throws SQLException {
+        boolean supportDefaultTableTypeVariable = true;
+        try {
+            ResultSet res = executeQueryWithResultSet("SELECT @@default_table_type as default_table_type");
+            res.next();
+            defaultTableType = res.getString("default_table_type");
+        } catch (Exception e) {
+            supportDefaultTableTypeVariable = false;
+        }
+
+        if (supportDefaultTableTypeVariable) {
+            executeQuery("SET GLOBAL default_table_type=rowstore");
+        }
+    }
+
+    @AfterClass
+    public static void restoreDefaultTableType() throws SQLException {
+        if (defaultTableType.isEmpty()) {
+            return;
+        }
+
+        executeQuery("SET GLOBAL default_table_type = " + defaultTableType);
+    }
+
+
     public void testKey(Map<String, String> keys, TableKey.Type type) {
         try {
             Map<String, String> props = ConfigHelper.getMinimalRequiredParameters();

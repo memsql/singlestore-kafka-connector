@@ -168,6 +168,6 @@ You can use this method to specify custom table names for multiple topics:
  * to run unit tests use the `unit-tests` run configuration
  * before running integration tests, start [MemSQL CIAB](https://hub.docker.com/r/memsql/cluster-in-a-box) cluster using one of the following run configurations:
    - `ensure-test-singlestore-cluster`
-   - `ensure-test-singlestore-cluster-6-7`
-   - `ensure-test-singlestore-cluster-6-8`
+   - `ensure-test-singlestore-cluster-7-3`
+   - `ensure-test-singlestore-cluster-7-1`
  * to run integration tests use the `integration-tests` run configuration
