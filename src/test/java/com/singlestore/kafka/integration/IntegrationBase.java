@@ -48,6 +48,13 @@ public class IntegrationBase {
         }
     }
 
+    public static ResultSet executeQueryWithResultSet(String sql) throws SQLException{
+        log.trace("Executing SQL:\n{}", sql);
+        try (Statement stmt = jdbcConnection.createStatement()) {
+            return stmt.executeQuery(sql);
+        }
+    }
+
     public static void put(Map<String, String> props, List<SinkRecord> records) throws SQLException {
         props.put(SingleStoreSinkConfig.DDL_ENDPOINT, "localhost:5506");
         props.put(SingleStoreSinkConfig.CONNECTION_DATABASE, "testdb");
