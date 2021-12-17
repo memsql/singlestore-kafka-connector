@@ -1,8 +1,8 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="ensure-test-memsql-cluster-7-3" type="ShConfigurationType" singleton="true">
+  <configuration default="false" name="setup-cluster-7-5" type="ShConfigurationType" singleton="true">
     <option name="SCRIPT_TEXT" value="" />
     <option name="INDEPENDENT_SCRIPT_PATH" value="true" />
-    <option name="SCRIPT_PATH" value="$PROJECT_DIR$/scripts/ensure-test-singlestore-cluster-73.sh" />
+    <option name="SCRIPT_PATH" value="$PROJECT_DIR$/scripts/setup-cluster-75.sh" />
     <option name="SCRIPT_OPTIONS" value="" />
     <option name="INDEPENDENT_SCRIPT_WORKING_DIRECTORY" value="true" />
     <option name="SCRIPT_WORKING_DIRECTORY" value="$PROJECT_DIR$" />

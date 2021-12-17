@@ -37,7 +37,7 @@ jobs:
       - run:
           name: Setup test cluster
           command: |
-              ./scripts/ensure-test-singlestore-cluster-password.sh
+              ./scripts/setup-cluster.sh
       - restore_cache: # restore the saved cache after the first run or if `pom.xml` has changed
           # Read about caching dependencies: https://circleci.com/docs/2.0/caching/
           key: singlestore-kafka-connector-{{ checksum "pom.xml" }}
@@ -94,6 +94,7 @@ workflows:
                 - memsql/cluster-in-a-box:centos-7.3.2-a364d4b31f-3.0.0-1.9.3
                 - memsql/cluster-in-a-box:centos-7.1.13-11ddea2a3a-3.0.0-1.9.3
                 - memsql/cluster-in-a-box:centos-7.5.12-3112a491c2-4.0.0-1.12.3
+                - memsql/cluster-in-a-box:centos-7.6.5-018454f4e3-4.0.1-1.13.0
   publish:
     jobs:
       - approve-publish:
