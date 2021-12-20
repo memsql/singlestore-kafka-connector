@@ -103,10 +103,10 @@ public class JdbcHelper {
         if (password != null) {
             connectionProps.setProperty("password", password);
         }
-        connectionProps.put("allowLoadLocalInfile", "true");
+        connectionProps.put("allowLocalInfile", "true");
         connectionProps.putAll(config.sqlParams);
         try {
-            Class.forName("org.mariadb.jdbc.Driver");
+            Class.forName("com.singlestore.jdbc.Driver");
             return DriverManager.getConnection(
                     getJDBCUrl(hosts, config.database),
                     connectionProps);
@@ -116,7 +116,7 @@ public class JdbcHelper {
     }
 
     private static String getJDBCUrl(List<String> hosts, String database) {
-        return "jdbc:mysql://" +
+        return "jdbc:singlestore://" +
                 String.join(",", hosts) +
                 "/" +
                 database;

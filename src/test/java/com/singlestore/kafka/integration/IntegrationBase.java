@@ -27,11 +27,11 @@ public class IntegrationBase {
 
         Properties connProperties = new Properties();
         connProperties.put("user", "root");
-        String password;
-        if ((password = System.getenv("SINGLESTORE_PASSWORD")) != null) {
+        String password = "1";
+        if (password != null) {
             connProperties.put("password", password);
         }
-        jdbcConnection = DriverManager.getConnection("jdbc:mysql://localhost:5506/memsql",
+        jdbcConnection = DriverManager.getConnection("jdbc:singlestore://localhost:5506/memsql",
                 connProperties);
 
         // make singlestore use less memory
@@ -58,8 +58,8 @@ public class IntegrationBase {
     public static void put(Map<String, String> props, List<SinkRecord> records) throws SQLException {
         props.put(SingleStoreSinkConfig.DDL_ENDPOINT, "localhost:5506");
         props.put(SingleStoreSinkConfig.CONNECTION_DATABASE, "testdb");
-        String password;
-        if ((password = System.getenv("SINGLESTORE_PASSWORD")) != null) {
+        String password = "1";
+        if (password != null) {
             props.put(SingleStoreSinkConfig.CONNECTION_PASSWORD, password);
         }
         props.put(SingleStoreSinkConfig.METADATA_TABLE_ALLOW, "false");
