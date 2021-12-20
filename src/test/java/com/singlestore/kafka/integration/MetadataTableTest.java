@@ -42,7 +42,7 @@ public class MetadataTableTest extends IntegrationBase {
             ResultSet res = SQLHelper.executeQuery(new SingleStoreSinkConfig(props), "USING testdb SELECT * FROM `kafka_connect_transaction_metadata`");
             while(res.next()) {
                 LocalDateTime created = LocalDateTime.parse(res.getString("createdAt"),
-                        DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.0"));
+                        DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
                 assert(start.isBefore(created));
                 assert(created.isBefore(end));
 

@@ -45,7 +45,7 @@ public class SingleStoreSinkConfigTest extends IntegrationBase {
             new SingleStoreSinkConfig(props);
             fail("Exception should be thrown");
         } catch (ConfigException ex) {
-            assertEquals(ex.getLocalizedMessage(), "Could not connect to address=(host=wrong_host)(port=5506)(type=master) : wrong_host");
+            assertEquals(ex.getLocalizedMessage(), "Socket fail to connect to host:address=(host=wrong_host)(port=5506)(type=primary). wrong_host");
         }
     }
 
@@ -69,7 +69,7 @@ public class SingleStoreSinkConfigTest extends IntegrationBase {
             new SingleStoreSinkConfig(props);
             fail("Exception should be thrown");
         } catch (ConfigException ex) {
-            assertEquals(ex.getLocalizedMessage(), "Unknown database 'wrongDatabase'");
+            assertTrue(ex.getLocalizedMessage().contains("Unknown database 'wrongDatabase'"));
         }
     }
 
@@ -104,7 +104,7 @@ public class SingleStoreSinkConfigTest extends IntegrationBase {
             new SingleStoreSinkConfig(props);
             fail("Exception should be thrown");
         } catch(ConfigException ex) {
-            assertEquals(ex.getLocalizedMessage(), "Could not connect to address=(host=wrong_host)(port=5506)(type=master) : wrong_host");
+            assertEquals(ex.getLocalizedMessage(), "Socket fail to connect to host:address=(host=wrong_host)(port=5506)(type=primary). wrong_host");
         }
     }
 
@@ -141,7 +141,7 @@ public class SingleStoreSinkConfigTest extends IntegrationBase {
             new SingleStoreSinkConfig(props);
             fail("Exception should be thrown");
         } catch(Exception ex) {
-            assertTrue(ex.getLocalizedMessage().startsWith("Access denied for user 'wrong_user'@'172.17.0.1'"));
+            assertTrue(ex.getLocalizedMessage().contains("Access denied for user 'wrong_user'@'172.17.0.1'"));
         }
     }
 
@@ -176,7 +176,7 @@ public class SingleStoreSinkConfigTest extends IntegrationBase {
             new SingleStoreSinkConfig(props);
             fail("Exception should be thrown");
         } catch(Exception ex) {
-            assertEquals(ex.getLocalizedMessage(), "Access denied for user 'test_user'@'172.17.0.1' (using password: YES)");
+            assertTrue(ex.getLocalizedMessage().contains( "Access denied for user 'test_user'@'172.17.0.1' (using password: YES)"));
         }
     }
 

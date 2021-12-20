@@ -57,7 +57,7 @@ public class SingleStoreDbWriter {
                     }
                 }
 
-                ((org.mariadb.jdbc.MariaDbStatement)stmt).setLocalInfileInputStream(inputStream);
+                ((com.singlestore.jdbc.Statement)stmt).setNextLocalInfileInputStream(inputStream);
 
                 DataExtension dataExtension = getDataExtension(baseStream);
                 try (OutputStream outputStream = dataExtension.getOutputStream()) {
