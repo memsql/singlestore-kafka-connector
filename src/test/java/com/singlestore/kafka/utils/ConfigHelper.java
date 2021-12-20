@@ -11,7 +11,7 @@ public class ConfigHelper {
         return new HashMap<String, String>() {{
             put(SingleStoreSinkConfig.DDL_ENDPOINT, "localhost:5506");
             put(SingleStoreSinkConfig.CONNECTION_DATABASE, "testdb");
-            put(SingleStoreSinkConfig.CONNECTION_PASSWORD, "1");
+            put(SingleStoreSinkConfig.CONNECTION_PASSWORD, System.getenv("SINGLESTORE_PASSWORD"));
         }};
     }
 }
