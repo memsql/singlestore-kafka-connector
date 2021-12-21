@@ -153,8 +153,8 @@ fi
 
 kafka-connect-start
 
-echo -n "Copying 'mariadb connector'..."
-docker exec kafka-connect wget -O /usr/share/java/kafka/mariadb-java-client-2.3.0.jar https://downloads.mariadb.com/Connectors/java/connector-java-2.3.0/mariadb-java-client-2.3.0.jar >/dev/null 2>/dev/null
+echo -n "Copying 'SingleStore JDBC driver'..."
+docker exec kafka-connect wget -O /usr/share/java/kafka/singlestore-jdbc-client-1.0.1.jar https://repo.maven.apache.org/maven2/com/singlestore/singlestore-jdbc-client/1.0.1/singlestore-jdbc-client-1.0.1.jar >/dev/null 2>/dev/null
 echo ". Success!"
 
 echo -n "Copying 'singlestore-kafka-connector'..."

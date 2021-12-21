@@ -31,7 +31,7 @@ public class IntegrationBase {
         if ((password = System.getenv("SINGLESTORE_PASSWORD")) != null) {
             connProperties.put("password", password);
         }
-        jdbcConnection = DriverManager.getConnection("jdbc:mysql://localhost:5506/memsql",
+        jdbcConnection = DriverManager.getConnection("jdbc:singlestore://localhost:5506/memsql",
                 connProperties);
 
         // make singlestore use less memory
