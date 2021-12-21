@@ -79,7 +79,7 @@ if [[ ${CONTAINER_IP} != "${CURRENT_LEAF_IP}" ]]; then
     # add leaf with correct ip
     mysql -u root -h 127.0.0.1 -P 5506 -p"${SINGLESTORE_PASSWORD}" --batch -N -e "add leaf root:'${SINGLESTORE_PASSWORD}'@'${CONTAINER_IP}':3307"
 fi
-CURRENT_AGG_IP=$(mysql -u root -h 127.0.0.1 -P 5506 -ppassword --batch -N -e 'select host from information_schema.aggregators where master_aggregator=0')
+CURRENT_AGG_IP=$(mysql -u root -h 127.0.0.1 -P 5506 -p"${SINGLESTORE_PASSWORD}" --batch -N -e 'select host from information_schema.aggregators where master_aggregator=0')
 if [[ ${CONTAINER_IP} != "${CURRENT_AGG_IP}" ]]; then
     # remove aggregator with current ip
     mysql -u root -h 127.0.0.1 -P 5506 -p"${SINGLESTORE_PASSWORD}" --batch -N -e "remove aggregator '${CURRENT_AGG_IP}':3308"
