@@ -21,8 +21,6 @@ jobs:
     parameters:
       singlestore_image:
         type: string
-      singlestore_password:
-        type: string
       machine_class:
         type: string
     working_directory: ~/singlestore-kafka-connector
@@ -30,7 +28,6 @@ jobs:
     resource_class: << parameters.machine_class >>
     environment:
       SINGLESTORE_IMAGE: << parameters.singlestore_image >>
-      SINGLESTORE_PASSWORD: << parameters.singlestore_password >>
     steps:
       - setup_environment
       - checkout
@@ -88,8 +85,6 @@ workflows:
             parameters:
               machine_class:
                 - large
-              singlestore_password:
-                - password
               singlestore_image:
                 - memsql/cluster-in-a-box:centos-7.3.2-a364d4b31f-3.0.0-1.9.3
                 - memsql/cluster-in-a-box:centos-7.1.13-11ddea2a3a-3.0.0-1.9.3
