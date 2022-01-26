@@ -1,4 +1,4 @@
-2022-01-05 Version 1.1.1
+2022-01-26 Version 1.1.1
     * Updated version of Jackson Databind library to 2.9.10.8 as 2.9.10.7 version contained vulnerabilities
 2022-01-05 Version 1.1.0
     * Changed connector to use SingleStore JDBC driver instead of MariaDB
