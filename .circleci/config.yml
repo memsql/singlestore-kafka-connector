@@ -12,7 +12,7 @@ commands:
           name: Setup Machine
           command: |
             sudo apt-get update
-            sudo apt-get install -y sbt python-pip git mysql-client-core-5.5
+            sudo apt-get install -y sbt python-pip git mariadb-client-core-10.6
             sudo apt-get clean
             sudo apt-get autoclean
 
@@ -28,6 +28,7 @@ jobs:
     resource_class: << parameters.machine_class >>
     environment:
       SINGLESTORE_IMAGE: << parameters.singlestore_image >>
+      JAVA_HOME: /usr/lib/jvm/java-11-openjdk-amd64/
     steps:
       - setup_environment
       - checkout
@@ -54,7 +55,7 @@ jobs:
   publish:
     machine: true
     environment:
-      JAVA_HOME: /usr/lib/jvm/jdk1.8.0
+      JAVA_HOME: /usr/lib/jvm/java-11-openjdk-amd64/
       SONATYPE_USERNAME: memsql
     steps:
       - setup_environment
@@ -87,9 +88,9 @@ workflows:
                 - large
               singlestore_image:
                 - memsql/cluster-in-a-box:centos-7.3.2-a364d4b31f-3.0.0-1.9.3
-                - memsql/cluster-in-a-box:centos-7.1.13-11ddea2a3a-3.0.0-1.9.3
                 - memsql/cluster-in-a-box:centos-7.5.12-3112a491c2-4.0.0-1.12.3
                 - memsql/cluster-in-a-box:centos-7.6.5-018454f4e3-4.0.1-1.13.0
+                - memsql/cluster-in-a-box:alma-7.8.2-8c7b918527-4.0.4-1.13.6
   publish:
     jobs:
       - approve-publish:
