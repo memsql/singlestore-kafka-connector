@@ -154,7 +154,7 @@ fi
 kafka-connect-start
 
 echo -n "Copying 'SingleStore JDBC driver'..."
-docker exec kafka-connect wget -O /usr/share/java/kafka/singlestore-jdbc-client-1.0.1.jar https://repo.maven.apache.org/maven2/com/singlestore/singlestore-jdbc-client/1.0.1/singlestore-jdbc-client-1.0.1.jar >/dev/null 2>/dev/null
+docker exec kafka-connect wget -O /usr/share/java/kafka/singlestore-jdbc-client-1.1.0.jar https://repo.maven.apache.org/maven2/com/singlestore/singlestore-jdbc-client/1.1.0/singlestore-jdbc-client-1.1.0.jar >/dev/null 2>/dev/null
 echo ". Success!"
 
 echo -n "Copying 'singlestore-kafka-connector'..."
