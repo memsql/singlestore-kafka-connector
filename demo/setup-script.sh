@@ -149,10 +149,10 @@ kafka-connect-start() {
     -e CONNECT_INTERNAL_VALUE_CONVERTER="org.apache.kafka.connect.json.JsonConverter" \
     -e CONNECT_REST_ADVERTISED_HOST_NAME="kafka-connect" \
     -e CONNECT_LOG4J_ROOT_LOGLEVEL=DEBUG \
-    -e CONNECT_PLUGIN_PATH=/usr/share/java,/usr/share/java/kafka-singlestore \
+    -e CONNECT_PLUGIN_PATH=/usr/share/java \
     -e CONNECT_REST_HOST_NAME="kafka-connect" \
     -v /tmp/quickstart/file:/tmp/quickstart \
-    -v /tmp/quickstart/connect:/usr/share/java/kafka-singlestore \
+    -v /tmp/quickstart/connect/singlestore-kafka-connector-1.1.1.jar:/usr/share/java/singlestore-kafka-connector-1.1.1.jar \
     confluentinc/cp-kafka-connect:5.0.0 >/dev/null
     echo ". Started!"
 }
