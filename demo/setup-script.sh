@@ -113,6 +113,19 @@ if docker ps -a | grep singlestore-kafka-connect ;
 fi
 echo ". Success!"
 
+echo -n "Copying 'singlestore-kafka-connector'..."
+docker run \
+    -d \
+    --rm \
+    --net=confluent \
+    --name singlestore-kafka-connect \
+    -v /tmp/quickstart/connect:/tmp/quickstart/connect \
+    singlestore-kafka-connect \
+    tail -f /dev/null >/dev/null 2>/dev/null
+docker exec singlestore-kafka-connect cp /home/app/target/singlestore-kafka-connector-1.1.1.jar /tmp/quickstart/connect
+docker stop singlestore-kafka-connect >/dev/null 2>/dev/null
+echo ". Success!"
+
 kafka-connect-start() {
   echo -n "Starting 'kafka-connect' docker container..."
   docker run -d \
@@ -139,6 +152,7 @@ kafka-connect-start() {
     -e CONNECT_PLUGIN_PATH=/usr/share/java \
     -e CONNECT_REST_HOST_NAME="kafka-connect" \
     -v /tmp/quickstart/file:/tmp/quickstart \
+    -v /tmp/quickstart/connect/singlestore-kafka-connector-1.1.1.jar:/usr/share/java/singlestore-kafka-connector-1.1.1.jar \
     confluentinc/cp-kafka-connect:5.0.0 >/dev/null
     echo ". Started!"
 }
@@ -154,21 +168,7 @@ fi
 kafka-connect-start
 
 echo -n "Copying 'SingleStore JDBC driver'..."
-docker exec kafka-connect wget -O /usr/share/java/kafka/singlestore-jdbc-client-1.1.0.jar https://repo.maven.apache.org/maven2/com/singlestore/singlestore-jdbc-client/1.1.0/singlestore-jdbc-client-1.1.0.jar >/dev/null 2>/dev/null
-echo ". Success!"
-
-echo -n "Copying 'singlestore-kafka-connector'..."
-docker run \
-    -d \
-    --rm \
-    --net=confluent \
-    --name singlestore-kafka-connect \
-    -v /tmp/quickstart/connect:/tmp/quickstart/connect \
-    singlestore-kafka-connect \
-    tail -f /dev/null >/dev/null 2>/dev/null
-docker exec singlestore-kafka-connect cp /home/app/target/singlestore-kafka-connector-1.1.1.jar /tmp/quickstart/connect
-docker cp /tmp/quickstart/connect/singlestore-kafka-connector-1.1.1.jar kafka-connect:/usr/share/java/kafka
-docker stop singlestore-kafka-connect >/dev/null 2>/dev/null
+docker exec kafka-connect curl https://repo.maven.apache.org/maven2/com/singlestore/singlestore-jdbc-client/1.1.0/singlestore-jdbc-client-1.1.0.jar --output /usr/share/java/kafka/singlestore-jdbc-client-1.1.0.jar >/dev/null 2>/dev/null
 echo ". Success!"
 
 singlestore-start() {
