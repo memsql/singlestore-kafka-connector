@@ -129,9 +129,6 @@ docker exec singlestore-kafka-connect wget -O /tmp/quickstart/connect/singlestor
 docker stop singlestore-kafka-connect >/dev/null 2>/dev/null
 echo ". Success!"
 
-docker cp /tmp/quickstart/connect/singlestore-jdbc-client-1.1.0.jar kafka:/usr/share/java
-docker cp /tmp/quickstart/connect/singlestore-jdbc-client-1.1.0.jar kafka:/usr/share/java/kafka
-
 kafka-connect-start() {
   echo -n "Starting 'kafka-connect' docker container..."
   docker run -d \
@@ -157,11 +154,8 @@ kafka-connect-start() {
     -e CONNECT_LOG4J_ROOT_LOGLEVEL=DEBUG \
     -e CONNECT_PLUGIN_PATH=/usr/share/java,/usr/share/java/kafka-singlestore \
     -e CONNECT_REST_HOST_NAME="kafka-connect" \
-    -e CLASSPATH=/usr/share/java/kafka-singlestore/* \
     -v /tmp/quickstart/file:/tmp/quickstart \
     -v /tmp/quickstart/connect:/usr/share/java/kafka-singlestore \
-    -v /tmp/quickstart/connect/singlestore-jdbc-client-1.1.0.jar:/usr/share/java/singlestore-jdbc-client-1.1.0.jar \
-    -v /tmp/quickstart/connect/singlestore-jdbc-client-1.1.0.jar:/usr/share/java/kafka-connect-jdbc/singlestore-jdbc-client-1.1.0.jar \
     -v /tmp/quickstart/connect/singlestore-jdbc-client-1.1.0.jar:/usr/share/java/kafka/singlestore-jdbc-client-1.1.0.jar \
     confluentinc/cp-kafka-connect:5.0.0 >/dev/null
     echo ". Started!"
