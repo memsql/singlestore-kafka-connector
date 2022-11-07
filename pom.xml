@@ -137,14 +137,14 @@
                             <description>
                                 The SingleStore sink connector allow you to exchange data from Kafka to SingleStore.
                             </description>
-                            <logo>logos/memsql.png</logo>
+                            <logo>logos/singlestore.png</logo>
 
                             <supportProviderName>SingleStore, Inc.</supportProviderName>
 
                             <ownerUsername>singlestore</ownerUsername>
                             <ownerType>organization</ownerType>
                             <ownerName>SingleStore, Inc.</ownerName>
-                            <ownerLogo>logos/memsql.png</ownerLogo>
+                            <ownerLogo>logos/singlestore.png</ownerLogo>
 
                             <dockerNamespace>singlestore</dockerNamespace>
                             <dockerName>singlestore-kafka-connector</dockerName>
