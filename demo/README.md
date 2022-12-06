@@ -5,6 +5,7 @@ This guide will show basic functionality of `singlestore-kafka-connector`
 ## Requirements
 
 * docker
+* git
 
 ## Set up environment
 
@@ -16,8 +17,14 @@ export LICENSE_KEY=<singlestore_license_key>
 
 Then run the setup script:
 
+(Linux/MacOS)
 ```
 ./setup-script.sh
+```
+
+(Windows)
+```
+./setup-script.ps1
 ```
 
 This script will start all the required components: 
@@ -52,8 +59,14 @@ and then write all records to SingleStore `test.singlestore_json_songs` table
 To ingest some data to `singlestore_json_songs` topic you can execute `ingest-data.sh` script, 
 which will add some sample data to kafka.
 
+(Linux/MacOS)
 ```
 ./ingest-data.sh
+```
+
+(Windows)
+```
+./ingest-data.ps1
 ```
 
 After that, you will see that the data has been added to the database.
