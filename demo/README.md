@@ -73,7 +73,7 @@ After that, you will see that the data has been added to the database.
 
 (Linux/MacOS)
 ```
-docker exec -it singlestore-kafka bash
+docker exec -it singlestore-kafka-short-demo bash
 memsql -u root -proot
 
 use test;
