@@ -1,25 +1,15 @@
 package com.singlestore.kafka.sink;
 
-import com.fasterxml.jackson.core.JsonEncoding;
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonGenerator;
 import com.singlestore.kafka.utils.TableKey;
 import org.apache.kafka.connect.data.Field;
 import org.apache.kafka.connect.data.Schema;
-import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.errors.ConnectException;
-import org.apache.kafka.connect.sink.SinkRecord;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 public class SingleStoreDialect {
@@ -61,22 +51,14 @@ public class SingleStoreDialect {
         return stmt;
     }
 
-    public static String getDefaultColumnName(Schema schema) {
-        return schema.name() == null ? "data" : schema.name();
-    }
-
     public static String getCreateTableQuery(String table, String schema) {
         return String.format("CREATE TABLE IF NOT EXISTS %s %s", quoteIdentifier(table), schema);
     }
 
-    public static String getColumnNames(Schema schema) {
-        if (schema.type() == Schema.Type.STRUCT) {
-            return  schema.fields().stream()
-                    .map(field -> quoteIdentifier(field.name()))
-                    .collect(Collectors.joining(", "));
-        } else {
-            return quoteIdentifier(getDefaultColumnName(schema));
-        }
+
+    public static String escapeColumnNames(List<String> columns) {
+        return columns.stream().map(SingleStoreDialect::quoteIdentifier)
+            .collect(Collectors.joining(", "));
     }
 
     public static String getSchemaForCreateTableQuery(Schema schema, List<TableKey> keys) {
@@ -120,124 +102,6 @@ public class SingleStoreDialect {
         String singlestoreType = getSqlType(schema);
         String nullable = schema.isOptional() ? "" : " NOT NULL";
         return String.format("%s %s%s", name, singlestoreType, nullable);
-    }
-
-    private static String escapeCSV(String value) {
-        if (value.indexOf('\\') != -1) {
-            value = value.replace("\\", "\\\\");
-        }
-        if (value.indexOf('\n') != -1) {
-            value = value.replace("\n", "\\n");
-        }
-        if (value.indexOf('\t') != -1) {
-            value = value.replace("\t", "\\t");
-        }
-        return value;
-    }
-
-    private static String escapeCSV(Schema schema, Object value) throws IOException {
-        if(schema.type().isPrimitive()) {
-            if (value == null) {
-                return "\\N";
-            } else if (value instanceof Boolean) {
-                return (Boolean) value ? "1" : "0";
-            } else {
-                return escapeCSV(value.toString());
-            }
-        } else {
-            return escapeCSV(toJSON(schema, value));
-        }
-    }
-
-    public static String getRecordValueCSV(SinkRecord record) throws IOException {
-        if (record.valueSchema().type() != Schema.Type.STRUCT) {
-            return escapeCSV(record.valueSchema(), record.value());
-        }
-
-        List<String> fields = new ArrayList<>();
-        Struct struct = (Struct) record.value();
-        Schema structSchema = struct.schema();
-        for (Field field: structSchema.fields()) {
-            fields.add(escapeCSV(field.schema(), struct.get(field.name())));
-        }
-        return String.join("\t", fields);
-    }
-
-    public static String toJSON(Schema schema, Object value) throws IOException {
-        ByteArrayOutputStream stream = new ByteArrayOutputStream();
-        JsonGenerator jGenerator = new JsonFactory()
-                .createGenerator(stream, JsonEncoding.UTF8);
-        generateJSON(jGenerator, schema, value);
-        jGenerator.close();
-        return new String(stream.toByteArray(), StandardCharsets.UTF_8);
-    }
-
-    private static void generateJSON(JsonGenerator jGenerator, Schema schema, Object value) throws IOException {
-        if (value == null) {
-            jGenerator.writeNull();
-            return;
-        }
-        try {
-            switch(schema.type()) {
-                case INT8:
-                    jGenerator.writeNumber((byte) value);
-                    break;
-                case INT16:
-                    jGenerator.writeNumber((short) value);
-                    break;
-                case INT32:
-                    jGenerator.writeNumber((int) value);
-                    break;
-                case INT64:
-                    jGenerator.writeNumber((long) value);
-                    break;
-                case FLOAT32:
-                    jGenerator.writeNumber((float) value);
-                    break;
-                case FLOAT64:
-                    jGenerator.writeNumber((double) value);
-                    break;
-                case BOOLEAN:
-                    jGenerator.writeBoolean((boolean) value);
-                    break;
-                case BYTES:
-                    jGenerator.writeBinary((byte[]) value);
-                    break;
-                case STRING:
-                    jGenerator.writeString((String) value);
-                    break;
-                case ARRAY:
-                    jGenerator.writeStartArray();
-                    for(Object element: (List<?>) value) {
-                        generateJSON(jGenerator, schema.valueSchema(), element);
-                    }
-                    jGenerator.writeEndArray();
-                    break;
-                case MAP:
-                    jGenerator.writeStartArray();
-                    for (Map.Entry<?, ?> entry : ((Map<?,?>)value).entrySet()) {
-                        jGenerator.writeStartObject();
-                        jGenerator.writeFieldName("key");
-                        generateJSON(jGenerator, schema.keySchema(), entry.getKey());
-
-                        jGenerator.writeFieldName("value");
-                        generateJSON(jGenerator, schema.valueSchema(), entry.getValue());
-
-                        jGenerator.writeEndObject();
-                    }
-                    jGenerator.writeEndArray();
-                    break;
-                case STRUCT:
-                    jGenerator.writeStartObject();
-                    for (Field field: schema.fields()) {
-                        jGenerator.writeFieldName(field.name());
-                        generateJSON(jGenerator, field.schema(), ((Struct)value).get(field.name()));
-                    }
-                    jGenerator.writeEndObject();
-            }
-        } catch (ClassCastException ex) {
-            throw new ConnectException(String.format("The object '%s' has an incorrect schema (%s)", value, schema.type()), ex);
-        }
     }
 
     private static String getSqlType(Schema fieldSchema) {

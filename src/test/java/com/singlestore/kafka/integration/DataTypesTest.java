@@ -7,12 +7,34 @@ import org.apache.kafka.connect.sink.SinkRecord;
 import org.junit.Test;
 
 import java.nio.charset.StandardCharsets;
+import java.sql.SQLException;
 import java.util.*;
 
 import static com.singlestore.kafka.utils.SinkRecordCreator.createRecord;
 import static org.junit.Assert.fail;
 
 public class DataTypesTest extends IntegrationBase {
+    @Test
+    public void schemaless() throws SQLException {
+        Map<Object, Object> mp = new HashMap<>();
+        mp.put("boolean", false);
+        mp.put("int", 10);
+        mp.put("long", Long.MAX_VALUE);
+        mp.put("float", 10.1f);
+        mp.put("double", 10.1d);
+        mp.put("bytes", "abc".getBytes(StandardCharsets.UTF_8));
+        mp.put("string", "ab\\\t\nc");
+        mp.put("array", Arrays.asList("asd", "bcd"));
+        Map<Object, Object> nestedMap = new HashMap<>();
+        nestedMap.put("c1", "v1");
+        nestedMap.put("c2", "v2");
+        mp.put("map", nestedMap);
+
+        List<SinkRecord> records = Collections.singletonList(createRecord(null, mp, "schemaless"));
+        Map<String, String> props = new HashMap<>();
+
+        put(props, records, "CREATE TABLE testdb.schemaless(`boolean` BOOL, `int` INT, `long` LONG, `float` FLOAT, `double` DOUBLE, `bytes` BLOB, `string` TEXT, `array` JSON, `map` JSON)");
+    }
 
     @Test
     public void int8() {
@@ -250,7 +272,7 @@ public class DataTypesTest extends IntegrationBase {
             records.add(createRecord( SchemaBuilder.map(
                     Schema.STRING_SCHEMA,
                     Schema.INT32_SCHEMA
-            ), null, "mapOptional"));
+            ).optional(), null, "mapOptional"));
             put(props, records);
         } catch (Exception e) {
             log.error("", e);
