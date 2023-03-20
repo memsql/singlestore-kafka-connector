@@ -20,6 +20,10 @@ public class JdbcHelper {
         try (Connection connection = getDDLConnection(config)) {
             boolean tableExists = JdbcHelper.tableExists(connection, table);
             if (!tableExists) {
+                if (schema == null) {
+                    log.error("Table {} doesn't exist and schema is not provided. Table creation is not supported without schema.", table);
+                    throw new ConnectException(String.format("Table %s doesn't exist and schema is not provided. Table creation is not supported without schema.", table));
+                }
                 log.info(String.format("Table `%s` doesn't exist. Creating it", table));
                 JdbcHelper.createTable(connection, table, schema, config.tableKeys);
             }
