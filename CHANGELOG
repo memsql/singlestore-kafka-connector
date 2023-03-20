@@ -1,3 +1,5 @@
+2023-03-20 Version 1.2.0
+    * Added possibility to write data without schema
 2022-01-26 Version 1.1.2
     * Updated version of Jackson Databind library to 2.13.4.2
 2022-01-26 Version 1.1.1

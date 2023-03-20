@@ -122,7 +122,7 @@ docker run \
     -v /tmp/quickstart/connect:/tmp/quickstart/connect \
     singlestore-kafka-connect-short-demo \
     tail -f /dev/null >/dev/null 2>/dev/null
-docker exec singlestore-kafka-connect-short-demo cp /home/app/target/singlestore-kafka-connector-1.1.2.jar /tmp/quickstart/connect
+docker exec singlestore-kafka-connect-short-demo cp /home/app/target/singlestore-kafka-connector-1.2.0-beta.jar /tmp/quickstart/connect
 docker stop singlestore-kafka-connect-short-demo >/dev/null 2>/dev/null
 echo ". Success!"
 
@@ -145,6 +145,7 @@ kafka-connect-start() {
     -e CONNECT_KEY_CONVERTER="org.apache.kafka.connect.json.JsonConverter" \
     -e CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE=false \
     -e CONNECT_VALUE_CONVERTER="org.apache.kafka.connect.json.JsonConverter" \
+    -e CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE=false \
     -e CONNECT_INTERNAL_KEY_CONVERTER="org.apache.kafka.connect.json.JsonConverter" \
     -e CONNECT_INTERNAL_VALUE_CONVERTER="org.apache.kafka.connect.json.JsonConverter" \
     -e CONNECT_REST_ADVERTISED_HOST_NAME="kafka-connect-short-demo" \
@@ -152,7 +153,7 @@ kafka-connect-start() {
     -e CONNECT_PLUGIN_PATH=/usr/share/java \
     -e CONNECT_REST_HOST_NAME="kafka-connect-short-demo" \
     -v /tmp/quickstart/file:/tmp/quickstart \
-    -v /tmp/quickstart/connect/singlestore-kafka-connector-1.1.2.jar:/usr/share/java/singlestore-kafka-connector-1.1.2.jar \
+    -v /tmp/quickstart/connect/singlestore-kafka-connector-1.2.0-beta.jar:/usr/share/java/singlestore-kafka-connector-1.2.0-beta.jar \
     confluentinc/cp-kafka-connect:5.0.0 >/dev/null
     echo ". Started!"
 }
@@ -216,6 +217,7 @@ singlestore-wait-start
 
 echo -n "Creating 'test' SingleStore database..."
 docker exec singlestore-kafka-short-demo memsql -u root -proot -e "create database if not exists test;"
+docker exec singlestore-kafka-short-demo memsql -u root -proot -e "create table test.singlestore_json_songs(Id int, Artist text, Song text);"
 echo ". Success!"
 
 kafka-connect-wait-start() {

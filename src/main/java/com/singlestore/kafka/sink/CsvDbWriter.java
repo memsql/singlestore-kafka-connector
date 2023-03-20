@@ -15,25 +15,21 @@ public class CsvDbWriter {
 
     private static final Logger log = LoggerFactory.getLogger(CsvDbWriter.class);
 
-    private final Schema schema;
+    private final SinkRecord record;
 
     public CsvDbWriter(SinkRecord record) {
-        this.schema = record.valueSchema();
+        this.record = record;
     }
 
     public String generateQuery(String ext, String table) {
         String queryPrefix = String.format("LOAD DATA LOCAL INFILE '###.%s'", ext);
-        String columnNames = SingleStoreDialect.getColumnNames(schema);
+        String columnNames = SingleStoreDialect.getColumnNames(record);
         String queryEnding = String.format("INTO TABLE %s (%s)", SingleStoreDialect.quoteIdentifier(table), columnNames);
         return String.join(" ", queryPrefix, queryEnding);
     }
 
     public void writeData(OutputStream outputStream, Collection<SinkRecord> records) throws IOException {
         for (SinkRecord record: records) {
-            if (record.valueSchema() == null) {
-                log.error("No value schema was provided for the data record: {}", record);
-                throw new ConnectException(String.format("No value schema was provided for the data record: %s", record.toString()));
-            }
             byte[] value = SingleStoreDialect.getRecordValueCSV(record).getBytes(StandardCharsets.UTF_8);
             outputStream.write(value);
             outputStream.write('\n');

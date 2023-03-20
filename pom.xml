@@ -6,7 +6,7 @@
     <artifactId>singlestore-kafka-connector</artifactId>
 
     <name>singlestore-kafka-connector</name>
-    <version>1.1.2</version>
+    <version>1.2.0-beta</version>
     <description>
         The official SingleStore connector for Kafka Confluent Connect.
     </description>
@@ -50,7 +50,7 @@
         <url>git://git@github.com:memsql/singlestore-kafka-connector.git</url>
         <connection>scm:git:git@github.com:memsql/singlestore-kafka-connector.git</connection>
         <developerConnection>scm:git:git@github.com:memsql/singlestore-kafka-connector.git</developerConnection>
-        <tag>singlestore-kafka-connector-1.1.2</tag>
+        <tag>singlestore-kafka-connector-1.2.0-beta</tag>
     </scm>
 
     <dependencies>
