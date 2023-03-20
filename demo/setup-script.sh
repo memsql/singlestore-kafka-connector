@@ -145,7 +145,6 @@ kafka-connect-start() {
     -e CONNECT_KEY_CONVERTER="org.apache.kafka.connect.json.JsonConverter" \
     -e CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE=false \
     -e CONNECT_VALUE_CONVERTER="org.apache.kafka.connect.json.JsonConverter" \
-    -e CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE=false \
     -e CONNECT_INTERNAL_KEY_CONVERTER="org.apache.kafka.connect.json.JsonConverter" \
     -e CONNECT_INTERNAL_VALUE_CONVERTER="org.apache.kafka.connect.json.JsonConverter" \
     -e CONNECT_REST_ADVERTISED_HOST_NAME="kafka-connect-short-demo" \
@@ -217,7 +216,6 @@ singlestore-wait-start
 
 echo -n "Creating 'test' SingleStore database..."
 docker exec singlestore-kafka-short-demo memsql -u root -proot -e "create database if not exists test;"
-docker exec singlestore-kafka-short-demo memsql -u root -proot -e "create table test.singlestore_json_songs(Id int, Artist text, Song text);"
 echo ". Success!"
 
 kafka-connect-wait-start() {
