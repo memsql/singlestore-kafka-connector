@@ -6,6 +6,7 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
+import com.singlestore.kafka.utils.ColumnMapping;
 import com.singlestore.kafka.utils.TableKey;
 import org.apache.kafka.connect.data.Field;
 import org.apache.kafka.connect.data.Schema;
@@ -28,6 +29,7 @@ import java.util.stream.Collectors;
 public class SingleStoreDialect {
 
     static String DEFAULT_COLUMN_NAME = "data";
+    static String NULL_CSV = "\\N";
 
     public static String quoteIdentifier(String colName) {
         return "`" + colName.replace("`", "``") + "`";
@@ -74,33 +76,36 @@ public class SingleStoreDialect {
         return String.format("CREATE TABLE IF NOT EXISTS %s %s", quoteIdentifier(table), schema);
     }
 
-    public static String getColumnNamesNoSchema(Object value) {
-        if (!(value instanceof Map)) {
-            return DEFAULT_COLUMN_NAME;
+    public static List<ColumnMapping> getColumns(SingleStoreSinkConfig config, String table, SinkRecord record) {
+        if (config.tableToColumnToFieldMap.containsKey(table)) {
+            return config.tableToColumnToFieldMap.get(table);
         }
 
-        Map<Object, Object> valueMap = (Map<Object, Object>) value;
-        return valueMap.keySet().stream().map(field -> quoteIdentifier(field.toString()))
-            .collect(Collectors.joining(", "));
-    }
-
-    public static String getColumnNames(SinkRecord record) {
-        Schema schema = record.valueSchema();
-
-        if (schema == null) {
-            return getColumnNamesNoSchema(record.value());
+        if (record.valueSchema() != null) {
+            return getColumnsFromValueSchema(record.valueSchema());
         }
 
-        return getColumnNames(schema);
+        return getColumnsFromObject(record.value());
     }
 
-    public static String getColumnNames(Schema schema) {
-        if (schema.type() == Schema.Type.STRUCT) {
-            return  schema.fields().stream()
-                .map(field -> quoteIdentifier(field.name()))
-                .collect(Collectors.joining(", "));
+    public static List<ColumnMapping> getColumnsFromValueSchema(Schema valueSchema) {
+        if (valueSchema.type() == Schema.Type.STRUCT) {
+            return  valueSchema.fields().stream()
+                .map(field -> new ColumnMapping(field.name(), null))
+                .collect(Collectors.toList());
         } else {
-            return quoteIdentifier(getDefaultColumnName(schema));
+            return Collections.singletonList(new ColumnMapping(getDefaultColumnName(valueSchema), null));
+        }
+    }
+
+    public static List<ColumnMapping> getColumnsFromObject(Object value) {
+        if (value instanceof Map) {
+            Map<Object, Object> valueMap = (Map<Object, Object>) value;
+            return valueMap.keySet().stream()
+                .map(column -> new ColumnMapping(column.toString(), null))
+                .collect(Collectors.toList());
+        } else {
+            return Collections.singletonList(new ColumnMapping(DEFAULT_COLUMN_NAME, null));
         }
     }
 
@@ -160,21 +165,7 @@ public class SingleStoreDialect {
         return value;
     }
 
-    private static String escapeCSV(Schema schema, Object value) throws IOException {
-        if(schema.type().isPrimitive()) {
-            if (value == null) {
-                return "\\N";
-            } else if (value instanceof Boolean) {
-                return (Boolean) value ? "1" : "0";
-            } else {
-                return escapeCSV(value.toString());
-            }
-        } else {
-            return escapeCSV(toJSON(schema, value));
-        }
-    }
-
-    private static String escapeCSVNoSchema(Object value) throws JsonProcessingException {
+    private static String convertToCsv(Object value) throws JsonProcessingException {
         if (value == null) {
             return "\\N";
         } else if (value instanceof Boolean) {
@@ -188,34 +179,83 @@ public class SingleStoreDialect {
         }
     }
 
-    private static String getRecordValueCSVNoSchema(Object value) throws JsonProcessingException {
-        if (!(value instanceof Map)) {
-            return escapeCSVNoSchema(value);
+    private static String convertToCsv(Schema schema, Object value) throws IOException {
+        if(schema.type().isPrimitive()) {
+            if (value == null) {
+                return "\\N";
+            } else if (value instanceof Boolean) {
+                return (Boolean) value ? "1" : "0";
+            } else {
+                return escapeCSV(value.toString());
+            }
+        } else {
+            return escapeCSV(toJSON(schema, value));
         }
-
-        List<String> fields = new ArrayList<>();
-        Map<Object, Object> valueMap = (Map<Object, Object>) value;
-        for (Object field: valueMap.values()) {
-            fields.add(escapeCSVNoSchema(field));
-        }
-        return String.join("\t", fields);
     }
 
-    public static String getRecordValueCSV(SinkRecord record) throws IOException {
-        if (record.valueSchema() == null) {
-            return getRecordValueCSVNoSchema(record.value());
+    public static String getFieldCSVByPath(SinkRecord record, String path) throws IOException {
+        Object value = record.value();
+        Schema schema = record.valueSchema();
+
+        for (String key: path.split("\\.")) {
+            if (value == null) {
+                return NULL_CSV;
+            }
+
+            if (schema != null) {
+                if (schema.type() != Schema.Type.STRUCT) {
+                    return NULL_CSV;
+                }
+
+                Struct valueStruct = (Struct) value;
+                value = valueStruct.get(key);
+                schema = valueStruct.schema().field(key).schema();
+            } else {
+                if (!(value instanceof Map)) {
+                    return NULL_CSV;
+                }
+
+                Map valueMap = (Map) value;
+                value = valueMap.get(key);
+            }
         }
 
-        if (record.valueSchema().type() != Schema.Type.STRUCT) {
-            return escapeCSV(record.valueSchema(), record.value());
+        if (schema != null) {
+            return convertToCsv(schema, value);
+        } else {
+            return convertToCsv(value);
         }
+    }
 
+    public static String getRecordValueCSV(SinkRecord record, List<ColumnMapping> columns) throws IOException {
         List<String> fields = new ArrayList<>();
-        Struct struct = (Struct) record.value();
-        Schema structSchema = struct.schema();
-        for (Field field: structSchema.fields()) {
-            fields.add(escapeCSV(field.schema(), struct.get(field.name())));
+
+        for (ColumnMapping mapping: columns) {
+            String field;
+
+            if (mapping.getFieldPath() != null) {
+                field = getFieldCSVByPath(record, mapping.getFieldPath());
+            } else if (record.valueSchema() != null) {
+                if (record.valueSchema().type() != Schema.Type.STRUCT) {
+                    field = convertToCsv(record.valueSchema(), record.value());
+                } else {
+                    Struct valueStruct = (Struct) record.value();
+                    Object fieldValue = valueStruct.get(mapping.getColumnName());
+                    Schema fieldSchema = valueStruct.schema().field(mapping.getColumnName()).schema();
+                    field = convertToCsv(fieldSchema, fieldValue);
+                }
+            } else {
+                if (!(record.value() instanceof Map)) {
+                    field = convertToCsv(record.value());
+                } else {
+                    Map valueMap = (Map) record.value();
+                    field = convertToCsv(valueMap.get(mapping.getColumnName()));
+                }
+            }
+
+            fields.add(field);
         }
+
         return String.join("\t", fields);
     }
 
