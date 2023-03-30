@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 set -eu
-export SINGLESTORE_IMAGE="memsql/cluster-in-a-box:centos-7.5.8-12c73130aa-3.2.11-1.11.11"
+export SINGLESTORE_IMAGE="singlestore/cluster-in-a-box:centos-7.5.12-3112a491c2-4.0.0-1.12.5"
 ./scripts/setup-cluster.sh
