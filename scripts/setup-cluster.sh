@@ -4,7 +4,7 @@ set -eu
 # this script must be run from the top-level of the repo
 cd "$(git rev-parse --show-toplevel)"
 
-DEFAULT_IMAGE_NAME="memsql/cluster-in-a-box:centos-7.6.5-018454f4e3-4.0.1-1.13.0"
+DEFAULT_IMAGE_NAME="singlestore/cluster-in-a-box:alma-8.0.15-0b9b66384f-4.0.11-1.15.2"
 IMAGE_NAME="${SINGLESTORE_IMAGE:-$DEFAULT_IMAGE_NAME}"
 CONTAINER_NAME="singlestore-integration"
 
