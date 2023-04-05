@@ -50,6 +50,9 @@ public class ValueWithSchema {
     public Schema getSchema() {
         return schema;
     }
+    public Object getValue() {
+        return value;
+    }
 
     private boolean isStruct() {
         if (isStruct == null) {
