@@ -15,7 +15,10 @@ import org.slf4j.LoggerFactory;
 import java.io.*;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.zip.GZIPOutputStream;
 
 public class SingleStoreDbWriter {
@@ -31,41 +34,78 @@ public class SingleStoreDbWriter {
 
     public void write(Collection<SinkRecord> rawRecords) throws SQLException {
         Collection<SinkRecord> records = new DataTransform(config.fieldsWhitelist).selectWhitelistedFields(rawRecords);
+        Map<String, Collection<SinkRecord>> tableToRecords = new HashMap<>();
         SinkRecord first = records.iterator().next();
-        String table = JdbcHelper.getTableName(first.topic(), config);
 
-        JdbcHelper.createTableIfNeeded(config, table, first.valueSchema());
-        try (PipedOutputStream baseStream  = new PipedOutputStream();
-            InputStream inputStream = new PipedInputStream(baseStream, BUFFER_SIZE)) {
-            // TODO think about caching connection instead of opening it each time
-            try (Connection connection = JdbcHelper.isReferenceTable(config, table)
-                    ? JdbcHelper.getDDLConnection(config)
-                    : JdbcHelper.getDMLConnection(config);
-                 Statement stmt = connection.createStatement()) {
-
-                if (config.metadataTableAllow) {
-                    String metaId = String.format("%s-%s-%s", first.topic(), first.kafkaPartition(), first.kafkaOffset());
-                    if (JdbcHelper.metadataRecordExists(connection, metaId, config)) {
-                        // If metadata record already exists, skip writing this batch of data
-                        return;
-                    }
-                    connection.setAutoCommit(false);
-                    Integer recordsCount = records.size();
-                    try (PreparedStatement metadataStmt = SingleStoreDialect.getInsertIntoMetadataQuery(connection, config.metadataTableName, metaId, recordsCount)) {
-                        log.trace("Executing SQL:\n{}", metadataStmt);
-                        metadataStmt.executeUpdate();
-                    }
+        if (config.recordToTableMappingField == null) {
+            String table = JdbcHelper.getTableName(first, config);
+            tableToRecords.put(table, records);
+        } else {
+            for (SinkRecord record: records) {
+                String table = JdbcHelper.getTableName(record, config);
+                if (table == null) {
+                    continue;
                 }
 
-                ((com.singlestore.jdbc.Statement)stmt).setNextLocalInfileInputStream(inputStream);
+                if (!tableToRecords.containsKey(table)) {
+                    tableToRecords.put(table, new ArrayList<>());
+                }
+                tableToRecords.get(table).add(record);
+            }
+        }
 
-                DataExtension dataExtension = getDataExtension(baseStream);
-                try (OutputStream outputStream = dataExtension.getOutputStream()) {
-                    write(first, dataExtension, table, outputStream, records, stmt);
-                    if (config.metadataTableAllow) {
-                        connection.commit();
+        for (Map.Entry<String, Collection<SinkRecord>> entry: tableToRecords.entrySet()) {
+            String table = entry.getKey();
+            SinkRecord record = entry.getValue().iterator().next();
+            JdbcHelper.createTableIfNeeded(config, table, record.valueSchema());
+        }
+
+        boolean writeToReferenceTable = false;
+        for (String table: tableToRecords.keySet()) {
+            if (JdbcHelper.isReferenceTable(config, table)) {
+                writeToReferenceTable = true;
+                break;
+            }
+        }
+
+        // TODO think about caching connection instead of opening it each time
+        try (Connection connection = writeToReferenceTable
+            ? JdbcHelper.getDDLConnection(config)
+            : JdbcHelper.getDMLConnection(config);
+             Statement stmt = connection.createStatement()) {
+            if (config.metadataTableAllow) {
+                String metaId = String.format("%s-%s-%s", first.topic(), first.kafkaPartition(), first.kafkaOffset());
+                if (JdbcHelper.metadataRecordExists(connection, metaId, config)) {
+                    // If metadata record already exists, skip writing this batch of data
+                    return;
+                }
+                connection.setAutoCommit(false);
+                Integer recordsCount = records.size();
+                try (PreparedStatement metadataStmt = SingleStoreDialect.getInsertIntoMetadataQuery(connection, config.metadataTableName, metaId, recordsCount)) {
+                    log.trace("Executing SQL:\n{}", metadataStmt);
+                    metadataStmt.executeUpdate();
+                }
+            }
+
+            // TODO: investigate parallelization of this loop
+            for (Map.Entry<String, Collection<SinkRecord>> entry: tableToRecords.entrySet()) {
+                String table = entry.getKey();
+                Collection<SinkRecord> tableRecords = entry.getValue();
+                SinkRecord firstTableRecord = tableRecords.iterator().next();
+
+                try (PipedOutputStream baseStream  = new PipedOutputStream();
+                     InputStream inputStream = new PipedInputStream(baseStream, BUFFER_SIZE)) {
+                    ((com.singlestore.jdbc.Statement)stmt).setNextLocalInfileInputStream(inputStream);
+
+                    DataExtension dataExtension = getDataExtension(baseStream);
+                    try (OutputStream outputStream = dataExtension.getOutputStream()) {
+                        write(firstTableRecord, dataExtension, table, outputStream, tableRecords, stmt);
                     }
                 }
+            }
+
+            if (config.metadataTableAllow) {
+                connection.commit();
             }
         } catch (IOException ex) {
             throw new ConnectException(ex.getLocalizedMessage());
