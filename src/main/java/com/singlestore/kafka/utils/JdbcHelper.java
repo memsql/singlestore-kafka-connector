@@ -25,7 +25,7 @@ public class JdbcHelper {
                     throw new ConnectException(String.format("Table %s doesn't exist and schema is not provided. Table creation is not supported without schema.", table));
                 }
                 log.info(String.format("Table `%s` doesn't exist. Creating it", table));
-                JdbcHelper.createTable(connection, table, schema, config.tableKeys);
+                JdbcHelper.createTable(connection, table, schema, config.tableKeys, config.tableToColumnToFieldMap.get(table));
             }
             if (config.metadataTableAllow) {
                 boolean metadataTableExists = JdbcHelper.tableExists(connection, config.metadataTableName);
@@ -61,8 +61,8 @@ public class JdbcHelper {
         return config.topicToTableMap.getOrDefault(topic, topic);
     }
 
-    private static void createTable(Connection connection, String table, Schema schema, List<TableKey> keys) throws SQLException {
-        createTable(connection, table, SingleStoreDialect.getSchemaForCreateTableQuery(schema, keys));
+    private static void createTable(Connection connection, String table, Schema schema, List<TableKey> keys, List<ColumnMapping> columnMappings) throws SQLException {
+        createTable(connection, table, SingleStoreDialect.getSchemaForCreateTableQuery(schema, keys, columnMappings));
     }
 
     private static void createTable(Connection connection, String table, String schema) throws SQLException {

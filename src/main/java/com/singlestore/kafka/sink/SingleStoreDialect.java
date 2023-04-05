@@ -1,6 +1,8 @@
 package com.singlestore.kafka.sink;
 
+import com.singlestore.kafka.utils.ColumnMapping;
 import com.singlestore.kafka.utils.TableKey;
+import com.singlestore.kafka.utils.ValueWithSchema;
 import org.apache.kafka.connect.data.Field;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.errors.ConnectException;
@@ -8,6 +10,7 @@ import org.apache.kafka.connect.errors.ConnectException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -61,9 +64,18 @@ public class SingleStoreDialect {
             .collect(Collectors.joining(", "));
     }
 
-    public static String getSchemaForCreateTableQuery(Schema schema, List<TableKey> keys) {
+    public static String getSchemaForCreateTableQuery(Schema schema, List<TableKey> keys, List<ColumnMapping> columnMappings) throws SQLException {
         List<Field> fields;
-        if (schema.type() == Schema.Type.STRUCT) {
+        if (columnMappings != null) {
+            fields = new ArrayList<>();
+            for (ColumnMapping mapping: columnMappings) {
+                Schema columnSchema = new ValueWithSchema(schema).getByPath(mapping.getFieldPath()).getSchema();
+                if (columnSchema == null) {
+                    throw new SQLException(String.format("Failed to create table. Can't get type of the column %s (%s)", mapping.getColumnName(), mapping.getFieldPath()));
+                }
+                fields.add(new Field(mapping.getColumnName(), 0, columnSchema));
+            }
+        } else if (schema.type() == Schema.Type.STRUCT) {
             fields = schema.fields();
         } else {
             fields = Collections.singletonList(new Field("data", 0, schema));
