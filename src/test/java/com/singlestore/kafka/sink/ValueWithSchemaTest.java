@@ -2,6 +2,7 @@ package com.singlestore.kafka.sink;
 
 import static org.junit.Assert.*;
 
+import com.singlestore.kafka.utils.ColumnMapping;
 import com.singlestore.kafka.utils.ValueWithSchema;
 import org.apache.kafka.connect.data.Schema;
 import static com.singlestore.kafka.utils.SinkRecordCreator.createRecord;
@@ -170,6 +171,28 @@ public class ValueWithSchemaTest {
                 "array",
                 "map",
                 "struct"
+            )));
+    }
+
+    @Test
+    public void mapColumnsToCSV() throws IOException {
+        Schema nestedStructSchema = SchemaBuilder.struct()
+            .field("c1", Schema.STRING_SCHEMA);
+        Schema schema = SchemaBuilder.struct()
+            .field("f1", Schema.BOOLEAN_SCHEMA)
+            .field("f2", Schema.INT8_SCHEMA)
+            .field("f3", nestedStructSchema);
+
+        assertEquals("1\tv1\t\\N", new ValueWithSchema(createRecord(schema, new Struct(schema)
+            .put("f1", true)
+            .put("f2", (byte)10)
+            .put("f3", new Struct(nestedStructSchema)
+                .put("c1", "v1"))
+        ))
+            .mapColumnsToCSV(Arrays.asList(
+                new ColumnMapping("c1", "f1"),
+                new ColumnMapping("c2", "f3.c1"),
+                new ColumnMapping("c3", "f10")
             )));
     }
 }

@@ -37,9 +37,18 @@ public class ValueWithSchema {
         schema = record.valueSchema();
     }
 
+    public ValueWithSchema(Schema schema) {
+        this.value = null;
+        this.schema = schema;
+    }
+
     private ValueWithSchema(Object value, Schema schema) {
         this.value = value;
         this.schema = schema;
+    }
+
+    public Schema getSchema() {
+        return schema;
     }
 
     private boolean isStruct() {
@@ -64,16 +73,38 @@ public class ValueWithSchema {
         }
 
         if (schema != null) {
-            Struct valueStruct = (Struct) value;
             try {
-                return new ValueWithSchema(valueStruct.get(key), schema.field(key).schema());
+                Object fieldValue = value == null ? null : ((Struct) value).get(key);
+                Schema fieldSchema = schema.field(key).schema();
+                return new ValueWithSchema(fieldValue, fieldSchema);
             } catch (DataException ex) {
                 return new ValueWithSchema(null, null);
             }
         } else {
+            if (value == null) {
+                return NULL_VALUE;
+            }
             Map valueMap = (Map) value;
             return new ValueWithSchema(valueMap.get(key), null);
         }
+    }
+
+    public ValueWithSchema getByPath(String path) {
+        ValueWithSchema res = this;
+        for (String key: path.split("\\.")) {
+            res = res.getByKey(key);
+        }
+
+        return res;
+    }
+
+    public String mapColumnsToCSV(List<ColumnMapping> columnMappings) throws IOException {
+        ArrayList<String> fields = new ArrayList<>();
+        for (ColumnMapping mapping: columnMappings) {
+            fields.add(this.getByPath(mapping.getFieldPath()).toCSV());
+        }
+
+        return String.join("\t", fields);
     }
 
     public String toCSV(List<String> columns) throws IOException {
