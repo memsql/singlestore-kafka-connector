@@ -6,7 +6,7 @@
     <artifactId>singlestore-kafka-connector</artifactId>
 
     <name>singlestore-kafka-connector</name>
-    <version>1.2.0</version>
+    <version>1.2.0-beta</version>
     <description>
         The official SingleStore connector for Kafka Confluent Connect.
     </description>

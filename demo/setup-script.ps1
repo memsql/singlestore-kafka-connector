@@ -118,7 +118,7 @@ docker run `
     --name singlestore-kafka-connect-short-demo `
     singlestore-kafka-connect-short-demo `
     tail -f /dev/null > $null
-docker cp singlestore-kafka-connect-short-demo:/home/app/target/singlestore-kafka-connector-1.2.0.jar "$env:TEMP"
+docker cp singlestore-kafka-connect-short-demo:/home/app/target/singlestore-kafka-connector-1.2.0-beta.jar "$env:TEMP"
 docker stop singlestore-kafka-connect-short-demo > $null
 Write-Output "Success!"
 
@@ -128,7 +128,7 @@ function Start-Kafka-Connect {
     # replace backslashes with slashes, colons with nothing,
     # convert to lower case and trim last /
     $nixTempPath = (("$env:TEMP" -replace "\\","/") -replace ":","").ToLower().Trim("/")
-    $kafkaConnectorVolumes = $nixTempPath + "/singlestore-kafka-connector-1.2.0.jar:/usr/share/java/singlestore-kafka-connector-1.2.0.jar"
+    $kafkaConnectorVolumes = $nixTempPath + "/singlestore-kafka-connector-1.2.0-beta.jar:/usr/share/java/singlestore-kafka-connector-1.2.0-beta.jar"
 
     docker run -d `
         --name=kafka-connect-short-demo `
