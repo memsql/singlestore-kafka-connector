@@ -74,8 +74,8 @@ public class ValueWithSchema {
 
         if (schema != null) {
             try {
-                Schema fieldSchema = schema.field(key).schema();
                 Object fieldValue = value == null ? null : ((Struct) value).get(key);
+                Schema fieldSchema = schema.field(key).schema();
                 return new ValueWithSchema(fieldValue, fieldSchema);
             } catch (DataException ex) {
                 return new ValueWithSchema(null, null);
