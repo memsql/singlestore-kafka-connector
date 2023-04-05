@@ -16,16 +16,19 @@ public class CsvDbWriter {
     private static final Logger log = LoggerFactory.getLogger(CsvDbWriter.class);
 
     List<String> columns;
+    String filter;
 
-    public CsvDbWriter(SinkRecord record) {
+    public CsvDbWriter(SingleStoreSinkConfig config, SinkRecord record) {
         this.columns = new ValueWithSchema(record).getColumns();
+        this.filter = config.filter;
     }
 
     public String generateQuery(String ext, String table) {
         String queryPrefix = String.format("LOAD DATA LOCAL INFILE '###.%s'", ext);
         String columnNames = SingleStoreDialect.escapeColumnNames(columns);
-        String queryEnding = String.format("INTO TABLE %s (%s)", SingleStoreDialect.quoteIdentifier(table), columnNames);
-        return String.join(" ", queryPrefix, queryEnding);
+        String queryTable = String.format("INTO TABLE %s (%s)", SingleStoreDialect.quoteIdentifier(table), columnNames);
+        String queryFilter = filter == null ? "" : String.format("WHERE %s", filter);
+        return String.join(" ", queryPrefix, queryTable, queryFilter);
     }
 
     public void writeData(OutputStream outputStream, Collection<SinkRecord> records) throws IOException {
