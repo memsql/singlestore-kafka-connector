@@ -5,13 +5,14 @@ import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 import org.junit.Test;
 
+import java.sql.SQLException;
 import java.util.*;
 
 import static org.junit.Assert.*;
 
 public class SingleStoreDialectTest {
     @Test
-    public void getSchemaForCrateTableQueryStruct() {
+    public void getSchemaForCrateTableQueryStruct() throws SQLException {
         Schema schema = SchemaBuilder.struct()
                 .field("f1", Schema.STRING_SCHEMA)
                 .field("f2", Schema.STRING_SCHEMA)
@@ -29,7 +30,7 @@ public class SingleStoreDialectTest {
                 new TableKey(TableKey.Type.KEY, "", Collections.singletonList("f5"))
                 ));
 
-        assertEquals(SingleStoreDialect.getSchemaForCreateTableQuery(schema, keys), "(\n" +
+        assertEquals(SingleStoreDialect.getSchemaForCreateTableQuery(schema, keys, null), "(\n" +
                 "`f1` TEXT NOT NULL,\n" +
                 "`f2` TEXT NOT NULL,\n" +
                 "`f3` TEXT NOT NULL,\n" +
@@ -45,7 +46,7 @@ public class SingleStoreDialectTest {
     }
 
     @Test
-    public void getSchemaForCrateTableColumnstore() {
+    public void getSchemaForCrateTableColumnstore() throws SQLException {
         Schema schema = SchemaBuilder.struct()
                 .field("f1", SchemaBuilder.map(Schema.STRING_SCHEMA, Schema.STRING_SCHEMA))
                 .field("f2", Schema.STRING_SCHEMA)
@@ -53,7 +54,7 @@ public class SingleStoreDialectTest {
 
         List<TableKey> keys = new ArrayList<>(Collections.emptyList());
 
-        assertEquals(SingleStoreDialect.getSchemaForCreateTableQuery(schema, keys), "(\n" +
+        assertEquals(SingleStoreDialect.getSchemaForCreateTableQuery(schema, keys, null), "(\n" +
                 "`f1` JSON NOT NULL,\n" +
                 "`f2` TEXT NOT NULL,\n" +
                 "KEY (`f2`) USING CLUSTERED COLUMNSTORE\n" +
@@ -62,26 +63,26 @@ public class SingleStoreDialectTest {
 
 
     @Test
-    public void getSchemaForCrateTableQueryNotStruct() {
+    public void getSchemaForCrateTableQueryNotStruct() throws SQLException {
         Schema schema = Schema.STRING_SCHEMA;
 
         List<TableKey> keys = new ArrayList<>(Collections.singletonList(
                 new TableKey(TableKey.Type.COLUMNSTORE, "", Collections.singletonList("data"))
         ));
 
-        assertEquals(SingleStoreDialect.getSchemaForCreateTableQuery(schema, keys), "(\n" +
+        assertEquals(SingleStoreDialect.getSchemaForCreateTableQuery(schema, keys, null), "(\n" +
                 "`data` TEXT NOT NULL,\n" +
                 "KEY (`data`) USING CLUSTERED COLUMNSTORE\n" +
                 ")");
     }
 
     @Test
-    public void getSchemaForCrateTableQueryNoKeys() {
+    public void getSchemaForCrateTableQueryNoKeys() throws SQLException {
         Schema schema = Schema.STRING_SCHEMA;
 
         List<TableKey> keys = new ArrayList<>();
 
-        assertEquals(SingleStoreDialect.getSchemaForCreateTableQuery(schema, keys), "(\n" +
+        assertEquals(SingleStoreDialect.getSchemaForCreateTableQuery(schema, keys, null), "(\n" +
                 "`data` TEXT NOT NULL,\n" +
                 "KEY (`data`) USING CLUSTERED COLUMNSTORE\n" +
                 ")");
