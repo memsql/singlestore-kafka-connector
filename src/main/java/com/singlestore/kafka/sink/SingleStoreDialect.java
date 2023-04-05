@@ -69,7 +69,7 @@ public class SingleStoreDialect {
         if (columnMappings != null) {
             fields = new ArrayList<>();
             for (ColumnMapping mapping: columnMappings) {
-                Schema columnSchema = new ValueWithSchema(schema).getSchema();
+                Schema columnSchema = new ValueWithSchema(schema).getByPath(mapping.getFieldPath()).getSchema();
                 if (columnSchema == null) {
                     throw new SQLException(String.format("Failed to create table. Can't get type of the column %s (%s)", mapping.getColumnName(), mapping.getFieldPath()));
                 }

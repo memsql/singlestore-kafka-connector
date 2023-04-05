@@ -1,5 +1,6 @@
 package com.singlestore.kafka.sink;
 
+import com.singlestore.kafka.utils.ColumnMapping;
 import com.singlestore.kafka.utils.TableKey;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
@@ -86,6 +87,29 @@ public class SingleStoreDialectTest {
                 "`data` TEXT NOT NULL,\n" +
                 "KEY (`data`) USING CLUSTERED COLUMNSTORE\n" +
                 ")");
+    }
+
+    @Test
+    public void getSchemaForCreateTableQueryColumnMapping() throws SQLException {
+        Schema schema = SchemaBuilder.struct()
+            .field("f1", Schema.STRING_SCHEMA)
+            .field("f2", Schema.INT64_SCHEMA)
+            .field("f3",
+                SchemaBuilder.struct().field("c1", Schema.FLOAT64_SCHEMA))
+            .build();
+
+        List<TableKey> keys = new ArrayList<>();
+        List<ColumnMapping> mappings = Arrays.asList(
+            new ColumnMapping("c1", "f1"),
+            new ColumnMapping("c2", "f3.c1")
+        );
+
+
+        assertEquals(SingleStoreDialect.getSchemaForCreateTableQuery(schema, keys, mappings), "(\n" +
+            "`c1` TEXT NOT NULL,\n" +
+            "`c2` DOUBLE NOT NULL,\n" +
+            "KEY (`c1`) USING CLUSTERED COLUMNSTORE\n" +
+            ")");
     }
 
     @Test
