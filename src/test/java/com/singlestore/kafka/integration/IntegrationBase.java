@@ -56,9 +56,9 @@ public class IntegrationBase {
     }
 
     public static void put(Map<String, String> props, List<SinkRecord> records) throws SQLException {
-        put(props, records, null);
+        put(props, records, null, true);
     }
-    public static void put(Map<String, String> props, List<SinkRecord> records, String query) throws SQLException {
+    public static void put(Map<String, String> props, List<SinkRecord> records, String query, boolean dropTableBeforeWrite) throws SQLException {
         props.put(SingleStoreSinkConfig.DDL_ENDPOINT, "localhost:5506");
         props.put(SingleStoreSinkConfig.CONNECTION_DATABASE, "testdb");
         String password;
@@ -67,7 +67,9 @@ public class IntegrationBase {
         }
         props.put(SingleStoreSinkConfig.METADATA_TABLE_ALLOW, "false");
 
-        executeQuery(String.format("DROP TABLE IF EXISTS testdb.%s", SingleStoreDialect.quoteIdentifier(records.iterator().next().topic())));
+        if (dropTableBeforeWrite) {
+            executeQuery(String.format("DROP TABLE IF EXISTS testdb.%s", SingleStoreDialect.quoteIdentifier(records.iterator().next().topic())));
+        }
         if (query != null) {
             executeQuery(query);
         }

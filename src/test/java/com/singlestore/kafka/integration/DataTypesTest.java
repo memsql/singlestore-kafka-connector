@@ -33,7 +33,7 @@ public class DataTypesTest extends IntegrationBase {
         List<SinkRecord> records = Collections.singletonList(createRecord(null, mp, "schemaless"));
         Map<String, String> props = new HashMap<>();
 
-        put(props, records, "CREATE TABLE testdb.schemaless(`boolean` BOOL, `int` INT, `long` LONG, `float` FLOAT, `double` DOUBLE, `bytes` BLOB, `string` TEXT, `array` JSON, `map` JSON)");
+        put(props, records, "CREATE TABLE testdb.schemaless(`boolean` BOOL, `int` INT, `long` LONG, `float` FLOAT, `double` DOUBLE, `bytes` BLOB, `string` TEXT, `array` JSON, `map` JSON)", true);
     }
 
     @Test
