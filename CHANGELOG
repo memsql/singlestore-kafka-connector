@@ -3,6 +3,7 @@
     * Added possibility to map records to tables based on record data
     * Added possibility to filter records
     * Added possibility to map record fields to table columns
+    * Added possibility to perform upsert
 2022-01-26 Version 1.1.2
     * Updated version of Jackson Databind library to 2.13.4.2
 2022-01-26 Version 1.1.1
