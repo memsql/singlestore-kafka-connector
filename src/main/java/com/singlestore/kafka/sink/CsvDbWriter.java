@@ -17,6 +17,7 @@ public class CsvDbWriter {
     List<ColumnMapping> columnMappings;
     String filter;
     String table;
+    boolean upsert;
 
     public CsvDbWriter(SingleStoreSinkConfig config, SinkRecord record, String table) {
         this.columnMappings = config.tableToColumnToFieldMap.get(table);
@@ -27,14 +28,16 @@ public class CsvDbWriter {
         }
         this.filter = config.filter;
         this.table = table;
+        this.upsert = config.upsert;
     }
 
     public String generateQuery(String ext) {
         String queryPrefix = String.format("LOAD DATA LOCAL INFILE '###.%s'", ext);
         String columnNames = SingleStoreDialect.escapeColumnNames(columns);
+        String queryReplace = upsert ? "REPLACE" : "";
         String queryTable = String.format("INTO TABLE %s (%s)", SingleStoreDialect.quoteIdentifier(table), columnNames);
         String queryFilter = filter == null ? "" : String.format("WHERE %s", filter);
-        return String.join(" ", queryPrefix, queryTable, queryFilter);
+        return String.join(" ", queryPrefix, queryReplace, queryTable, queryFilter);
     }
 
     public void writeData(OutputStream outputStream, Collection<SinkRecord> records) throws IOException {
