@@ -40,6 +40,29 @@ public class DataTransformTest {
     }
 
     @Test
+    public void Schemaless() {
+        Map<Object, Object> mp = new HashMap<>();
+        mp.put("id", 1);
+        mp.put("age", 25);
+        mp.put("name", "John");
+        mp.put("job", "teacher");
+
+        SinkRecord record = createRecord(null, mp);
+
+        Collection<SinkRecord> updatedRecords = new DataTransform(Arrays.asList("age", "name", "nonexisting"))
+            .selectWhitelistedFields(Collections.singletonList(record));
+
+        assertEquals(updatedRecords.size(), 1);
+        Iterator<SinkRecord> iterator = updatedRecords.iterator();
+        SinkRecord updatedRecord = iterator.next();
+        Map<Object, Object> expectedMp = new HashMap<>();
+        expectedMp.put("age", 25);
+        expectedMp.put("name", "John");
+
+        assertEquals(createRecord(null, expectedMp), updatedRecord);
+    }
+
+    @Test
     public void NonExistingFields() {
         Collection<SinkRecord> updatedRecords = new DataTransform(Collections.singletonList("nonexisting")).selectWhitelistedFields(records);
         Schema schema = SchemaBuilder.struct().build();

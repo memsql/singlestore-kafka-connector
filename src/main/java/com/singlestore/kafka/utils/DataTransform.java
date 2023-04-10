@@ -22,8 +22,7 @@ public class DataTransform {
             return records;
         }
 
-        Schema updatedSchema = this.updateSchema(records.iterator().next().valueSchema());
-        return records.stream().map(record -> this.updateRecord(record, updatedSchema)).collect(Collectors.toList());
+        return records.stream().map(this::updateRecord).collect(Collectors.toList());
     }
 
     private Schema updateSchema(Schema schema) {
@@ -37,14 +36,32 @@ public class DataTransform {
         return builder.build();
     }
 
-    private SinkRecord updateRecord(SinkRecord record, Schema updatedSchema) {
-        final Struct updatedValue = new Struct(updatedSchema);
-        final Struct value = (Struct) record.value();
+    private SinkRecord updateRecord(SinkRecord record) {
+        Schema schema = record.valueSchema();
+        if (schema != null) {
+            if (schema.type() != Schema.Type.STRUCT) {
+                return record;
+            }
 
-        for (Field field : updatedSchema.fields()) {
-            updatedValue.put(field.name(), value.get(field.name()));
+            Schema updatedSchema = updateSchema(schema);
+            final Struct updatedValue = new Struct(updatedSchema);
+            Struct value = (Struct) record.value();
+            for (Field field : updatedSchema.fields()) {
+                updatedValue.put(field.name(), value.get(field.name()));
+            }
+
+            return record.newRecord(record.topic(), record.kafkaPartition(), record.keySchema(), record.key(), updatedSchema, updatedValue, record.timestamp());
+        } else {
+            if (!(record.value() instanceof Map)) {
+                return record;
+            }
+
+            Map<Object, Object> value = (Map<Object, Object>) record.value();
+            Map<Object, Object> updatedValue = value.entrySet().stream()
+                .filter(entry -> fieldsWhitelist.contains(entry.getKey().toString()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+            return record.newRecord(record.topic(), record.kafkaPartition(), record.keySchema(), record.key(), null, updatedValue, record.timestamp());
         }
-
-        return record.newRecord(record.topic(), record.kafkaPartition(), record.keySchema(), record.key(), updatedSchema, updatedValue, record.timestamp());
     }
 }

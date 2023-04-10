@@ -55,41 +55,4 @@ public class ExceptionTest extends IntegrationBase {
             fail("ConnectException should be thrown");
         }
     }
-
-    @Test
-    public void testNoSchemaException() {
-        Schema schema = SchemaBuilder.struct().name("NAME")
-                .field("name", Schema.STRING_SCHEMA)
-                .field("age", Schema.INT32_SCHEMA)
-                .build();
-        Struct struct = new Struct(schema)
-                .put("name", "Barbara Liskov")
-                .put("age", 75);
-        SinkRecord record = new SinkRecord("topic",0,null,null, null, struct, 0);
-        Map<String, String> props = ConfigHelper.getMinimalRequiredParameters();
-        props.put(SingleStoreSinkConfig.CONNECTION_DATABASE, "testdb");
-        SingleStoreSinkTask task = new SingleStoreSinkTask();
-        task.start(props);
-        try {
-            task.put(Collections.singleton(record));
-            fail("Exception should be thrown");
-        } catch (ConnectException ex) {
-            assertTrue(ex.getLocalizedMessage().contains("No value schema was provided for the data record:"));
-        } catch (Exception ex) {
-            fail("ConnectException should be thrown");
-        }
-
-        List<SinkRecord> records = new ArrayList<>();
-        records.add(new SinkRecord("topic",0,null,null, schema, struct, 0));
-        records.add(new SinkRecord("topic",0,null,null, schema, struct, 0));
-        records.add(new SinkRecord("topic",0,null,null, null, struct, 0));
-        try {
-            task.put(records);
-            fail("Exception should be thrown");
-        } catch (ConnectException ex) {
-            assertTrue(ex.getLocalizedMessage().contains("No value schema was provided for the data record:"));
-        } catch (Exception ex) {
-            fail("ConnectException should be thrown");
-        }
-    }
 }
