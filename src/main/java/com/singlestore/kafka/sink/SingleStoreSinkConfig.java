@@ -99,6 +99,10 @@ public class SingleStoreSinkConfig extends AbstractConfig {
     private static final String RECORD_TO_TABLE_MAPPING_DOC = "Specify a mapping between the Kafka record and the SingleStoreDB table name";
     private static final String RECORD_TO_TABLE_MAPPING_DISPLAY = "The SingleStoreDB table name to use for record-to-table mapping";
 
+    private static  final String UPSERT = "singlestore.upsert";
+    private static  final String UPSERT_DOC = "Update a row in case of a duplicate key";
+    private static  final String UPSERT_DISPLAY = "Change the behavior to update the row with the same key instead of throwing an error";
+
     private static final ConfigDef.Range NON_NEGATIVE_INT_VALIDATOR = ConfigDef.Range.atLeast(0);
 
     public static final ConfigDef CONFIG_DEF = new ConfigDef()
@@ -280,7 +284,16 @@ public class SingleStoreSinkConfig extends AbstractConfig {
                 SINGLESTORE_GROUP,
                 4,
                 ConfigDef.Width.MEDIUM,
-                RECORD_TO_TABLE_MAPPING_DISPLAY);
+                RECORD_TO_TABLE_MAPPING_DISPLAY)
+            .define(UPSERT,
+                ConfigDef.Type.BOOLEAN,
+                false,
+                ConfigDef.Importance.LOW,
+                UPSERT_DOC,
+                SINGLESTORE_GROUP,
+                4,
+                ConfigDef.Width.MEDIUM,
+                UPSERT_DISPLAY);
 
     public final String ddlEndpoint;
     public final List<String> dmlEndpoints;
@@ -300,6 +313,7 @@ public class SingleStoreSinkConfig extends AbstractConfig {
     public final Map<String, List<ColumnMapping>> tableToColumnToFieldMap;
     public final String recordToTableMappingField;
     public final Map<String, String> recordToTableMap;
+    public boolean upsert;
 
 
     public SingleStoreSinkConfig(Map<String, String> props) {
@@ -322,6 +336,7 @@ public class SingleStoreSinkConfig extends AbstractConfig {
         this.tableToColumnToFieldMap = getTableToColumnToFieldMap(props);
         this.recordToTableMappingField = getString(RECORD_TO_TABLE_MAPPING_FIELD);
         this.recordToTableMap = getRecordToTableMap(props);
+        this.upsert = getBoolean(UPSERT);
 
         if (!topicToTableMap.isEmpty() && recordToTableMappingField != null) {
             throw new ConfigException("Configurations \"singlestore.recordToTableMappingField\" and \"singlestore.tableName\" are mutually exclusive");

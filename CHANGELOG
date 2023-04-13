@@ -1,3 +1,10 @@
+2023-04-05 Version 1.2.0
+    * Added the ability to:
+        * Write data without a schema
+        * Map records to tables based on record data
+        * Map record fields to table columns
+        * Filter records
+        * Perform upsert
 2022-01-26 Version 1.1.2
     * Updated version of Jackson Databind library to 2.13.4.2
 2022-01-26 Version 1.1.1
