@@ -79,6 +79,10 @@ public class SingleStoreSinkConfig extends AbstractConfig {
     private static final String TABLE_NAME_DOC = "Specify a mapping between Kafka topic name and SingleStore table name";
     private static final String TABLE_NAME_DISPLAY = "SingleStore table name specifying";
 
+    public static  final String FILTER = "singlestore.filter";
+    private static final String FILTER_DOC = "Specify a SQL expression to use for filtering incoming data. " +
+        "This parameter is inserted directly into the query's WHERE clause and is not SQL-injection safe";
+    private static final String FILTER_DISPLAY = "SQL expression to filter incoming data";
     private static final ConfigDef.Range NON_NEGATIVE_INT_VALIDATOR = ConfigDef.Range.atLeast(0);
 
     public static final ConfigDef CONFIG_DEF = new ConfigDef()
@@ -224,7 +228,16 @@ public class SingleStoreSinkConfig extends AbstractConfig {
                     SINGLESTORE_GROUP,
                     4,
                     ConfigDef.Width.MEDIUM,
-                    TABLE_NAME_DISPLAY);
+                    TABLE_NAME_DISPLAY)
+            .define(FILTER,
+                ConfigDef.Type.STRING,
+                null,
+                ConfigDef.Importance.LOW,
+                FILTER_DOC,
+                SINGLESTORE_GROUP,
+                4,
+                ConfigDef.Width.MEDIUM,
+                FILTER_DISPLAY);
 
     public final String ddlEndpoint;
     public final List<String> dmlEndpoints;
@@ -240,6 +253,7 @@ public class SingleStoreSinkConfig extends AbstractConfig {
     public final String metadataTableName;
     public final Map<String, String> topicToTableMap;
     public final List<String> fieldsWhitelist;
+    public final String filter;
 
     public SingleStoreSinkConfig(Map<String, String> props) {
         super(CONFIG_DEF, props);
@@ -257,6 +271,7 @@ public class SingleStoreSinkConfig extends AbstractConfig {
         this.metadataTableName = getString(METADATA_TABLE_NAME);
         this.topicToTableMap = getTopicToTableMap(props);
         this.fieldsWhitelist = getList(FIELDS_WHITELIST);
+        this.filter = getString(FILTER);
 
         try {
             JdbcHelper.getDDLConnection(this);

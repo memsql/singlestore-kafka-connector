@@ -344,4 +344,15 @@ public class SingleStoreSinkConfigTest extends IntegrationBase {
         config = new SingleStoreSinkConfig(props);
         assertEquals(config.metadataTableName, props.get(SingleStoreSinkConfig.METADATA_TABLE_NAME));
     }
+
+    @Test
+    public void successFilterParameter() {
+        Map<String, String> props = getMinimalRequiredParameters();
+        SingleStoreSinkConfig config = new SingleStoreSinkConfig(props);
+        assertNull(config.filter);
+
+        props.put(SingleStoreSinkConfig.FILTER, "a = 1");
+        config = new SingleStoreSinkConfig(props);
+        assertEquals(config.filter, props.get(SingleStoreSinkConfig.FILTER));
+    }
 }
