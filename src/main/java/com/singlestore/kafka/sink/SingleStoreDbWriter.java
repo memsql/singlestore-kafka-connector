@@ -74,8 +74,8 @@ public class SingleStoreDbWriter {
 
     private void write(SinkRecord record, DataExtension dataCompression, String table,
                          OutputStream outputStream, Collection<SinkRecord> records, Statement stmt) throws IOException, SQLException {
-        CsvDbWriter dbWriter = new CsvDbWriter(config, record);
-        String dataQuery = dbWriter.generateQuery(dataCompression.getExt(), table);
+        CsvDbWriter dbWriter = new CsvDbWriter(config, record, table);
+        String dataQuery = dbWriter.generateQuery(dataCompression.getExt());
         dbWriter.writeData(outputStream, records);
         outputStream.close();
         log.trace("Executing SQL:\n{}", dataQuery);

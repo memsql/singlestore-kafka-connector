@@ -1,5 +1,6 @@
 package com.singlestore.kafka.sink;
 
+import com.singlestore.kafka.utils.ColumnMapping;
 import com.singlestore.kafka.utils.DataCompression;
 import com.singlestore.kafka.utils.JdbcHelper;
 import com.singlestore.kafka.utils.TableKey;
@@ -83,6 +84,12 @@ public class SingleStoreSinkConfig extends AbstractConfig {
     private static final String FILTER_DOC = "Specify a SQL expression to use for filtering incoming data. " +
         "This parameter is inserted directly into the query's WHERE clause and is not SQL-injection safe";
     private static final String FILTER_DISPLAY = "SQL expression to filter incoming data";
+
+    public static  final String TABLE_COLUMN_TO_FIELD = "singlestore.columnToField.<tableName>.<columnName>";
+    private static final String TABLE_COLUMN_TO_FIELD_DOC = "Specify a mapping between SingleStoreDB table column names and the Kafka record fields. " +
+        "Nested fields are specified as a sequence of field names separated by '.'";
+    private static final String TABLE_COLUMN_TO_FIELD_DISPLAY = "Kafka record field for SingleStore column mapping";
+
     private static final ConfigDef.Range NON_NEGATIVE_INT_VALIDATOR = ConfigDef.Range.atLeast(0);
 
     public static final ConfigDef CONFIG_DEF = new ConfigDef()
@@ -237,7 +244,16 @@ public class SingleStoreSinkConfig extends AbstractConfig {
                 SINGLESTORE_GROUP,
                 4,
                 ConfigDef.Width.MEDIUM,
-                FILTER_DISPLAY);
+                FILTER_DISPLAY)
+            .define(TABLE_COLUMN_TO_FIELD,
+                ConfigDef.Type.STRING,
+                null,
+                ConfigDef.Importance.LOW,
+                TABLE_COLUMN_TO_FIELD_DOC,
+                SINGLESTORE_GROUP,
+                4,
+                ConfigDef.Width.MEDIUM,
+                TABLE_COLUMN_TO_FIELD_DISPLAY);
 
     public final String ddlEndpoint;
     public final List<String> dmlEndpoints;
@@ -254,6 +270,8 @@ public class SingleStoreSinkConfig extends AbstractConfig {
     public final Map<String, String> topicToTableMap;
     public final List<String> fieldsWhitelist;
     public final String filter;
+    public final Map<String, List<ColumnMapping>> tableToColumnToFieldMap;
+
 
     public SingleStoreSinkConfig(Map<String, String> props) {
         super(CONFIG_DEF, props);
@@ -272,6 +290,7 @@ public class SingleStoreSinkConfig extends AbstractConfig {
         this.topicToTableMap = getTopicToTableMap(props);
         this.fieldsWhitelist = getList(FIELDS_WHITELIST);
         this.filter = getString(FILTER);
+        this.tableToColumnToFieldMap = getTableToColumnToFieldMap(props);
 
         try {
             JdbcHelper.getDDLConnection(this);
@@ -296,6 +315,31 @@ public class SingleStoreSinkConfig extends AbstractConfig {
                 .filter(key -> key.startsWith(tablePrefix))
                 .forEach(key -> topicToTableMap.put(key.substring(tablePrefix.length()), props.get(key)));
         return topicToTableMap;
+    }
+
+    private Map<String, List<ColumnMapping>> getTableToColumnToFieldMap(Map<String, String> props) {
+        String prefix = "singlestore.columnToField.";
+        Map<String, List<ColumnMapping>> map = new HashMap<>();
+
+        props.keySet().stream()
+            .filter(key -> key.startsWith(prefix))
+            .forEach(key -> {
+                String[] tableAndColumn = key.substring(prefix.length()).split("\\.");
+                if (tableAndColumn.length != 2) {
+                    throw new ConfigException(String.format("Invalid configuration \"%s\"", key));
+                }
+                String table = tableAndColumn[0];
+                String column = tableAndColumn[1];
+
+                if (!map.containsKey(table))
+                {
+                    map.put(table, new ArrayList<>());
+                }
+
+                map.get(table).add(new ColumnMapping(column, props.get(key)));
+            });
+
+        return map;
     }
 
     private Map<String, String> getSqlParams(Map<String, String> props) {
