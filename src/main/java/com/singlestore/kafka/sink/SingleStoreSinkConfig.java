@@ -21,27 +21,27 @@ public class SingleStoreSinkConfig extends AbstractConfig {
 
     public static final String DDL_ENDPOINT = "connection.ddlEndpoint";
     private static final String DDL_ENDPOINT_DOC =
-            "Hostname or IP address of the SingleStore Master Aggregator in the format `host[:port]`";
+            "Hostname or IP address of the SingleStoreDB Master Aggregator in the format `host[:port]`";
     private static final String DDL_ENDPOINT_DISPLAY = "DDL Endpoint";
 
     public static final String DML_ENDPOINTS = "connection.dmlEndpoints";
     private static final String DML_ENDPOINTS_DOC =
-            "Hostname or IP address of SingleStore Aggregator nodes to run queries against " +
+            "Hostname or IP address of SingleStoreDB Aggregator nodes to run queries against " +
                     "in the format host[:port],host[:port],... (port is optional, multiple hosts separated by comma). " +
                     "Example: child-agg:3308,child-agg2 (default: ddlEndpoint)";
     private static final String DML_ENDPOINTS_DISPLAY = "DML Endpoints";
 
     public static final String CONNECTION_DATABASE = "connection.database";
-    private static final String CONNECTION_DATABASE_DOC = "SingleStore connection database.";
-    private static final String CONNECTION_DATABASE_DISPLAY = "SingleStore Database";
+    private static final String CONNECTION_DATABASE_DOC = "SingleStoreDB connection database.";
+    private static final String CONNECTION_DATABASE_DISPLAY = "SingleStoreDB Database";
 
     public static final String CONNECTION_USER = "connection.user";
-    private static final String CONNECTION_USER_DOC = "SingleStore connection user.";
-    private static final String CONNECTION_USER_DISPLAY = "SingleStore User";
+    private static final String CONNECTION_USER_DOC = "SingleStoreDB connection user.";
+    private static final String CONNECTION_USER_DISPLAY = "SingleStoreDB User";
 
     public static final String CONNECTION_PASSWORD = "connection.password";
-    private static final String CONNECTION_PASSWORD_DOC = "SingleStore connection password.";
-    private static final String CONNECTION_PASSWORD_DISPLAY = "SingleStore Password";
+    private static final String CONNECTION_PASSWORD_DOC = "SingleStoreDB connection password.";
+    private static final String CONNECTION_PASSWORD_DISPLAY = "SingleStoreDB Password";
 
     public static final String SQL_PARAMETERS = "params.<value>";
     private static final String SQL_PARAMETERS_DOC = "Specify a specific MySQL or JDBC parameter which will be injected into the connection URI";
@@ -65,7 +65,7 @@ public class SingleStoreSinkConfig extends AbstractConfig {
 
     public static final String LOAD_DATA_COMPRESSION = "singlestore.loadDataCompression";
     private static final String LOAD_DATA_COMPRESSION_DOC = "Compress data on load; one of (GZip, LZ4, Skip) (default: GZip)";
-    private static final String LOAD_DATA_COMPRESSION_DISPLAY = "SingleStore Load Data Compression";
+    private static final String LOAD_DATA_COMPRESSION_DISPLAY = "SingleStoreDB Load Data Compression";
 
     public static final String METADATA_TABLE_ALLOW = "singlestore.metadata.allow";
     private static final String METADATA_TABLE_ALLOW_DOCS = "Allows or denies the use of an additional meta-table to save the recording results (default: true)";
@@ -77,8 +77,8 @@ public class SingleStoreSinkConfig extends AbstractConfig {
     private static final String METADATA_TABLE_NAME_DISPLAY = "Metadata table name";
 
     public static final String TABLE_NAME = "singlestore.tableName.<topicName>";
-    private static final String TABLE_NAME_DOC = "Specify a mapping between Kafka topic name and SingleStore table name";
-    private static final String TABLE_NAME_DISPLAY = "SingleStore table name specifying";
+    private static final String TABLE_NAME_DOC = "Specify a mapping between Kafka topic name and SingleStoreDB table name";
+    private static final String TABLE_NAME_DISPLAY = "SingleStoreDB table name specifying";
 
     public static  final String FILTER = "singlestore.filter";
     private static final String FILTER_DOC = "Specify a SQL expression to use for filtering incoming data. " +
@@ -88,7 +88,16 @@ public class SingleStoreSinkConfig extends AbstractConfig {
     public static  final String TABLE_COLUMN_TO_FIELD = "singlestore.columnToField.<tableName>.<columnName>";
     private static final String TABLE_COLUMN_TO_FIELD_DOC = "Specify a mapping between SingleStoreDB table column names and the Kafka record fields. " +
         "Nested fields are specified as a sequence of field names separated by '.'";
-    private static final String TABLE_COLUMN_TO_FIELD_DISPLAY = "Kafka record field for SingleStore column mapping";
+    private static final String TABLE_COLUMN_TO_FIELD_DISPLAY = "Kafka record field for SingleStoreDB column mapping";
+
+    public static final String RECORD_TO_TABLE_MAPPING_FIELD = "singlestore.recordToTable.mappingField";
+    private static final String RECORD_TO_TABLE_MAPPING_FIELD_DOC =
+        "Specify which field of the Kafka record defines to the SingleStoreDB table where the Kafka record will be written";
+    private static final String RECORD_TO_TABLE_MAPPING_FIELD_DISPLAY = "The Kafka record field to use for record-to-table mapping";
+
+    public static final String RECORD_TO_TABLE_MAPPING = "singlestore.recordToTable.mapping.<value>";
+    private static final String RECORD_TO_TABLE_MAPPING_DOC = "Specify a mapping between the Kafka record and the SingleStoreDB table name";
+    private static final String RECORD_TO_TABLE_MAPPING_DISPLAY = "The SingleStoreDB table name to use for record-to-table mapping";
 
     private static final ConfigDef.Range NON_NEGATIVE_INT_VALIDATOR = ConfigDef.Range.atLeast(0);
 
@@ -253,7 +262,25 @@ public class SingleStoreSinkConfig extends AbstractConfig {
                 SINGLESTORE_GROUP,
                 4,
                 ConfigDef.Width.MEDIUM,
-                TABLE_COLUMN_TO_FIELD_DISPLAY);
+                TABLE_COLUMN_TO_FIELD_DISPLAY)
+            .define(RECORD_TO_TABLE_MAPPING_FIELD,
+                ConfigDef.Type.STRING,
+                null,
+                ConfigDef.Importance.LOW,
+                RECORD_TO_TABLE_MAPPING_FIELD_DOC,
+                SINGLESTORE_GROUP,
+                4,
+                ConfigDef.Width.MEDIUM,
+                RECORD_TO_TABLE_MAPPING_FIELD_DISPLAY)
+            .define(RECORD_TO_TABLE_MAPPING,
+                ConfigDef.Type.STRING,
+                null,
+                ConfigDef.Importance.LOW,
+                RECORD_TO_TABLE_MAPPING_DOC,
+                SINGLESTORE_GROUP,
+                4,
+                ConfigDef.Width.MEDIUM,
+                RECORD_TO_TABLE_MAPPING_DISPLAY);
 
     public final String ddlEndpoint;
     public final List<String> dmlEndpoints;
@@ -271,6 +298,8 @@ public class SingleStoreSinkConfig extends AbstractConfig {
     public final List<String> fieldsWhitelist;
     public final String filter;
     public final Map<String, List<ColumnMapping>> tableToColumnToFieldMap;
+    public final String recordToTableMappingField;
+    public final Map<String, String> recordToTableMap;
 
 
     public SingleStoreSinkConfig(Map<String, String> props) {
@@ -291,6 +320,16 @@ public class SingleStoreSinkConfig extends AbstractConfig {
         this.fieldsWhitelist = getList(FIELDS_WHITELIST);
         this.filter = getString(FILTER);
         this.tableToColumnToFieldMap = getTableToColumnToFieldMap(props);
+        this.recordToTableMappingField = getString(RECORD_TO_TABLE_MAPPING_FIELD);
+        this.recordToTableMap = getRecordToTableMap(props);
+
+        if (!topicToTableMap.isEmpty() && recordToTableMappingField != null) {
+            throw new ConfigException("Configurations \"singlestore.recordToTableMappingField\" and \"singlestore.tableName\" are mutually exclusive");
+        }
+
+        if (!recordToTableMap.isEmpty() && recordToTableMappingField == null) {
+            throw new ConfigException("Configuration \"singlestore.recordToTableMapping\" requires \"singlestore.recordToTableMappingField\" to be specified");
+        }
 
         try {
             JdbcHelper.getDDLConnection(this);
@@ -306,15 +345,6 @@ public class SingleStoreSinkConfig extends AbstractConfig {
         } catch (IllegalArgumentException ex) {
             throw new ConfigException("Configuration \"singlestore.loadDataCompression\" is wrong. Available options: Gzip, LZ4, Skip");
         }
-    }
-
-    private Map<String, String> getTopicToTableMap(Map<String, String> props) {
-        Map<String, String> topicToTableMap = new HashMap<>();
-        String tablePrefix = "singlestore.tableName.";
-        props.keySet().stream()
-                .filter(key -> key.startsWith(tablePrefix))
-                .forEach(key -> topicToTableMap.put(key.substring(tablePrefix.length()), props.get(key)));
-        return topicToTableMap;
     }
 
     private Map<String, List<ColumnMapping>> getTableToColumnToFieldMap(Map<String, String> props) {
@@ -342,13 +372,25 @@ public class SingleStoreSinkConfig extends AbstractConfig {
         return map;
     }
 
-    private Map<String, String> getSqlParams(Map<String, String> props) {
-        String paramsPrefix = "params.";
-        Map<String, String> sqlParams = new HashMap<>();
+    private Map<String, String> getPropsWithPrefix(Map<String, String> props, String prefix) {
+        Map<String, String> map = new HashMap<>();
         props.keySet().stream()
-                .filter(key -> key.startsWith(paramsPrefix))
-                .forEach(key -> sqlParams.put(key.substring(paramsPrefix.length()), props.get(key)));
-        return sqlParams;
+            .filter(key -> key.startsWith(prefix))
+            .forEach(key -> map.put(key.substring(prefix.length()), props.get(key)));
+        return map;
+
+    }
+
+    private Map<String, String> getTopicToTableMap(Map<String, String> props) {
+        return getPropsWithPrefix(props, "singlestore.tableName.");
+    }
+
+    private Map<String, String> getRecordToTableMap(Map<String, String> props) {
+        return getPropsWithPrefix(props, "singlestore.recordToTable.mapping.");
+    }
+
+    private Map<String, String> getSqlParams(Map<String, String> props) {
+        return getPropsWithPrefix(props, "params.");
     }
 
     private String unescapeColumnName(String column) {

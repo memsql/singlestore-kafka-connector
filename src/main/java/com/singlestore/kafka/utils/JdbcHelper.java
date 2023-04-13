@@ -4,6 +4,7 @@ import com.singlestore.kafka.sink.SingleStoreDialect;
 import com.singlestore.kafka.sink.SingleStoreSinkConfig;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.errors.ConnectException;
+import org.apache.kafka.connect.sink.SinkRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,7 +58,15 @@ public class JdbcHelper {
         }
     }
 
-    public static String getTableName(String topic, SingleStoreSinkConfig config) {
+    public static String getTableName(SinkRecord record, SingleStoreSinkConfig config) {
+        if (config.recordToTableMappingField != null) {
+            Object value = new ValueWithSchema(record).getByPath(config.recordToTableMappingField).getValue();
+            if (value == null) {
+                return null;
+            }
+            return config.recordToTableMap.get(value.toString());
+        }
+        String topic = record.topic();
         return config.topicToTableMap.getOrDefault(topic, topic);
     }
 
