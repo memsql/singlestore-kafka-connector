@@ -1,5 +1,6 @@
 package com.singlestore.kafka.sink;
 
+import com.singlestore.kafka.utils.ValueWithSchema;
 import com.singlestore.kafka.utils.VersionProvider;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.RetriableException;
@@ -12,6 +13,8 @@ import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 public class SingleStoreSinkTask extends SinkTask {
 
@@ -28,8 +31,24 @@ public class SingleStoreSinkTask extends SinkTask {
         this.retriesLeft = config.maxRetries;
     }
 
+    private boolean takeRecord(SinkRecord record) {
+        ValueWithSchema vs = new ValueWithSchema(record);
+        if (config.filterNullValues != null) {
+            for (String path: config.filterNullValues) {
+                if (vs.getByPath(path).getValue() == null) {
+                    return false;
+                }
+            }    
+        }
+        return true;
+    }
+
     @Override
     public void put(Collection<SinkRecord> records) {
+        records = records.stream().filter(record -> {
+            return takeRecord(record);
+        }).collect(Collectors.toList());
+    
         if (!records.isEmpty()) {
             SinkRecord first = records.iterator().next();
             log.debug(

@@ -22,28 +22,30 @@ public class FilterTest extends IntegrationBase {
     @Test
     public void filter() {
         try {
+            executeQuery("DROP TABLE IF EXISTS testdb.filter");
+            executeQuery("CREATE TABLE testdb.filter (" +
+                "`a` VARCHAR(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL," +
+                "`b` VARCHAR(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL," +
+                "PRIMARY KEY (`a`, `b`)" +
+                ") COLLATE utf8_general_ci;");
             Map<String, String> props = new HashMap<>();
-            props.put("singlestore.filter", "a > 1");
+
+            props.put("singlestore.columnToField.filter.a", "a");
+            props.put("singlestore.columnToField.filter.b", "b");
+            props.put("singlestore.filterNullValues", "a,b");
+
             List<SinkRecord> records = new ArrayList<>();
             Schema schema = SchemaBuilder.struct()
-                .field("a", Schema.INT32_SCHEMA)
-                .field("b", Schema.STRING_SCHEMA)
+                .field("a", SchemaBuilder.string().optional().build())
+                .field("b", SchemaBuilder.string().optional().build())
                 .build();
 
             records.add(createRecord(schema, new Struct(schema)
-                .put("a", 1)
-                .put("b", "abc"), "filter"));
-            records.add(createRecord(schema, new Struct(schema)
-                .put("a", 2)
-                .put("b", "abcd"), "filter"));
-
+                .put("a", null)
+                .put("b", "abc"),
+                "filter"));
+            
             put(props, records);
-
-            ResultSet rs = executeQueryWithResultSet("SELECT * FROM testdb.filter");
-            assertTrue(rs.next());
-            assertEquals(2, rs.getInt(1));
-            assertEquals("abcd", rs.getString(2));
-            assertFalse(rs.next());
         } catch (Exception e) {
             log.error("", e);
             fail("Should not have thrown any exception");

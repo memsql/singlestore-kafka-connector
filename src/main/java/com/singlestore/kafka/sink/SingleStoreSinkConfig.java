@@ -103,6 +103,11 @@ public class SingleStoreSinkConfig extends AbstractConfig {
     private static  final String UPSERT_DOC = "Update a row in case of a duplicate key";
     private static  final String UPSERT_DISPLAY = "Change the behavior to update the row with the same key instead of throwing an error";
 
+    private static final String FILTER_NULL_VALUES = "singlestore.filterNullValues";
+    private static  final String FILTER_NULL_VALUES_DOC = "Specify record field. Records with null value of this field will not be inserted";
+    private static  final String FILTER_NULL_VALUES_DISPLAY = "Record field. Records with null value of this field will not be inserted";
+    
+
     private static final ConfigDef.Range NON_NEGATIVE_INT_VALIDATOR = ConfigDef.Range.atLeast(0);
 
     public static final ConfigDef CONFIG_DEF = new ConfigDef()
@@ -293,7 +298,17 @@ public class SingleStoreSinkConfig extends AbstractConfig {
                 SINGLESTORE_GROUP,
                 4,
                 ConfigDef.Width.MEDIUM,
-                UPSERT_DISPLAY);
+                UPSERT_DISPLAY)
+            .define(FILTER_NULL_VALUES,
+                ConfigDef.Type.LIST,
+                null,
+                ConfigDef.Importance.LOW,
+                FILTER_NULL_VALUES_DOC,
+                SINGLESTORE_GROUP,
+                4,
+                ConfigDef.Width.MEDIUM,
+                FILTER_NULL_VALUES_DISPLAY);
+;
 
     public final String ddlEndpoint;
     public final List<String> dmlEndpoints;
@@ -313,6 +328,7 @@ public class SingleStoreSinkConfig extends AbstractConfig {
     public final Map<String, List<ColumnMapping>> tableToColumnToFieldMap;
     public final String recordToTableMappingField;
     public final Map<String, String> recordToTableMap;
+    public final List<String> filterNullValues;
     public boolean upsert;
 
 
@@ -337,6 +353,7 @@ public class SingleStoreSinkConfig extends AbstractConfig {
         this.recordToTableMappingField = getString(RECORD_TO_TABLE_MAPPING_FIELD);
         this.recordToTableMap = getRecordToTableMap(props);
         this.upsert = getBoolean(UPSERT);
+        this.filterNullValues = getList(FILTER_NULL_VALUES);
 
         if (!topicToTableMap.isEmpty() && recordToTableMappingField != null) {
             throw new ConfigException("Configurations \"singlestore.recordToTableMappingField\" and \"singlestore.tableName\" are mutually exclusive");
