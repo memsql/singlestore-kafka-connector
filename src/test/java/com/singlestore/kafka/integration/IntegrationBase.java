@@ -41,7 +41,7 @@ public class IntegrationBase {
         executeQuery("CREATE DATABASE testdb");
     }
 
-    public static void executeQuery(String sql) throws SQLException{
+    public static void executeQuery(String sql) throws SQLException {
         log.trace("Executing SQL:\n{}", sql);
         try (Statement stmt = jdbcConnection.createStatement()) {
             stmt.execute(sql);

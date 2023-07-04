@@ -116,7 +116,11 @@ public class JdbcHelper {
         if (password != null) {
             connectionProps.setProperty("password", password);
         }
-        connectionProps.put("allowLocalInfile", "true");
+        connectionProps.put("connectionAttributes", 
+        String.format("_connector_name:%s,_connector_version:%s,_product_version:%s", 
+        "SingleStore Kafka Connector",
+        VersionProvider.getVersion(),
+        "3.2.0"));
         connectionProps.putAll(config.sqlParams);
         try {
             Class.forName("com.singlestore.jdbc.Driver");
