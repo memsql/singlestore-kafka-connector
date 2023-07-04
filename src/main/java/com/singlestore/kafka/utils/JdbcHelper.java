@@ -116,6 +116,11 @@ public class JdbcHelper {
         if (password != null) {
             connectionProps.setProperty("password", password);
         }
+        connectionProps.put("connectionAttributes", 
+        String.format("_connector_name:%s,_connector_version:%s,_product_version:%s", 
+        "SingleStore Kafka Connector",
+        VersionProvider.getVersion(),
+        VersionProvider.getKafkaVersion()));
         connectionProps.put("allowLocalInfile", "true");
         connectionProps.putAll(config.sqlParams);
         try {

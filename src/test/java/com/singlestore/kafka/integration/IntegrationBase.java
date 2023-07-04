@@ -4,10 +4,14 @@ import com.singlestore.kafka.sink.SingleStoreDbWriter;
 import com.singlestore.kafka.sink.SingleStoreDialect;
 import com.singlestore.kafka.sink.SingleStoreSinkConfig;
 import com.singlestore.kafka.sink.SingleStoreSinkTask;
+import com.vdurmont.semver4j.Semver;
+
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.junit.BeforeClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.junit.Assert.assertTrue;
 
 import java.sql.*;
 import java.util.List;
@@ -41,7 +45,7 @@ public class IntegrationBase {
         executeQuery("CREATE DATABASE testdb");
     }
 
-    public static void executeQuery(String sql) throws SQLException{
+    public static void executeQuery(String sql) throws SQLException {
         log.trace("Executing SQL:\n{}", sql);
         try (Statement stmt = jdbcConnection.createStatement()) {
             stmt.execute(sql);
@@ -52,6 +56,14 @@ public class IntegrationBase {
         log.trace("Executing SQL:\n{}", sql);
         try (Statement stmt = jdbcConnection.createStatement()) {
             return stmt.executeQuery(sql);
+        }
+    }
+
+    public static Semver getSingleStoreVersion() throws SQLException {
+        try (ResultSet rs = executeQueryWithResultSet("SELECT @@memsql_version")) {
+            assertTrue(rs.next());
+            String version = rs.getString(1);
+            return new Semver(version);
         }
     }
 
