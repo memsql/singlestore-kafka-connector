@@ -121,6 +121,7 @@ public class JdbcHelper {
         "SingleStore Kafka Connector",
         VersionProvider.getVersion(),
         VersionProvider.getKafkaVersion()));
+        connectionProps.put("allowLocalInfile", "true");
         connectionProps.putAll(config.sqlParams);
         try {
             Class.forName("com.singlestore.jdbc.Driver");
