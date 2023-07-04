@@ -4,6 +4,8 @@ import com.singlestore.kafka.sink.SingleStoreDbWriter;
 import com.singlestore.kafka.sink.SingleStoreDialect;
 import com.singlestore.kafka.sink.SingleStoreSinkConfig;
 import com.singlestore.kafka.sink.SingleStoreSinkTask;
+import com.vdurmont.semver4j.Semver;
+
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.junit.BeforeClass;
 import org.slf4j.Logger;
@@ -52,6 +54,13 @@ public class IntegrationBase {
         log.trace("Executing SQL:\n{}", sql);
         try (Statement stmt = jdbcConnection.createStatement()) {
             return stmt.executeQuery(sql);
+        }
+    }
+
+    public static Semver getSingleStoreVersion() throws SQLException {
+        try (ResultSet rs = executeQueryWithResultSet("SELECT @@memsql_version")) {
+            String version = rs.getString(1);
+            return new Semver(version);
         }
     }
 

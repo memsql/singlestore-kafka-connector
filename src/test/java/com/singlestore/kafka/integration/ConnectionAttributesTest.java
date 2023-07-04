@@ -2,6 +2,7 @@ package com.singlestore.kafka.integration;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -17,16 +18,19 @@ import org.slf4j.LoggerFactory;
 import com.singlestore.kafka.sink.SingleStoreSinkConfig;
 import com.singlestore.kafka.utils.JdbcHelper;
 import com.singlestore.kafka.utils.VersionProvider;
+import com.vdurmont.semver4j.Semver;
 
 public class ConnectionAttributesTest extends IntegrationBase {
     protected static final Logger log = LoggerFactory.getLogger(ConnectionAttributesTest.class);
 
     @Test
     public void connectionAttributes() throws SQLException {
+        assumeTrue(getSingleStoreVersion().isGreaterThanOrEqualTo(new Semver("8.1.0")));
+
         Map<String, String> attributes = new HashMap<String, String>();
         attributes.put("_connector_name", "SingleStore Kafka Connector");
         attributes.put("_connector_version", VersionProvider.getVersion());
-        attributes.put("_product_version", "3.2.0");
+        attributes.put("_product_version", VersionProvider.getKafkaVersion());
         
         Map<String, String> props = new HashMap<String, String>();
         props.put(SingleStoreSinkConfig.DDL_ENDPOINT, "localhost:5506");

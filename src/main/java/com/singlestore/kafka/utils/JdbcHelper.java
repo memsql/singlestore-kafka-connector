@@ -120,7 +120,7 @@ public class JdbcHelper {
         String.format("_connector_name:%s,_connector_version:%s,_product_version:%s", 
         "SingleStore Kafka Connector",
         VersionProvider.getVersion(),
-        "3.2.0"));
+        VersionProvider.getKafkaVersion()));
         connectionProps.putAll(config.sqlParams);
         try {
             Class.forName("com.singlestore.jdbc.Driver");
