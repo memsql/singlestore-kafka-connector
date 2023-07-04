@@ -19,7 +19,7 @@ public class VersionProvider {
             Properties props = new Properties();
             props.load(VersionProvider.class.getResourceAsStream("/application.properties"));
             versionProperty = props.getProperty("version", versionProperty).trim();
-            kafkaVersionProperty = props.getProperty("kafka.version", kafkaVersionProperty).trim();
+            kafkaVersionProperty = props.getProperty("kafkaVersion", kafkaVersionProperty).trim();
         } catch (IOException ex) {
             log.warn("Error while loading version:", ex);
         }

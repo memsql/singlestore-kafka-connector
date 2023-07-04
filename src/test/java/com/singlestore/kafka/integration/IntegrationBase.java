@@ -11,6 +11,8 @@ import org.junit.BeforeClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.junit.Assert.assertTrue;
+
 import java.sql.*;
 import java.util.List;
 import java.util.Map;
@@ -59,6 +61,7 @@ public class IntegrationBase {
 
     public static Semver getSingleStoreVersion() throws SQLException {
         try (ResultSet rs = executeQueryWithResultSet("SELECT @@memsql_version")) {
+            assertTrue(rs.next());
             String version = rs.getString(1);
             return new Semver(version);
         }
