@@ -116,6 +116,54 @@ public class SingleStoreSinkConfigTest extends IntegrationBase {
     }
 
     @Test
+    public void successClientEndpointParameter() {
+        Map<String, String> props = getMinimalRequiredParameters();
+        props.put(SingleStoreSinkConfig.CLIENT_ENDPOINT, props.get(SingleStoreSinkConfig.DDL_ENDPOINT));
+        props.remove(SingleStoreSinkConfig.DDL_ENDPOINT);
+        SingleStoreSinkConfig config = new SingleStoreSinkConfig(props);
+        assertEquals(config.ddlEndpoint, props.get(SingleStoreSinkConfig.CLIENT_ENDPOINT));
+        assertEquals(config.dmlEndpoints, Collections.singletonList(props.get(SingleStoreSinkConfig.CLIENT_ENDPOINT)));
+    }
+
+    @Test
+    public void failClientEndpointAndDdlEndpointParameters() {
+        Map<String, String> props = getMinimalRequiredParameters();
+        props.put(SingleStoreSinkConfig.CLIENT_ENDPOINT, props.get(SingleStoreSinkConfig.DDL_ENDPOINT));
+
+        try {
+            new SingleStoreSinkConfig(props);
+        } catch(ConfigException ex) {
+            assertEquals(ex.getLocalizedMessage(), "Configurations \"singlestore.connection.ddlEndpoint\" and \"singlestore.connection.clientEndpoint\" are mutually exclusive");
+        }
+    }
+
+    @Test
+    public void failClientEndpointAndDmlEndpointsParameters() {
+        Map<String, String> props = getMinimalRequiredParameters();
+        props.put(SingleStoreSinkConfig.CLIENT_ENDPOINT, props.get(SingleStoreSinkConfig.DDL_ENDPOINT));
+        props.put(SingleStoreSinkConfig.DML_ENDPOINTS, props.get(SingleStoreSinkConfig.DDL_ENDPOINT));
+        props.remove(SingleStoreSinkConfig.DDL_ENDPOINT);
+
+        try {
+            new SingleStoreSinkConfig(props);
+        } catch(ConfigException ex) {
+            assertEquals(ex.getLocalizedMessage(), "Configurations \"singlestore.connection.dmlEndpoints\" and \"singlestore.connection.clientEndpoint\" are mutually exclusive");
+        }
+    }
+
+    @Test
+    public void failNoEndpointParameter() {
+        Map<String, String> props = getMinimalRequiredParameters();
+        props.remove(SingleStoreSinkConfig.DDL_ENDPOINT);
+
+        try {
+            new SingleStoreSinkConfig(props);
+        } catch(ConfigException ex) {
+            assertEquals(ex.getLocalizedMessage(), "One of the \"singlestore.connection.ddlEndpoint\" and \"singlestore.connection.clientEndpoint\" must be specified");
+        }
+    }
+
+    @Test
     public void successUserParameter() {
         try {
             executeQuery("DROP USER IF EXISTS test_user");

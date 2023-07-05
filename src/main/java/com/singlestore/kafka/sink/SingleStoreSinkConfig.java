@@ -31,6 +31,11 @@ public class SingleStoreSinkConfig extends AbstractConfig {
                     "Example: child-agg:3308,child-agg2 (default: ddlEndpoint)";
     private static final String DML_ENDPOINTS_DISPLAY = "DML Endpoints";
 
+    public static final String CLIENT_ENDPOINT = "connection.clientEndpoint";
+    private static final String CLIENT_ENDPOINT_DOC = 
+            "Hostname or IP address to the SingleStoreDB Cloud workspace to run queries against in the format `host[:port]`";
+    private static final String CLIENT_ENDPOINT_DISPLAY = "Client Endpoint";
+
     public static final String CONNECTION_DATABASE = "connection.database";
     private static final String CONNECTION_DATABASE_DOC = "SingleStoreDB connection database.";
     private static final String CONNECTION_DATABASE_DISPLAY = "SingleStoreDB Database";
@@ -109,13 +114,24 @@ public class SingleStoreSinkConfig extends AbstractConfig {
             .define(
                     DDL_ENDPOINT,
                     ConfigDef.Type.STRING,
-                    ConfigDef.NO_DEFAULT_VALUE,
+                    null,
                     ConfigDef.Importance.HIGH,
                     DDL_ENDPOINT_DOC,
                     CONNECTION_GROUP,
                     1,
                     ConfigDef.Width.LONG,
                     DDL_ENDPOINT_DISPLAY
+            )
+            .define(
+                    CLIENT_ENDPOINT,
+                    ConfigDef.Type.STRING,
+                    null,
+                    ConfigDef.Importance.HIGH,
+                    CLIENT_ENDPOINT_DOC,
+                    CONNECTION_GROUP,
+                    1,
+                    ConfigDef.Width.LONG,
+                    CLIENT_ENDPOINT_DISPLAY
             )
             .define(
                     CONNECTION_DATABASE,
@@ -318,8 +334,34 @@ public class SingleStoreSinkConfig extends AbstractConfig {
 
     public SingleStoreSinkConfig(Map<String, String> props) {
         super(CONFIG_DEF, props);
-        this.ddlEndpoint = getString(DDL_ENDPOINT);
-        this.dmlEndpoints = getDmlEndpoints();
+        String ddlEndpoint = getString(DDL_ENDPOINT);
+        List<String> dmlEndpoints = getList(DML_ENDPOINTS);
+        String clientEndpoint = getString(CLIENT_ENDPOINT);
+
+        if (ddlEndpoint != null && clientEndpoint != null) {
+            throw new ConfigException("Configurations \"singlestore.connection.ddlEndpoint\" and \"singlestore.connection.clientEndpoint\" are mutually exclusive");
+        }
+
+        if ((dmlEndpoints != null && !dmlEndpoints.isEmpty()) && clientEndpoint != null) {
+            throw new ConfigException("Configurations \"singlestore.connection.dmlEndpoints\" and \"singlestore.connection.clientEndpoint\" are mutually exclusive");
+        }
+
+        if (ddlEndpoint == null && clientEndpoint == null) {
+            throw new ConfigException("One of the \"singlestore.connection.ddlEndpoint\" and \"singlestore.connection.clientEndpoint\" must be specified");
+        }
+
+        if (ddlEndpoint != null) {
+            this.ddlEndpoint = ddlEndpoint;
+        } else {
+            this.ddlEndpoint = clientEndpoint;
+        }
+
+        if (dmlEndpoints != null && !dmlEndpoints.isEmpty()) {
+            this.dmlEndpoints = dmlEndpoints;
+        } else {
+            this.dmlEndpoints = Collections.singletonList(this.ddlEndpoint);
+        }
+
         this.database = getString(CONNECTION_DATABASE);
         this.user = getString(CONNECTION_USER);
         this.password = getPasswordValue();
@@ -478,10 +520,19 @@ public class SingleStoreSinkConfig extends AbstractConfig {
         return tableKeys;
     }
 
+    private String getDdlEndpoint() {
+        String ddlEndpoint = getString(DDL_ENDPOINT);
+        if (ddlEndpoint == null) {
+            return getString(CLIENT_ENDPOINT);
+        }
+
+        return ddlEndpoint;
+    }
+
     private List<String> getDmlEndpoints() {
         List<String> dmlEndpoints = getList(DML_ENDPOINTS);
         if (dmlEndpoints == null || dmlEndpoints.isEmpty()) {
-            return Collections.singletonList(getString(DDL_ENDPOINT));
+            return Collections.singletonList(getDdlEndpoint());
         }
         return dmlEndpoints;
     }

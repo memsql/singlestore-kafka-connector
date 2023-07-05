@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.singlestore.kafka.sink.SingleStoreSinkConfig;
+import com.singlestore.kafka.utils.ConfigHelper;
 import com.singlestore.kafka.utils.JdbcHelper;
 import com.singlestore.kafka.utils.VersionProvider;
 import com.vdurmont.semver4j.Semver;
@@ -32,14 +33,7 @@ public class ConnectionAttributesTest extends IntegrationBase {
         attributes.put("_connector_version", VersionProvider.getVersion());
         attributes.put("_product_version", VersionProvider.getKafkaVersion());
         
-        Map<String, String> props = new HashMap<String, String>();
-        props.put(SingleStoreSinkConfig.DDL_ENDPOINT, "localhost:5506");
-        props.put(SingleStoreSinkConfig.CONNECTION_DATABASE, "testdb");
-        String password;
-        if ((password = System.getenv("SINGLESTORE_PASSWORD")) != null) {
-            props.put(SingleStoreSinkConfig.CONNECTION_PASSWORD, password);
-        }
-
+        Map<String, String> props = ConfigHelper.getMinimalRequiredParameters();
         try (
             Connection conn = JdbcHelper.getDDLConnection(new SingleStoreSinkConfig(props));
             Statement stmt = conn.createStatement();
