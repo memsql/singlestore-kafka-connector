@@ -13,22 +13,23 @@ Quickstart guide can be found [here](https://github.com/memsql/singlestore-kafka
 The `singlestore-kafka-connector` is configurable via property file that should be
 specified before starting kafka-connect job.
 
-| Option                                         | Description
-| -                                              | -
-| `connection.ddlEndpoint`  (required)           | Hostname or IP address of the SingleStore Master Aggregator in the format `host[:port]` (port is optional). Ex. `master-agg.foo.internal:3308` or `master-agg.foo.internal`
-| `connection.dmlEndpoints`                      | Hostname or IP address of SingleStore Aggregator nodes to run queries against in the format `host[:port],host[:port],...` (port is optional, multiple hosts separated by comma). Ex. `child-agg:3308,child-agg2` (default: `ddlEndpoint`)
-| `connection.database`     (required)           | If set, all connections will default to using this database (default: empty)
-| `connection.user`                              | SingleStore username (default: `root`)
-| `connection.password`                          | SingleStore password (default: no password)
-| `params.<name>`                                | Specify a specific MySQL or JDBC parameter which will be injected into the connection URI (default: empty)
-| `max.retries`                                  | The maximum number of times to retry on errors before failing the task. (default: 10)
-| `fields.whitelist`                             | Specify fields to be inserted to the database. (default: all keys will be used)
-| `retry.backoff.ms`                             | The time in milliseconds to wait following an error before a retry attempt is made. (default 3000)
-| `tableKey.<index_type>[.name]`                 | Specify additional keys to add to tables created by the connector; value of this property is the comma separated list with names of the columns to apply key; <index_type> one of (`PRIMARY`, `COLUMNSTORE`, `UNIQUE`, `SHARD`, `KEY`);
-| `singlestore.loadDataCompression`              | Compress data on load; one of (`GZip`, `LZ4`, `Skip`) (default: GZip)
-| `singlestore.metadata.allow`                   | Allows or denies the use of an additional meta-table to save the recording results (default: true)
-| `singlestore.metadata.table`                   | Specify the name of the table to save kafka transaction metadata (default: `kafka_connect_transaction_metadata`)
-| `singlestore.tableName.<topicName>=<tableName>`| Specify an explicit table name to use for the specified topic
+| Option                                                         | Description
+| -                                                              | -
+| `connection.ddlEndpoint`    (On-Premise deployment) (required) | The hostname or IP address of the SingleStoreDB Master Aggregator in the `host[:port]` format, where port is an optional parameter. Example: `master-agg.foo.internal:3308` or `master-agg.foo.internal`.
+| `connection.dmlEndpoints`   (On-Premise deployment)            | The hostname or IP address of SingleStoreDB Aggregator nodes to run queries against in the `host[:port],host[:port],...` format, where :port is an optional parameter (multiple hosts separated by comma). Example: `child-agg:3308,child-agg2`. (default: `ddlEndpoint`)
+| `connection.clientEndpoint` (Cloud deployment) (required)      | The hostname or IP address to the SingleStoreDB Cloud workspace to run queries against in the format `host[:port]` (port is optional). Ex. `svc-b093ff56-7d9e-499f-b970-7913852facc4-ddl.aws-oregon-2.svc.singlestore.com:3306`
+| `connection.database`     (required)                           | If set, all connections will default to using this database (default: empty)
+| `connection.user`                                              | SingleStore username (default: `root`)
+| `connection.password`                                          | SingleStore password (default: no password)
+| `params.<name>`                                                | Specify a specific MySQL or JDBC parameter which will be injected into the connection URI (default: empty)
+| `max.retries`                                                  | The maximum number of times to retry on errors before failing the task. (default: 10)
+| `fields.whitelist`                                             | Specify fields to be inserted to the database. (default: all keys will be used)
+| `retry.backoff.ms`                                             | The time in milliseconds to wait following an error before a retry attempt is made. (default 3000)
+| `tableKey.<index_type>[.name]`                                 | Specify additional keys to add to tables created by the connector; value of this property is the comma separated list with names of the columns to apply key; <index_type> one of (`PRIMARY`, `COLUMNSTORE`, `UNIQUE`, `SHARD`, `KEY`);
+| `singlestore.loadDataCompression`                              | Compress data on load; one of (`GZip`, `LZ4`, `Skip`) (default: GZip)
+| `singlestore.metadata.allow`                                   | Allows or denies the use of an additional meta-table to save the recording results (default: true)
+| `singlestore.metadata.table`                                   | Specify the name of the table to save kafka transaction metadata (default: `kafka_connect_transaction_metadata`)
+| `singlestore.tableName.<topicName>=<tableName>`                | Specify an explicit table name to use for the specified topic
 
 ### Config example
 ```

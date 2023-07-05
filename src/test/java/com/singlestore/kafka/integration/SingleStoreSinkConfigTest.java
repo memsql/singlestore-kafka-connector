@@ -15,28 +15,6 @@ import static org.junit.Assert.*;
 public class SingleStoreSinkConfigTest extends IntegrationBase {
 
     @Test
-    public void failWithEmptyMap() {
-        try {
-            new SingleStoreSinkConfig(new HashMap<>());
-            fail("Exception should be thrown");
-        } catch (ConfigException ex) {
-            assertEquals(ex.getLocalizedMessage(), "Missing required configuration \"connection.ddlEndpoint\" which has no default value.");
-        }
-    }
-
-    @Test
-    public void failWithoutDdlEndpoint() {
-        try {
-            Map<String, String> props = new HashMap<>();
-            props.put(SingleStoreSinkConfig.CONNECTION_DATABASE, "testDatabase");
-            new SingleStoreSinkConfig(props);
-            fail("Exception should be thrown");
-        } catch (ConfigException ex) {
-            assertEquals(ex.getLocalizedMessage(), "Missing required configuration \"connection.ddlEndpoint\" which has no default value.");
-        }
-    }
-
-    @Test
     public void failWithWrongDdlEndpoint() {
         try {
             Map<String, String> props = new HashMap<>();
@@ -113,6 +91,54 @@ public class SingleStoreSinkConfigTest extends IntegrationBase {
         Map<String, String> props = getMinimalRequiredParameters();
         SingleStoreSinkConfig config = new SingleStoreSinkConfig(props);
         assertEquals(config.dmlEndpoints, Collections.singletonList(props.get(SingleStoreSinkConfig.DDL_ENDPOINT)));
+    }
+
+    @Test
+    public void successClientEndpointParameter() {
+        Map<String, String> props = getMinimalRequiredParameters();
+        props.put(SingleStoreSinkConfig.CLIENT_ENDPOINT, props.get(SingleStoreSinkConfig.DDL_ENDPOINT));
+        props.remove(SingleStoreSinkConfig.DDL_ENDPOINT);
+        SingleStoreSinkConfig config = new SingleStoreSinkConfig(props);
+        assertEquals(config.ddlEndpoint, props.get(SingleStoreSinkConfig.CLIENT_ENDPOINT));
+        assertEquals(config.dmlEndpoints, Collections.singletonList(props.get(SingleStoreSinkConfig.CLIENT_ENDPOINT)));
+    }
+
+    @Test
+    public void failClientEndpointAndDdlEndpointParameters() {
+        Map<String, String> props = getMinimalRequiredParameters();
+        props.put(SingleStoreSinkConfig.CLIENT_ENDPOINT, props.get(SingleStoreSinkConfig.DDL_ENDPOINT));
+
+        try {
+            new SingleStoreSinkConfig(props);
+        } catch(ConfigException ex) {
+            assertEquals(ex.getLocalizedMessage(), "Configurations \"singlestore.connection.ddlEndpoint\" and \"singlestore.connection.clientEndpoint\" are mutually exclusive");
+        }
+    }
+
+    @Test
+    public void failClientEndpointAndDmlEndpointsParameters() {
+        Map<String, String> props = getMinimalRequiredParameters();
+        props.put(SingleStoreSinkConfig.CLIENT_ENDPOINT, props.get(SingleStoreSinkConfig.DDL_ENDPOINT));
+        props.put(SingleStoreSinkConfig.DML_ENDPOINTS, props.get(SingleStoreSinkConfig.DDL_ENDPOINT));
+        props.remove(SingleStoreSinkConfig.DDL_ENDPOINT);
+
+        try {
+            new SingleStoreSinkConfig(props);
+        } catch(ConfigException ex) {
+            assertEquals(ex.getLocalizedMessage(), "Configurations \"singlestore.connection.dmlEndpoints\" and \"singlestore.connection.clientEndpoint\" are mutually exclusive");
+        }
+    }
+
+    @Test
+    public void failNoEndpointParameter() {
+        Map<String, String> props = getMinimalRequiredParameters();
+        props.remove(SingleStoreSinkConfig.DDL_ENDPOINT);
+
+        try {
+            new SingleStoreSinkConfig(props);
+        } catch(ConfigException ex) {
+            assertEquals(ex.getLocalizedMessage(), "One of the \"singlestore.connection.ddlEndpoint\" and \"singlestore.connection.clientEndpoint\" must be specified");
+        }
     }
 
     @Test
