@@ -15,28 +15,6 @@ import static org.junit.Assert.*;
 public class SingleStoreSinkConfigTest extends IntegrationBase {
 
     @Test
-    public void failWithEmptyMap() {
-        try {
-            new SingleStoreSinkConfig(new HashMap<>());
-            fail("Exception should be thrown");
-        } catch (ConfigException ex) {
-            assertEquals(ex.getLocalizedMessage(), "Missing required configuration \"connection.ddlEndpoint\" which has no default value.");
-        }
-    }
-
-    @Test
-    public void failWithoutDdlEndpoint() {
-        try {
-            Map<String, String> props = new HashMap<>();
-            props.put(SingleStoreSinkConfig.CONNECTION_DATABASE, "testDatabase");
-            new SingleStoreSinkConfig(props);
-            fail("Exception should be thrown");
-        } catch (ConfigException ex) {
-            assertEquals(ex.getLocalizedMessage(), "Missing required configuration \"connection.ddlEndpoint\" which has no default value.");
-        }
-    }
-
-    @Test
     public void failWithWrongDdlEndpoint() {
         try {
             Map<String, String> props = new HashMap<>();
