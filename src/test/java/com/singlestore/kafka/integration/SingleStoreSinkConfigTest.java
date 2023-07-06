@@ -137,7 +137,7 @@ public class SingleStoreSinkConfigTest extends IntegrationBase {
         try {
             new SingleStoreSinkConfig(props);
         } catch(ConfigException ex) {
-            assertEquals(ex.getLocalizedMessage(), "One of the \"singlestore.connection.ddlEndpoint\" and \"singlestore.connection.clientEndpoint\" must be specified");
+            assertEquals(ex.getLocalizedMessage(), "Either the \"singlestore.connection.ddlEndpoint\" or the \"singlestore.connection.clientEndpoint\" must be specified");
         }
     }
 
