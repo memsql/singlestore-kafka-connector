@@ -21,7 +21,7 @@ public class SingleStoreSinkConfig extends AbstractConfig {
 
     public static final String DDL_ENDPOINT = "connection.ddlEndpoint";
     private static final String DDL_ENDPOINT_DOC =
-            "Hostname or IP address of the SingleStoreDB Master Aggregator in the format `host[:port]`";
+            "Hostname or IP address of the SingleStoreDB Cloud workspace to run queries against in the `host[:port]` format";
     private static final String DDL_ENDPOINT_DISPLAY = "DDL Endpoint";
 
     public static final String DML_ENDPOINTS = "connection.dmlEndpoints";
@@ -347,7 +347,7 @@ public class SingleStoreSinkConfig extends AbstractConfig {
         }
 
         if (ddlEndpoint == null && clientEndpoint == null) {
-            throw new ConfigException("One of the \"singlestore.connection.ddlEndpoint\" and \"singlestore.connection.clientEndpoint\" must be specified");
+            throw new ConfigException("Either the \"singlestore.connection.ddlEndpoint\" or the \"singlestore.connection.clientEndpoint\" must be specified");
         }
 
         if (ddlEndpoint != null) {

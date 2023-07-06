@@ -15,9 +15,9 @@ specified before starting kafka-connect job.
 
 | Option                                                         | Description
 | -                                                              | -
-| `connection.ddlEndpoint`    (On-Premise deployment) (required) | The hostname or IP address of the SingleStoreDB Master Aggregator in the `host[:port]` format, where port is an optional parameter. Example: `master-agg.foo.internal:3308` or `master-agg.foo.internal`.
-| `connection.dmlEndpoints`   (On-Premise deployment)            | The hostname or IP address of SingleStoreDB Aggregator nodes to run queries against in the `host[:port],host[:port],...` format, where :port is an optional parameter (multiple hosts separated by comma). Example: `child-agg:3308,child-agg2`. (default: `ddlEndpoint`)
-| `connection.clientEndpoint` (Cloud deployment) (required)      | The hostname or IP address to the SingleStoreDB Cloud workspace to run queries against in the format `host[:port]` (port is optional). Ex. `svc-b093ff56-7d9e-499f-b970-7913852facc4-ddl.aws-oregon-2.svc.singlestore.com:3306`
+| `connection.ddlEndpoint`    (On-Premise deployment) (required) | The hostname or IP address of the SingleStoreDB Master Aggregator in the `host[:port]` format, where `port` is an optional parameter. Example: `master-agg.foo.internal:3308` or `master-agg.foo.internal`.
+| `connection.dmlEndpoints`   (On-Premise deployment)            | The hostname or IP address of SingleStoreDB Aggregator nodes to run queries against in the `host[:port],host[:port],...` format, where `port` is an optional parameter (multiple hosts separated by comma). Example: `child-agg:3308,child-agg2`. (default: `ddlEndpoint`)
+| `connection.clientEndpoint` (Cloud deployment) (required)      | The hostname or IP address of the SingleStoreDB Cloud workspace to run queries against in the `host[:port]` format, where `port` is an optional parameter. Example: `svc-XXXX-ddl.aws-oregon-2.svc.singlestore.com:3306`.
 | `connection.database`     (required)                           | If set, all connections will default to using this database (default: empty)
 | `connection.user`                                              | SingleStore username (default: `root`)
 | `connection.password`                                          | SingleStore password (default: no password)
