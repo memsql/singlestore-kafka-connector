@@ -28,7 +28,7 @@ jobs:
     resource_class: << parameters.machine_class >>
     environment:
       SINGLESTORE_IMAGE: << parameters.singlestore_image >>
-      JAVA_HOME: /usr/lib/jvm/java-11-openjdk-amd64/
+      JAVA_HOME: /usr/lib/jvm/java-8-openjdk-amd64/
     steps:
       - setup_environment
       - checkout
@@ -55,7 +55,7 @@ jobs:
   publish:
     machine: true
     environment:
-      JAVA_HOME: /usr/lib/jvm/java-11-openjdk-amd64/
+      JAVA_HOME: /usr/lib/jvm/java-8-openjdk-amd64/
       SONATYPE_USERNAME: memsql
     steps:
       - setup_environment
