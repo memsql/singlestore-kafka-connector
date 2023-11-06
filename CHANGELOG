@@ -1,3 +1,5 @@
+2023-11-06 Version 1.2.1
+    * Updated JDBC driver. This is done because the old driver doesn't support long column names.
 2023-04-05 Version 1.2.0
     * Added the ability to:
         * Write data without a schema
