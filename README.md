@@ -8,6 +8,8 @@ for loading data from Kafka to SingleStore.
 
 Quickstart guide can be found [here](https://github.com/memsql/singlestore-kafka-connector/blob/master/demo/README.md)
 
+You can find the latest version of the connector on [Maven](https://mvnrepository.com/artifact/com.singlestore/singlestore-kafka-connector).
+
 ## Configuration
 
 The `singlestore-kafka-connector` is configurable via property file that should be
