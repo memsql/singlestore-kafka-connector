@@ -4,7 +4,7 @@ set -eu
 # this script must be run from the top-level of the repo
 cd "$(git rev-parse --show-toplevel)"
 
-DEFAULT_IMAGE_NAME="singlestore/cluster-in-a-box:alma-8.0.15-0b9b66384f-4.0.11-1.15.2"
+DEFAULT_IMAGE_NAME="singlestore/cluster-in-a-box:alma-8.7.12-483e5f8acb-4.1.0-1.17.15"
 IMAGE_NAME="${SINGLESTORE_IMAGE:-$DEFAULT_IMAGE_NAME}"
 CONTAINER_NAME="singlestore-integration"
 
@@ -64,9 +64,11 @@ echo "Restarting cluster"
 docker exec -it ${CONTAINER_NAME} memsqlctl restart-node --yes --all
 singlestore-wait-start
 echo "Setting up root-ssl user"
-mysql -u root -h 127.0.0.1 -P 5506 -p"${SINGLESTORE_PASSWORD}" -e 'grant all privileges on *.* to "root-ssl"@"%" require ssl with grant option'
-mysql -u root -h 127.0.0.1 -P 5507 -p"${SINGLESTORE_PASSWORD}" -e 'grant all privileges on *.* to "root-ssl"@"%" require ssl with grant option'
-mysql -u root -h 127.0.0.1 -P 5508 -p"${SINGLESTORE_PASSWORD}" -e 'grant all privileges on *.* to "root-ssl"@"%" require ssl with grant option'
+mysql -u root -h 127.0.0.1 -P 5506 -p"${SINGLESTORE_PASSWORD}" -e 'create user "root-ssl"@"%" require ssl'
+mysql -u root -h 127.0.0.1 -P 5506 -p"${SINGLESTORE_PASSWORD}" -e 'grant all privileges on *.* to "root-ssl" with grant option'
+mysql -u root -h 127.0.0.1 -P 5507 -p"${SINGLESTORE_PASSWORD}" -e 'create user "root-ssl"@"%" require ssl'
+mysql -u root -h 127.0.0.1 -P 5507 -p"${SINGLESTORE_PASSWORD}" -e 'grant all privileges on *.* to "root-ssl" with grant option'
+mysql -u root -h 127.0.0.1 -P 5508 -p"${SINGLESTORE_PASSWORD}" -e 'grant all privileges on *.* to "root-ssl" with grant option'
 echo "Done!"
 
 echo
