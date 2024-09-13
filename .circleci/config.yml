@@ -87,11 +87,10 @@ workflows:
               machine_class:
                 - large
               singlestore_image:
-                - singlestore/cluster-in-a-box:centos-7.5.12-3112a491c2-4.0.0-1.12.5
-                - singlestore/cluster-in-a-box:alma-7.6.14-6f67cb4355-4.0.4-1.13.6
-                - singlestore/cluster-in-a-box:alma-7.8.19-4263b2d130-4.0.10-1.14.4
                 - singlestore/cluster-in-a-box:alma-8.0.19-f48780d261-4.0.11-1.16.0
-                - singlestore/cluster-in-a-box:alma-8.1.8-967dab3a92-4.0.12-1.16.1
+                - singlestore/cluster-in-a-box:alma-8.1.32-e3d3cde6da-4.0.16-1.17.6
+                - singlestore/cluster-in-a-box:alma-8.5.22-fe61f40cd1-4.1.0-1.17.11
+                - singlestore/cluster-in-a-box:alma-8.7.12-483e5f8acb-4.1.0-1.17.15
   publish:
     jobs:
       - approve-publish:
