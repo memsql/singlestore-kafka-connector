@@ -122,7 +122,7 @@ docker run \
     -v /tmp/quickstart/connect:/tmp/quickstart/connect \
     singlestore-kafka-connect-short-demo \
     tail -f /dev/null >/dev/null 2>/dev/null
-docker exec singlestore-kafka-connect-short-demo cp /home/app/target/singlestore-kafka-connector-1.2.1.jar /tmp/quickstart/connect
+docker exec singlestore-kafka-connect-short-demo cp /home/app/target/singlestore-kafka-connector-1.2.2.jar /tmp/quickstart/connect
 docker stop singlestore-kafka-connect-short-demo >/dev/null 2>/dev/null
 echo ". Success!"
 
@@ -152,7 +152,7 @@ kafka-connect-start() {
     -e CONNECT_PLUGIN_PATH=/usr/share/java \
     -e CONNECT_REST_HOST_NAME="kafka-connect-short-demo" \
     -v /tmp/quickstart/file:/tmp/quickstart \
-    -v /tmp/quickstart/connect/singlestore-kafka-connector-1.2.1.jar:/usr/share/java/singlestore-kafka-connector-1.2.1.jar \
+    -v /tmp/quickstart/connect/singlestore-kafka-connector-1.2.2.jar:/usr/share/java/singlestore-kafka-connector-1.2.2.jar \
     confluentinc/cp-kafka-connect:5.0.0 >/dev/null
     echo ". Started!"
 }
