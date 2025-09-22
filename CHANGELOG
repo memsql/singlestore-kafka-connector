@@ -1,3 +1,5 @@
+2025-22-09 Version 1.2.3
+    * Update Jackson Databind version
 2025-29-01 Version 1.2.2
     * Added publishing of zip archive to GitHub
 2023-11-06 Version 1.2.1
