@@ -4,8 +4,9 @@ set -eu
 # this script must be run from the top-level of the repo
 cd "$(git rev-parse --show-toplevel)"
 
-DEFAULT_IMAGE_NAME="singlestore/cluster-in-a-box:alma-8.7.12-483e5f8acb-4.1.0-1.17.15"
-IMAGE_NAME="${SINGLESTORE_IMAGE:-$DEFAULT_IMAGE_NAME}"
+DEFAULT_SINGLESTORE_VERSION=""
+VERSION="${SINGLESTORE_VERSION:-$DEFAULT_SINGLESTORE_VERSION}"
+IMAGE_NAME="ghcr.io/singlestore-labs/singlestoredb-dev:latest"
 CONTAINER_NAME="singlestore-integration"
 
 EXISTS=$(docker inspect ${CONTAINER_NAME} >/dev/null 2>&1 && echo 1 || echo 0)
@@ -20,16 +21,16 @@ if [[ "${EXISTS}" -eq 1 ]]; then
 fi
 
 if [[ "${EXISTS}" -eq 0 ]]; then
-    docker run -i --init \
+    docker run -d \
         --name ${CONTAINER_NAME} \
         -v ${PWD}/scripts/ssl:/test-ssl \
-        -e LICENSE_KEY=${LICENSE_KEY} \
+        -v ${PWD}/scripts/jwt:/test-jwt \
+        -e SINGLESTORE_LICENSE=${SINGLESTORE_LICENSE} \
         -e ROOT_PASSWORD=${SINGLESTORE_PASSWORD} \
+        -e SINGLESTORE_VERSION=${VERSION} \
         -p 5506:3306 -p 5507:3307 -p 5508:3308 \
         ${IMAGE_NAME}
 fi
-
-docker start ${CONTAINER_NAME}
 
 singlestore-wait-start() {
   echo -n "Waiting for SingleStore to start..."
@@ -48,20 +49,20 @@ singlestore-wait-start
 if [[ "${EXISTS}" -eq 0 ]]; then
     echo
     echo "Creating aggregator node"
-    docker exec -it ${CONTAINER_NAME} memsqlctl create-node --yes --password ${SINGLESTORE_PASSWORD} --port 3308
-    docker exec -it ${CONTAINER_NAME} memsqlctl update-config --yes --all --key minimum_core_count --value 0
-    docker exec -it ${CONTAINER_NAME} memsqlctl update-config --yes --all --key minimum_memory_mb --value 0
-    docker exec -it ${CONTAINER_NAME} memsqlctl start-node --yes --all
-    docker exec -it ${CONTAINER_NAME} memsqlctl add-aggregator --yes --host 127.0.0.1 --password ${SINGLESTORE_PASSWORD} --port 3308
+    docker exec ${CONTAINER_NAME} memsqlctl create-node --yes --password ${SINGLESTORE_PASSWORD} --port 3308
+    docker exec ${CONTAINER_NAME} memsqlctl update-config --yes --all --key minimum_core_count --value 0
+    docker exec ${CONTAINER_NAME} memsqlctl update-config --yes --all --key minimum_memory_mb --value 0
+    docker exec ${CONTAINER_NAME} memsqlctl start-node --yes --all
+    docker exec ${CONTAINER_NAME} memsqlctl add-aggregator --yes --host 127.0.0.1 --password ${SINGLESTORE_PASSWORD} --port 3308
 fi
 
 echo
 echo "Setting up SSL"
-docker exec -it ${CONTAINER_NAME} memsqlctl update-config --yes --all --key ssl_ca --value /test-ssl/test-ca-cert.pem
-docker exec -it ${CONTAINER_NAME} memsqlctl update-config --yes --all --key ssl_cert --value /test-ssl/test-singlestore-cert.pem
-docker exec -it ${CONTAINER_NAME} memsqlctl update-config --yes --all --key ssl_key --value /test-ssl/test-singlestore-key.pem
+docker exec ${CONTAINER_NAME} memsqlctl update-config --yes --all --key ssl_ca --value /test-ssl/test-ca-cert.pem
+docker exec ${CONTAINER_NAME} memsqlctl update-config --yes --all --key ssl_cert --value /test-ssl/test-singlestore-cert.pem
+docker exec ${CONTAINER_NAME} memsqlctl update-config --yes --all --key ssl_key --value /test-ssl/test-singlestore-key.pem
 echo "Restarting cluster"
-docker exec -it ${CONTAINER_NAME} memsqlctl restart-node --yes --all
+docker restart ${CONTAINER_NAME}
 singlestore-wait-start
 echo "Setting up root-ssl user"
 mysql -u root -h 127.0.0.1 -P 5506 -p"${SINGLESTORE_PASSWORD}" -e 'create user "root-ssl"@"%" require ssl'
@@ -71,6 +72,7 @@ mysql -u root -h 127.0.0.1 -P 5507 -p"${SINGLESTORE_PASSWORD}" -e 'grant all pri
 mysql -u root -h 127.0.0.1 -P 5508 -p"${SINGLESTORE_PASSWORD}" -e 'grant all privileges on *.* to "root-ssl" with grant option'
 echo "Done!"
 
+sleep 0.5
 echo
 echo "Ensuring child nodes are connected using container IP"
 CONTAINER_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${CONTAINER_NAME})
