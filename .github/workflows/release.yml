@@ -22,3 +22,16 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: target/components/packages/singlestore-singlestore-kafka-connector-*.zip
+      - name: Import GPG key
+        run: |
+          openssl enc -d -aes-256-cbc -K ${{ secrets.ENCRYPTION_KEY }} \
+          -iv ${{ secrets.ENCRYPTION_IV }} -in ci/secring.asc.enc \
+          -out ci/secring.asc
+          gpg --import ci/secring.asc
+      - name: Copy Maven Settings
+        run: |
+          mkdir -p ~/.m2
+          cp ci/settings.xml ~/.m2/settings.xml
+      - name: Release to Maven Central
+        if: ${{ success() }}
+        run: mvn -s ci/settings.xml clean deploy -DskipTests -Dsonatype.username=${{ secrets.SONATYPE_USER }} -Dsonatype.password=${{ secrets.SONATYPE_PASSWORD }}
