@@ -1,4 +1,5 @@
 # SingleStore Kafka Connector
+
 ## Version: 1.2.4 [![Continuous Integration](https://circleci.com/gh/memsql/singlestore-kafka-connector/tree/master.svg?style=shield)](https://circleci.com/gh/memsql/memsql-kafka-connector) [![License](http://img.shields.io/:license-Apache%202-brightgreen.svg)](http://www.apache.org/licenses/LICENSE-2.0.txt)
 
 ## Getting Started
@@ -15,25 +16,26 @@ You can find the latest version of the connector on [Maven](https://mvnrepositor
 The `singlestore-kafka-connector` is configurable via property file that should be
 specified before starting kafka-connect job.
 
-| Option                                                         | Description                                                                                                                                                                                                                                                                |
-|----------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `connection.ddlEndpoint`    (On-Premise deployment) (required) | The hostname or IP address of the SingleStoreDB Master Aggregator in the `host[:port]` format, where `port` is an optional parameter. Example: `master-agg.foo.internal:3308` or `master-agg.foo.internal`.                                                                |
-| `connection.dmlEndpoints`   (On-Premise deployment)            | The hostname or IP address of SingleStoreDB Aggregator nodes to run queries against in the `host[:port],host[:port],...` format, where `port` is an optional parameter (multiple hosts separated by comma). Example: `child-agg:3308,child-agg2`. (default: `ddlEndpoint`) |
-| `connection.clientEndpoint` (Cloud deployment) (required)      | The hostname or IP address of the SingleStoreDB Cloud workspace to run queries against in the `host[:port]` format, where `port` is an optional parameter. Example: `svc-XXXX-ddl.aws-oregon-2.svc.singlestore.com:3306`.                                                  |
-| `connection.database`     (required)                           | If set, all connections will default to using this database (default: empty)                                                                                                                                                                                               |
-| `connection.user`                                              | SingleStore username (default: `root`)                                                                                                                                                                                                                                     |
-| `connection.password`                                          | SingleStore password (default: no password)                                                                                                                                                                                                                                |
-| `params.<name>`                                                | Specify a specific MySQL or JDBC parameter which will be injected into the connection URI (default: empty)                                                                                                                                                                 |
-| `max.retries`                                                  | The maximum number of times to retry on errors before failing the task. (default: 10)                                                                                                                                                                                      |
-| `fields.whitelist`                                             | Specify fields to be inserted to the database. (default: all keys will be used)                                                                                                                                                                                            |
-| `retry.backoff.ms`                                             | The time in milliseconds to wait following an error before a retry attempt is made. (default 3000)                                                                                                                                                                         |
-| `tableKey.<index_type>[.name]`                                 | Specify additional keys to add to tables created by the connector; value of this property is the comma separated list with names of the columns to apply key; <index_type> one of (`PRIMARY`, `COLUMNSTORE`, `UNIQUE`, `SHARD`, `KEY`);                                    |
-| `singlestore.loadDataCompression`                              | Compress data on load; one of (`GZip`, `LZ4`, `Skip`) (default: GZip)                                                                                                                                                                                                      |
-| `singlestore.metadata.allow`                                   | Allows or denies the use of an additional meta-table to save the recording results (default: true)                                                                                                                                                                         |
-| `singlestore.metadata.table`                                   | Specify the name of the table to save kafka transaction metadata (default: `kafka_connect_transaction_metadata`)                                                                                                                                                           |
-| `singlestore.tableName.<topicName>=<tableName>`                | Specify an explicit table name to use for the specified topic                                                                                                                                                                                                              |
+| Option                                                      | Description                                                                                                                                                                                                                                                                |
+| ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `connection.ddlEndpoint` (On-Premise deployment) (required) | The hostname or IP address of the SingleStoreDB Master Aggregator in the `host[:port]` format, where `port` is an optional parameter. Example: `master-agg.foo.internal:3308` or `master-agg.foo.internal`.                                                                |
+| `connection.dmlEndpoints` (On-Premise deployment)           | The hostname or IP address of SingleStoreDB Aggregator nodes to run queries against in the `host[:port],host[:port],...` format, where `port` is an optional parameter (multiple hosts separated by comma). Example: `child-agg:3308,child-agg2`. (default: `ddlEndpoint`) |
+| `connection.clientEndpoint` (Cloud deployment) (required)   | The hostname or IP address of the SingleStoreDB Cloud workspace to run queries against in the `host[:port]` format, where `port` is an optional parameter. Example: `svc-XXXX-ddl.aws-oregon-2.svc.singlestore.com:3306`.                                                  |
+| `connection.database` (required)                            | If set, all connections will default to using this database (default: empty)                                                                                                                                                                                               |
+| `connection.user`                                           | SingleStore username (default: `root`)                                                                                                                                                                                                                                     |
+| `connection.password`                                       | SingleStore password (default: no password)                                                                                                                                                                                                                                |
+| `params.<name>`                                             | Specify a specific MySQL or JDBC parameter which will be injected into the connection URI (default: empty)                                                                                                                                                                 |
+| `max.retries`                                               | The maximum number of times to retry on errors before failing the task. (default: 10)                                                                                                                                                                                      |
+| `fields.whitelist`                                          | Specify fields to be inserted to the database. (default: all keys will be used)                                                                                                                                                                                            |
+| `retry.backoff.ms`                                          | The time in milliseconds to wait following an error before a retry attempt is made. (default 3000)                                                                                                                                                                         |
+| `tableKey.<index_type>[.name]`                              | Specify additional keys to add to tables created by the connector; value of this property is the comma separated list with names of the columns to apply key; <index_type> one of (`PRIMARY`, `COLUMNSTORE`, `UNIQUE`, `SHARD`, `KEY`);                                    |
+| `singlestore.loadDataCompression`                           | Compress data on load; one of (`GZip`, `LZ4`, `Skip`) (default: GZip)                                                                                                                                                                                                      |
+| `singlestore.metadata.allow`                                | Allows or denies the use of an additional meta-table to save the recording results (default: true)                                                                                                                                                                         |
+| `singlestore.metadata.table`                                | Specify the name of the table to save kafka transaction metadata (default: `kafka_connect_transaction_metadata`)                                                                                                                                                           |
+| `singlestore.tableName.<topicName>=<tableName>`             | Specify an explicit table name to use for the specified topic                                                                                                                                                                                                              |
 
 ### Config example
+
 ```
 {
     "name": "singlestore-sink-connector",
@@ -90,7 +92,7 @@ To overwrite the name of this table, use `singlestore.metadata.table` option.
 `singlestore-kafka-connector` makes such conversions from Kafka types to SingleStore types:
 
 | Kafka Type | SingleStore Type |
-|------------|------------------|
+| ---------- | ---------------- |
 | STRUCT     | JSON             |
 | MAP        | JSON             |
 | ARRAY      | JSON             |
@@ -109,6 +111,7 @@ To overwrite the name of this table, use `singlestore.metadata.table` option.
 To add some column as a key in SingleStore, use `tableKey` parameter like this:
 
 Suppose you have an entity
+
 ```
 {
     "id" : 123,
@@ -118,6 +121,7 @@ Suppose you have an entity
 
 and you want to add `id` column as a `PRIMARY KEY` to your SingleStore table. Then add
 `"tableKey.primary": "id"` to your configuration. It will create such query during creating a table:
+
 ```
     CREATE TABLE IF NOT EXISTS `table` (
         `id` INT NOT NULL,
@@ -125,8 +129,10 @@ and you want to add `id` column as a `PRIMARY KEY` to your SingleStore table. Th
         PRIMARY KEY (`id`)
     )
 ```
+
 You can also specify the name of a key by providing it like this
 `"tableKey.primary.someName" : "id"`. It will create a key with a name.
+
 ```
     CREATE TABLE IF NOT EXISTS `table` (
         `id` INT NOT NULL,
@@ -138,7 +144,7 @@ You can also specify the name of a key by providing it like this
 ## Table names
 
 By default the `singlestore-kafka-connector` maps data from topics into SingleStore tables by matching the topic name to the table name.
-For example, if the kafka topic is called `kafka-example-topic` then the `singlestore-kafka-connector` will load it into the SingleStore 
+For example, if the kafka topic is called `kafka-example-topic` then the `singlestore-kafka-connector` will load it into the SingleStore
 table called `kafka-example-topic` (the table will be created if it doesn't already exist).
 
 To specify a custom table name, you can use the `singlestore.tableName.<topicName>` parameter.
@@ -164,10 +170,85 @@ You can use this method to specify custom table names for multiple topics:
 }
 ```
 
+## Mutual TLS (mTLS) Configuration
+
+This guide explains how to configure an mTLS connection for the **SingleStore Kafka Connector** on **SingleStore Managed Service**.
+
+### 1. Generate Client Certificates
+
+First, generate the necessary certificates for SingleStore mTLS connections. Follow the steps outlined in the [SingleStore Documentation](https://docs.singlestore.com/db/v9.0/connect-to-singlestore/connect-to-singlestore-using-tls-ssl/#generate-client-certificates-for-singlestore-mtls-connections).
+
+Upon completion, you should have the following files:
+* `ca-key.pem` – The private key for your CA.
+* `ca-cert.pem` – The public CA certificate.
+* `client-key.pem` – The client private key.
+* `client-cert.pem` – The client certificate signed by the CA.
+
+
+Additionally, download the SingleStore server certificate bundle: [`singlestore_bundle.pem`](https://portal.singlestore.com/static/ca/singlestore_bundle.pem).
+
+### 2. Create a Java Keystore
+The connector requires the client certificate in a keystore format. Run the following command to create a `client-keystore.p12` file, ensuring you provide the correct file paths and a secure password:
+
+```bash
+openssl pkcs12 -export \
+  -inkey /path/to/client-key.pem \
+  -in /path/to/client-cert.pem \
+  -out client-keystore.p12 \
+  -name client-cert \
+  -CAfile /path/to/ca-cert.pem \
+  -caname root \
+  -passout pass:<your_keystore_password>
+```
+
+This command should create `client-keystore.p12` file.
+
+### 3. Configure SingleStore Cloud
+
+To enable mTLS, you must upload your CA certificate to the SingleStore Portal and create a database user that requires X.509 authentication.
+
+1.  Log in to the **SingleStore Portal**.
+2.  Navigate to **Workspace > Security**.
+3.  Locate the **Upload a CA Bundle** section and upload your `ca-cert.pem` file.
+
+### 4. Create mTLS User
+
+Connect to your SingleStore cluster and execute the following SQL commands. 
+
+*Note: Replace `<mtls_password>` with a secure password and update the `GRANT` statement with the specific permissions required for your workflow.*
+
+```sql
+CREATE USER 'mtls_user'@'%' IDENTIFIED BY '<mtls_password>' REQUIRE X509;
+
+-- Example: Grant all privileges (adjust as needed for least privilege)
+GRANT ALL PRIVILEGES ON *.* TO 'mtls_user'@'%';
+```
+
+### 5. Update Connector Configuration
+
+Finally, update your Kafka Connector JSON configuration to enable the mTLS connection. Ensure the following:
+
+* **File Paths:** The paths for `serverSslCert` and `keystore` must point to the correct locations on your worker nodes.
+* **Passwords:** Replace `<mtls_password>` and `<keystore_password>` with your actual secure values.
+
+```
+"config": {
+    ...
+    "connection.user" : "mtls_user",
+    "connection.password" : "<mtls_password>",
+    "params.sslMode" : "verify-full",
+    "params.serverSslCert": "/path/to/singlestore_bundle.pem",
+    "params.keystore": "/path/to/client-keystore.p12",
+    "params.keyStorePassword": "<keystore_password>",
+    "params.keyStoreType": "PKCS12",
+    ...
+}
+```
+
 ## Setting up development environment
 
- * clone the repository https://github.com/memsql/singlestore-kafka-connector.git
- * open a project with Intellij IDEA
- * to run unit tests use the `unit-tests` run configuration
- * before running integration tests, start [MemSQL CIAB](https://hub.docker.com/r/memsql/cluster-in-a-box) cluster using the `setup-cluster` run configurations
- * to run integration tests use the `integration-tests` run configuration
+- clone the repository https://github.com/memsql/singlestore-kafka-connector.git
+- open a project with Intellij IDEA
+- to run unit tests use the `unit-tests` run configuration
+- before running integration tests, start [MemSQL CIAB](https://hub.docker.com/r/memsql/cluster-in-a-box) cluster using the `setup-cluster` run configurations
+- to run integration tests use the `integration-tests` run configuration
