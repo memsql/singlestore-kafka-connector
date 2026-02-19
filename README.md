@@ -18,9 +18,9 @@ specified before starting kafka-connect job.
 
 | Option                                                      | Description                                                                                                                                                                                                                                                                |
 | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `connection.ddlEndpoint` (On-Premise deployment) (required) | The hostname or IP address of the SingleStoreDB Master Aggregator in the `host[:port]` format, where `port` is an optional parameter. Example: `master-agg.foo.internal:3308` or `master-agg.foo.internal`.                                                                |
-| `connection.dmlEndpoints` (On-Premise deployment)           | The hostname or IP address of SingleStoreDB Aggregator nodes to run queries against in the `host[:port],host[:port],...` format, where `port` is an optional parameter (multiple hosts separated by comma). Example: `child-agg:3308,child-agg2`. (default: `ddlEndpoint`) |
-| `connection.clientEndpoint` (Cloud deployment) (required)   | The hostname or IP address of the SingleStoreDB Cloud workspace to run queries against in the `host[:port]` format, where `port` is an optional parameter. Example: `svc-XXXX-ddl.aws-oregon-2.svc.singlestore.com:3306`.                                                  |
+| `connection.ddlEndpoint` (Self-Managed deployment) (required) | The hostname or IP address of the SingleStore Master Aggregator in the `host[:port]` format, where `port` is an optional parameter. Example: `master-agg.foo.internal:3308` or `master-agg.foo.internal`.                                                                |
+| `connection.dmlEndpoints` (Self-Managed deployment)           | A comma-separated list of the hostname or IP address of SingleStore Aggregator nodes to run queries against in the `host[:port],host[:port],...` format, where `port` is an optional parameter. Example: `child-agg:3308,child-agg2`. Default: `ddlEndpoint`. |
+| `connection.clientEndpoint` (Helios deployment) (required)   | The hostname or IP address of the SingleStore Helios workspace to run queries against in the `host[:port]` format, where `port` is an optional parameter. Example: `svc-XXXX-ddl.aws-oregon-2.svc.singlestore.com:3306`.                                                  |
 | `connection.database` (required)                            | If set, all connections will default to using this database (default: empty)                                                                                                                                                                                               |
 | `connection.user`                                           | SingleStore username (default: `root`)                                                                                                                                                                                                                                     |
 | `connection.password`                                       | SingleStore password (default: no password)                                                                                                                                                                                                                                |
@@ -172,7 +172,7 @@ You can use this method to specify custom table names for multiple topics:
 
 ## Mutual TLS (mTLS) Configuration
 
-This guide explains how to configure an mTLS connection for the **SingleStore Kafka Connector** on **SingleStore Managed Service**.
+This guide explains how to configure an mTLS connection for the **SingleStore Kafka Connector** on **SingleStore Helios**.
 
 ### 1. Generate Client Certificates
 
@@ -203,7 +203,7 @@ openssl pkcs12 -export \
 
 This command should create `client-keystore.p12` file.
 
-### 3. Configure SingleStore Cloud
+### 3. Configure SingleStore Helios
 
 To enable mTLS, you must upload your CA certificate to the SingleStore Portal and create a database user that requires X.509 authentication.
 
@@ -213,7 +213,7 @@ To enable mTLS, you must upload your CA certificate to the SingleStore Portal an
 
 ### 4. Create mTLS User
 
-Connect to your SingleStore cluster and execute the following SQL commands. 
+Connect to your SingleStore deployment and run the following SQL commands. 
 
 *Note: Replace `<mtls_password>` with a secure password and update the `GRANT` statement with the specific permissions required for your workflow.*
 
