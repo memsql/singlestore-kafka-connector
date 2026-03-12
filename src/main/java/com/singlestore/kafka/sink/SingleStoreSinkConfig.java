@@ -392,7 +392,7 @@ public class SingleStoreSinkConfig extends AbstractConfig {
             JdbcHelper.getDDLConnection(this);
             JdbcHelper.getDMLConnection(this);
         } catch (SQLException ex) {
-            String errorMessage = "Failed to configure SingleStore connection: " + ex.getMessage();
+            String errorMessage = "Failed to configure SingleStore connection: " + ex.getLocalizedMessage();
             ConfigException configException = new ConfigException(errorMessage);
             configException.initCause(ex); // Attaches the full stack trace and nested exceptions
             throw configException;
