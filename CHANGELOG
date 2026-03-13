@@ -1,5 +1,5 @@
 2026-13-03 Version 1.2.7
-    * Updated jackson-databind dependency
+    * Updated jackson-databind and kafka dependency
 2026-13-03 Version 1.2.6
     * Updated lz4-java dependency
 2026-12-03 Version 1.2.5
