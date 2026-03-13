@@ -6,7 +6,7 @@
     <artifactId>singlestore-kafka-connector</artifactId>
 
     <name>singlestore-kafka-connector</name>
-    <version>1.2.6</version>
+    <version>1.2.7</version>
     <description>
         The official SingleStore connector for Kafka Confluent Connect.
     </description>
@@ -38,7 +38,7 @@
         <confluent-maven-plugin.version>0.11.3</confluent-maven-plugin.version>
         <singlestore-jdbc-client.version>1.2.0</singlestore-jdbc-client.version>
         <lz4.version>1.10.4</lz4.version>
-        <jackson-databind.version>2.15.0</jackson-databind.version>
+        <jackson-databind.version>2.21.1</jackson-databind.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!--Testing-->
         <junit.version>4.13.1</junit.version>
@@ -50,18 +50,13 @@
         <url>git://git@github.com:memsql/singlestore-kafka-connector.git</url>
         <connection>scm:git:git@github.com:memsql/singlestore-kafka-connector.git</connection>
         <developerConnection>scm:git:git@github.com:memsql/singlestore-kafka-connector.git</developerConnection>
-        <tag>singlestore-kafka-connector-1.2.6</tag>
+        <tag>singlestore-kafka-connector-1.2.7</tag>
     </scm>
 
     <dependencies>
         <dependency>
             <groupId>org.apache.kafka</groupId>
             <artifactId>connect-api</artifactId>
-            <version>${kafka.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.kafka</groupId>
-            <artifactId>connect-runtime</artifactId>
             <version>${kafka.version}</version>
         </dependency>
         <dependency>
@@ -87,6 +82,12 @@
 
 
         <!--Tests-->
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>connect-runtime</artifactId>
+            <version>${kafka.version}</version>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>

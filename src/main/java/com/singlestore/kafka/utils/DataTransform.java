@@ -5,7 +5,6 @@ import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.sink.SinkRecord;
-import org.apache.kafka.connect.transforms.util.SchemaUtil;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -25,8 +24,20 @@ public class DataTransform {
         return records.stream().map(this::updateRecord).collect(Collectors.toList());
     }
 
+    private static SchemaBuilder copySchemaBasics(Schema source, SchemaBuilder builder) {
+        builder.name(source.name());
+        builder.version(source.version());
+        builder.doc(source.doc());
+        Map<String, String> params = source.parameters();
+        if (params != null) {
+            builder.parameters(params);
+        }
+
+        return builder;
+    }
+
     private Schema updateSchema(Schema schema) {
-        final SchemaBuilder builder = SchemaUtil.copySchemaBasics(schema, SchemaBuilder.struct());
+        final SchemaBuilder builder = copySchemaBasics(schema, SchemaBuilder.struct());
         for (Field field : schema.fields()) {
             if (this.fieldsWhitelist.contains(field.name())) {
                 builder.field(field.name(), field.schema());
