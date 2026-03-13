@@ -1,4 +1,6 @@
 2026-13-03 Version 1.2.6
+    * Updated jackson-databind dependency
+2026-13-03 Version 1.2.6
     * Updated lz4-java dependency
 2026-12-03 Version 1.2.5
     * Improved error handling by saving error cause
