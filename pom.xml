@@ -6,7 +6,7 @@
     <artifactId>singlestore-kafka-connector</artifactId>
 
     <name>singlestore-kafka-connector</name>
-    <version>1.2.5</version>
+    <version>1.2.6</version>
     <description>
         The official SingleStore connector for Kafka Confluent Connect.
     </description>
@@ -37,7 +37,7 @@
         <kafka.connect.maven.plugin.version>0.11.1</kafka.connect.maven.plugin.version>
         <confluent-maven-plugin.version>0.11.3</confluent-maven-plugin.version>
         <singlestore-jdbc-client.version>1.2.0</singlestore-jdbc-client.version>
-        <lz4.version>1.7.1</lz4.version>
+        <lz4.version>1.10.4</lz4.version>
         <jackson-databind.version>2.15.0</jackson-databind.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!--Testing-->
@@ -50,7 +50,7 @@
         <url>git://git@github.com:memsql/singlestore-kafka-connector.git</url>
         <connection>scm:git:git@github.com:memsql/singlestore-kafka-connector.git</connection>
         <developerConnection>scm:git:git@github.com:memsql/singlestore-kafka-connector.git</developerConnection>
-        <tag>singlestore-kafka-connector-1.2.5</tag>
+        <tag>singlestore-kafka-connector-1.2.6</tag>
     </scm>
 
     <dependencies>
