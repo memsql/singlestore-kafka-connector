@@ -230,13 +230,14 @@ Finally, update your Kafka Connector JSON configuration to enable the mTLS conne
 
 * **File Paths:** The paths for `serverSslCert` and `keystore` must point to the correct locations on your worker nodes.
 * **Passwords:** Replace `<mtls_password>` and `<keystore_password>` with your actual secure values.
+* **SSL Mode:** Set `<ssl_mode>` to either `verify-full` (encryption, certificate validation and hostname verification) or `verify-ca` (encryption, certificates validation, BUT no hostname verification) based on your security requirements. For more information and a complete list of available SSL/TLS configuration options, refer to the [SingleStore JDBC Driver - TLS Parameters](https://docs.singlestore.com/cloud/developer-resources/connect-with-application-development-tools/connect-with-java-jdbc/the-singlestore-jdbc-driver/#tls-parameters) documentation.
 
 ```
 "config": {
     ...
     "connection.user" : "mtls_user",
     "connection.password" : "<mtls_password>",
-    "params.sslMode" : "verify-full",
+    "params.sslMode" : "<ssl_mode>",
     "params.serverSslCert": "/path/to/singlestore_bundle.pem",
     "params.keystore": "/path/to/client-keystore.p12",
     "params.keyStorePassword": "<keystore_password>",
@@ -244,6 +245,7 @@ Finally, update your Kafka Connector JSON configuration to enable the mTLS conne
     ...
 }
 ```
+
 
 ## Setting up development environment
 
