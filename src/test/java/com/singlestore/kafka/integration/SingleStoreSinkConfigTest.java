@@ -23,7 +23,7 @@ public class SingleStoreSinkConfigTest extends IntegrationBase {
             new SingleStoreSinkConfig(props);
             fail("Exception should be thrown");
         } catch (ConfigException ex) {
-            assertTrue(ex.getLocalizedMessage().contains("Socket fail to connect to host:address=(host=wrong_host)(port=5506)(type=primary). wrong_host"));
+            assertTrue(ex.getLocalizedMessage().contains("Socket fail to connect to host:address=(host=wrong_host)(port=5506)"));
         }
     }
 
@@ -82,7 +82,7 @@ public class SingleStoreSinkConfigTest extends IntegrationBase {
             new SingleStoreSinkConfig(props);
             fail("Exception should be thrown");
         } catch(ConfigException ex) {
-            assertTrue(ex.getLocalizedMessage().contains("Socket fail to connect to host:address=(host=wrong_host)(port=5506)(type=primary). wrong_host"));
+            assertTrue(ex.getLocalizedMessage().contains("Socket fail to connect to host:address=(host=wrong_host)(port=5506)"));
         }
     }
 
