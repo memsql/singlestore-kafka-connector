@@ -39,6 +39,13 @@ public class DataTransformTest extends IntegrationBase {
         }}, false);
     }
 
+    @Test
+    public void blacklistInConfig() {
+        testFieldsWhitelist(new HashMap<String, String>() {{
+            put("fields.blacklist", "id");
+        }}, false);
+    }
+
     public void testFieldsWhitelist(Map<String, String> keys, boolean shouldHaveID) {
         try {
             Map<String, String> props = ConfigHelper.getMinimalRequiredParameters();

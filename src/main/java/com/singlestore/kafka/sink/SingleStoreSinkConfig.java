@@ -57,8 +57,16 @@ public class SingleStoreSinkConfig extends AbstractConfig {
     private static final String TABLE_KEY_DISPLAY = "Table key";
 
     public static final String FIELDS_WHITELIST = "fields.whitelist";
-    private static final String FIELDS_WHITELIST_DOCS = "Specify fields to be inserted to the database. By default all keys will be used; value of this property is the comma separated list with names of the columns`)";
+    private static final String FIELDS_WHITELIST_DOCS =
+            "Specify fields to be inserted to the database. By default all keys will be used; value of this property is a comma-separated list of field names. "
+                    + "If set together with \"fields.blacklist\", the whitelist is applied first and blacklisted names are then removed.";
     private static final String FIELDS_WHITELIST_DISPLAY = "Fields whitelist";
+
+    public static final String FIELDS_BLACKLIST = "fields.blacklist";
+    private static final String FIELDS_BLACKLIST_DOCS =
+            "Specify top-level record fields to exclude from inserts (comma-separated list of field names). "
+                    + "If \"fields.whitelist\" is set, only whitelisted fields are considered, then blacklisted names are removed.";
+    private static final String FIELDS_BLACKLIST_DISPLAY = "Fields blacklist";
 
     public static final String MAX_RETRIES = "max.retries";
     private static final String MAX_RETRIES_DOC = "The maximum number of times to retry on errors before failing the task.";
@@ -208,6 +216,16 @@ public class SingleStoreSinkConfig extends AbstractConfig {
                     ConfigDef.Width.MEDIUM,
                     FIELDS_WHITELIST_DISPLAY
             )
+            .define(FIELDS_BLACKLIST,
+                    ConfigDef.Type.LIST,
+                    null,
+                    ConfigDef.Importance.MEDIUM,
+                    FIELDS_BLACKLIST_DOCS,
+                    DATAMAPPING_GROUP,
+                    2,
+                    ConfigDef.Width.MEDIUM,
+                    FIELDS_BLACKLIST_DISPLAY
+            )
             .define(MAX_RETRIES,
                     ConfigDef.Type.INT,
                     10,
@@ -325,6 +343,7 @@ public class SingleStoreSinkConfig extends AbstractConfig {
     public final String metadataTableName;
     public final Map<String, String> topicToTableMap;
     public final List<String> fieldsWhitelist;
+    public final List<String> fieldsBlacklist;
     public final String filter;
     public final Map<String, List<ColumnMapping>> tableToColumnToFieldMap;
     public final String recordToTableMappingField;
@@ -374,6 +393,7 @@ public class SingleStoreSinkConfig extends AbstractConfig {
         this.metadataTableName = getString(METADATA_TABLE_NAME);
         this.topicToTableMap = getTopicToTableMap(props);
         this.fieldsWhitelist = getList(FIELDS_WHITELIST);
+        this.fieldsBlacklist = getList(FIELDS_BLACKLIST);
         this.filter = getString(FILTER);
         this.tableToColumnToFieldMap = getTableToColumnToFieldMap(props);
         this.recordToTableMappingField = getString(RECORD_TO_TABLE_MAPPING_FIELD);
