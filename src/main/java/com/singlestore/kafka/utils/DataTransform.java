@@ -21,7 +21,7 @@ public class DataTransform {
     /**
      * Applies {@code fields.whitelist} (if non-empty) and {@code fields.blacklist} to each record value.
      */
-    public Collection<SinkRecord> selectWhitelistedFields(Collection<SinkRecord> records) {
+    public Collection<SinkRecord> selectFields(Collection<SinkRecord> records) {
         if (records.size() == 0 || (fieldsWhitelist.size() == 0 && fieldsBlacklist.size() == 0)) {
             return records;
         }

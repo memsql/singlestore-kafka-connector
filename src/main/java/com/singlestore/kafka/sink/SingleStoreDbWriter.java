@@ -34,7 +34,7 @@ public class SingleStoreDbWriter {
 
     public void write(Collection<SinkRecord> rawRecords) throws SQLException {
         Collection<SinkRecord> records = new DataTransform(config.fieldsWhitelist, config.fieldsBlacklist)
-                .selectWhitelistedFields(rawRecords);
+                .selectFields(rawRecords);
         Map<String, Collection<SinkRecord>> tableToRecords = new HashMap<>();
         SinkRecord first = records.iterator().next();
 

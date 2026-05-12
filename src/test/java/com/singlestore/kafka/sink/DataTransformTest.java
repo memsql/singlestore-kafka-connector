@@ -28,14 +28,14 @@ public class DataTransformTest {
     @Test
     public void EmptyCollection() {
         Collection<SinkRecord> updatedRecords = new DataTransform(Arrays.asList("age", "name", "nonexisting"), Collections.emptyList())
-                .selectWhitelistedFields(new ArrayList<>());
+                .selectFields(new ArrayList<>());
         assertEquals(updatedRecords.size(), 0);
     }
 
     @Test
     public void BaseTest() {
         Collection<SinkRecord> updatedRecords = new DataTransform(Arrays.asList("age", "name", "nonexisting"), Collections.emptyList())
-                .selectWhitelistedFields(records);
+                .selectFields(records);
         Schema schema = SchemaBuilder.struct().field("age", Schema.INT32_SCHEMA).field("name", Schema.STRING_SCHEMA).build();
         checkExpectedResult(updatedRecords, createRecord(schema, new Struct(schema).put("age", 25).put("name", "John"), "topic"),  createRecord(schema, new Struct(schema).put("age", 30).put("name", "Mary"), "topic"));
     }
@@ -51,7 +51,7 @@ public class DataTransformTest {
         SinkRecord record = createRecord(null, mp);
 
         Collection<SinkRecord> updatedRecords = new DataTransform(Arrays.asList("age", "name", "nonexisting"), Collections.emptyList())
-            .selectWhitelistedFields(Collections.singletonList(record));
+            .selectFields(Collections.singletonList(record));
 
         assertEquals(updatedRecords.size(), 1);
         Iterator<SinkRecord> iterator = updatedRecords.iterator();
@@ -66,7 +66,7 @@ public class DataTransformTest {
     @Test
     public void NonExistingFields() {
         Collection<SinkRecord> updatedRecords = new DataTransform(Collections.singletonList("nonexisting"), Collections.emptyList())
-                .selectWhitelistedFields(records);
+                .selectFields(records);
         Schema schema = SchemaBuilder.struct().build();
         checkExpectedResult(updatedRecords, createRecord(schema, new Struct(schema), "topic"), createRecord(schema, new Struct(schema), "topic"));
     }
@@ -74,7 +74,7 @@ public class DataTransformTest {
     @Test
     public void DuplicateEntries() {
         Collection<SinkRecord> updatedRecords = new DataTransform(Collections.singletonList("job"), Collections.emptyList())
-                .selectWhitelistedFields(records);
+                .selectFields(records);
         Schema schema = SchemaBuilder.struct().field("job", Schema.STRING_SCHEMA).build();
         checkExpectedResult(updatedRecords, createRecord(schema, new Struct(schema).put("job", "teacher"), "topic"), createRecord(schema, new Struct(schema).put("job", "teacher"), "topic"));
     }
@@ -82,7 +82,7 @@ public class DataTransformTest {
     @Test
     public void BlacklistOnly() {
         Collection<SinkRecord> updatedRecords = new DataTransform(Collections.emptyList(), Arrays.asList("job", "nonexisting"))
-                .selectWhitelistedFields(records);
+                .selectFields(records);
         Schema schema = SchemaBuilder.struct()
                 .field("id", Schema.INT32_SCHEMA)
                 .field("age", Schema.INT32_SCHEMA)
@@ -96,7 +96,7 @@ public class DataTransformTest {
     @Test
     public void WhitelistAndBlacklist() {
         Collection<SinkRecord> updatedRecords = new DataTransform(Arrays.asList("age", "name", "job"), Collections.singletonList("name"))
-                .selectWhitelistedFields(records);
+                .selectFields(records);
         Schema schema = SchemaBuilder.struct().field("age", Schema.INT32_SCHEMA).field("job", Schema.STRING_SCHEMA).build();
         checkExpectedResult(updatedRecords,
                 createRecord(schema, new Struct(schema).put("age", 25).put("job", "teacher"), "topic"),
@@ -114,7 +114,7 @@ public class DataTransformTest {
         SinkRecord record = createRecord(null, mp);
 
         Collection<SinkRecord> updatedRecords = new DataTransform(Collections.emptyList(), Collections.singletonList("job"))
-                .selectWhitelistedFields(Collections.singletonList(record));
+                .selectFields(Collections.singletonList(record));
 
         assertEquals(updatedRecords.size(), 1);
         SinkRecord updatedRecord = updatedRecords.iterator().next();
