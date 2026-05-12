@@ -29,17 +29,24 @@ public class DataTransformTest extends IntegrationBase {
 
     @Test
     public void noWhitelistInConfig() {
-        testFieldsWhitelist(new HashMap<>(), true);
+        testFieldFilteringConfig(new HashMap<>(), true);
     }
 
     @Test
     public void whitelistInConfig() {
-        testFieldsWhitelist(new HashMap<String, String>() {{
+        testFieldFilteringConfig(new HashMap<String, String>() {{
             put("fields.whitelist", "name");
         }}, false);
     }
 
-    public void testFieldsWhitelist(Map<String, String> keys, boolean shouldHaveID) {
+    @Test
+    public void blacklistInConfig() {
+        testFieldFilteringConfig(new HashMap<String, String>() {{
+            put("fields.blacklist", "id");
+        }}, false);
+    }
+
+    public void testFieldFilteringConfig(Map<String, String> keys, boolean shouldHaveID) {
         try {
             Map<String, String> props = ConfigHelper.getMinimalRequiredParameters();
             props.put(SingleStoreSinkConfig.METADATA_TABLE_ALLOW, "false");

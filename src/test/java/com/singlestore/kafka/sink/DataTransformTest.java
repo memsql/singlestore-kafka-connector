@@ -7,7 +7,6 @@ import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.util.*;
 
@@ -28,13 +27,15 @@ public class DataTransformTest {
 
     @Test
     public void EmptyCollection() {
-        Collection<SinkRecord> updatedRecords = new DataTransform(Arrays.asList("age", "name", "nonexisting")).selectWhitelistedFields(new ArrayList<>());
+        Collection<SinkRecord> updatedRecords = new DataTransform(Arrays.asList("age", "name", "nonexisting"), Collections.emptyList())
+                .selectFields(new ArrayList<>());
         assertEquals(updatedRecords.size(), 0);
     }
 
     @Test
     public void BaseTest() {
-        Collection<SinkRecord> updatedRecords = new DataTransform(Arrays.asList("age", "name", "nonexisting")).selectWhitelistedFields(records);
+        Collection<SinkRecord> updatedRecords = new DataTransform(Arrays.asList("age", "name", "nonexisting"), Collections.emptyList())
+                .selectFields(records);
         Schema schema = SchemaBuilder.struct().field("age", Schema.INT32_SCHEMA).field("name", Schema.STRING_SCHEMA).build();
         checkExpectedResult(updatedRecords, createRecord(schema, new Struct(schema).put("age", 25).put("name", "John"), "topic"),  createRecord(schema, new Struct(schema).put("age", 30).put("name", "Mary"), "topic"));
     }
@@ -49,8 +50,8 @@ public class DataTransformTest {
 
         SinkRecord record = createRecord(null, mp);
 
-        Collection<SinkRecord> updatedRecords = new DataTransform(Arrays.asList("age", "name", "nonexisting"))
-            .selectWhitelistedFields(Collections.singletonList(record));
+        Collection<SinkRecord> updatedRecords = new DataTransform(Arrays.asList("age", "name", "nonexisting"), Collections.emptyList())
+            .selectFields(Collections.singletonList(record));
 
         assertEquals(updatedRecords.size(), 1);
         Iterator<SinkRecord> iterator = updatedRecords.iterator();
@@ -64,16 +65,65 @@ public class DataTransformTest {
 
     @Test
     public void NonExistingFields() {
-        Collection<SinkRecord> updatedRecords = new DataTransform(Collections.singletonList("nonexisting")).selectWhitelistedFields(records);
+        Collection<SinkRecord> updatedRecords = new DataTransform(Collections.singletonList("nonexisting"), Collections.emptyList())
+                .selectFields(records);
         Schema schema = SchemaBuilder.struct().build();
         checkExpectedResult(updatedRecords, createRecord(schema, new Struct(schema), "topic"), createRecord(schema, new Struct(schema), "topic"));
     }
 
     @Test
     public void DuplicateEntries() {
-        Collection<SinkRecord> updatedRecords = new DataTransform(Collections.singletonList("job")).selectWhitelistedFields(records);
+        Collection<SinkRecord> updatedRecords = new DataTransform(Collections.singletonList("job"), Collections.emptyList())
+                .selectFields(records);
         Schema schema = SchemaBuilder.struct().field("job", Schema.STRING_SCHEMA).build();
         checkExpectedResult(updatedRecords, createRecord(schema, new Struct(schema).put("job", "teacher"), "topic"), createRecord(schema, new Struct(schema).put("job", "teacher"), "topic"));
+    }
+
+    @Test
+    public void BlacklistOnly() {
+        Collection<SinkRecord> updatedRecords = new DataTransform(Collections.emptyList(), Arrays.asList("job", "nonexisting"))
+                .selectFields(records);
+        Schema schema = SchemaBuilder.struct()
+                .field("id", Schema.INT32_SCHEMA)
+                .field("age", Schema.INT32_SCHEMA)
+                .field("name", Schema.STRING_SCHEMA)
+                .build();
+        checkExpectedResult(updatedRecords,
+                createRecord(schema, new Struct(schema).put("id", 1).put("age", 25).put("name", "John"), "topic"),
+                createRecord(schema, new Struct(schema).put("id", 2).put("age", 30).put("name", "Mary"), "topic"));
+    }
+
+    @Test
+    public void WhitelistAndBlacklist() {
+        Collection<SinkRecord> updatedRecords = new DataTransform(Arrays.asList("age", "name", "job"), Collections.singletonList("name"))
+                .selectFields(records);
+        Schema schema = SchemaBuilder.struct().field("age", Schema.INT32_SCHEMA).field("job", Schema.STRING_SCHEMA).build();
+        checkExpectedResult(updatedRecords,
+                createRecord(schema, new Struct(schema).put("age", 25).put("job", "teacher"), "topic"),
+                createRecord(schema, new Struct(schema).put("age", 30).put("job", "teacher"), "topic"));
+    }
+
+    @Test
+    public void SchemalessBlacklist() {
+        Map<Object, Object> mp = new HashMap<>();
+        mp.put("id", 1);
+        mp.put("age", 25);
+        mp.put("name", "John");
+        mp.put("job", "teacher");
+
+        SinkRecord record = createRecord(null, mp);
+
+        Collection<SinkRecord> updatedRecords = new DataTransform(Collections.emptyList(), Collections.singletonList("job"))
+                .selectFields(Collections.singletonList(record));
+
+        assertEquals(updatedRecords.size(), 1);
+        SinkRecord updatedRecord = updatedRecords.iterator().next();
+        Map<Object, Object> expectedMp = new HashMap<>();
+        expectedMp.put("id", 1);
+        expectedMp.put("age", 25);
+        expectedMp.put("name", "John");
+
+        assertEquals(createRecord(null, expectedMp), updatedRecord);
     }
 
     private void checkExpectedResult(Collection<SinkRecord> updatedRecords, SinkRecord expectedRecord1, SinkRecord expectedRecord2) {

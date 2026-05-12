@@ -10,18 +10,30 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class DataTransform {
-    HashSet<String> fieldsWhitelist;
+    private final HashSet<String> fieldsWhitelist;
+    private final HashSet<String> fieldsBlacklist;
 
-    public DataTransform(List<String> fieldsWhiteList) {
-        this.fieldsWhitelist = fieldsWhiteList == null ? new HashSet<>() : new HashSet<>(fieldsWhiteList);
+    public DataTransform(List<String> fieldsWhitelist, List<String> fieldsBlacklist) {
+        this.fieldsWhitelist = fieldsWhitelist == null ? new HashSet<>() : new HashSet<>(fieldsWhitelist);
+        this.fieldsBlacklist = fieldsBlacklist == null ? new HashSet<>() : new HashSet<>(fieldsBlacklist);
     }
 
-    public Collection<SinkRecord> selectWhitelistedFields(Collection<SinkRecord> records) {
-        if (this.fieldsWhitelist.size() == 0 || records.size() == 0) {
+    /**
+     * Applies {@code fields.whitelist} (if non-empty) and {@code fields.blacklist} to each record value.
+     */
+    public Collection<SinkRecord> selectFields(Collection<SinkRecord> records) {
+        if (records.size() == 0 || (fieldsWhitelist.size() == 0 && fieldsBlacklist.size() == 0)) {
             return records;
         }
 
         return records.stream().map(this::updateRecord).collect(Collectors.toList());
+    }
+
+    private boolean includeField(String name) {
+        if (!fieldsWhitelist.isEmpty() && !fieldsWhitelist.contains(name)) {
+            return false;
+        }
+        return !fieldsBlacklist.contains(name);
     }
 
     private static SchemaBuilder copySchemaBasics(Schema source, SchemaBuilder builder) {
@@ -39,7 +51,7 @@ public class DataTransform {
     private Schema updateSchema(Schema schema) {
         final SchemaBuilder builder = copySchemaBasics(schema, SchemaBuilder.struct());
         for (Field field : schema.fields()) {
-            if (this.fieldsWhitelist.contains(field.name())) {
+            if (includeField(field.name())) {
                 builder.field(field.name(), field.schema());
             }
         }
@@ -69,7 +81,7 @@ public class DataTransform {
 
             Map<Object, Object> value = (Map<Object, Object>) record.value();
             Map<Object, Object> updatedValue = value.entrySet().stream()
-                .filter(entry -> fieldsWhitelist.contains(entry.getKey().toString()))
+                .filter(entry -> includeField(entry.getKey().toString()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
             return record.newRecord(record.topic(), record.kafkaPartition(), record.keySchema(), record.key(), null, updatedValue, record.timestamp());
