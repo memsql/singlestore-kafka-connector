@@ -1,6 +1,6 @@
 # SingleStore Kafka Connector
 
-## Version: 1.2.9 [![License](http://img.shields.io/:license-Apache%202-brightgreen.svg)](http://www.apache.org/licenses/LICENSE-2.0.txt)
+## [![Maven Central](https://img.shields.io/maven-central/v/com.singlestore/singlestore-kafka-connector?label=Version)](https://mvnrepository.com/artifact/com.singlestore/singlestore-kafka-connector) [![License](http://img.shields.io/:license-Apache%202-brightgreen.svg)](http://www.apache.org/licenses/LICENSE-2.0.txt)
 
 ## Getting Started
 
@@ -255,3 +255,35 @@ Finally, update your Kafka Connector JSON configuration to enable the mTLS conne
 - to run unit tests use the `unit-tests` run configuration
 - before running integration tests, start [MemSQL CIAB](https://hub.docker.com/r/memsql/cluster-in-a-box) cluster using the `setup-cluster` run configurations
 - to run integration tests use the `integration-tests` run configuration
+
+## Release process
+
+To release a new version:
+
+1. Push a version tag using semantic versioning with a `v` prefix (`v<major>.<minor>.<patch>`, for example `v1.2.3`):
+
+   ```bash
+   git tag v1.0.1
+   git push origin v1.0.1
+   ```
+
+   The package version is derived from the tag (the leading `v` is stripped). This triggers the [Release workflow](.github/workflows/release.yml), which:
+
+   - Builds the package
+   - Creates a [GitHub Release](https://github.com/memsql/singlestore-kafka-connector/releases) with auto-generated release notes and a Confluent Hub archive (`singlestore-singlestore-kafka-connector-<version>.zip`)
+   - Publishes the package to [Maven Central](https://mvnrepository.com/artifact/com.singlestore/singlestore-kafka-connector)
+
+2. After the GitHub Release is published, email [confluent-hub@confluent.io](mailto:confluent-hub@confluent.io) to update the connector on Confluent Hub. Replace `<version>` with the release version (for example, `1.2.9` for tag `v1.2.9`):
+
+   ```
+   Hi,
+
+   We have updated the SingleStore Kafka Sink connector.
+   You can access the updated connector at the following link:
+   https://github.com/memsql/singlestore-kafka-connector/releases/download/v<version>/singlestore-singlestore-kafka-connector-<version>.zip
+
+   Please let me know if you have any issues accessing the archive package or if any further steps are required to update the package on Confluent Hub.
+
+   Best regards,
+   <Your name>
+   ```
