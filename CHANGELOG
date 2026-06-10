@@ -1,3 +1,7 @@
+This file contains the changelog through version 1.2.9.
+For newer releases, see the GitHub release notes:
+https://github.com/memsql/singlestore-kafka-connector/releases
+
 2026-13-05 Version 1.2.9
     * Added fields.blacklist configuration option
 2026-15-04 Version 1.2.8
