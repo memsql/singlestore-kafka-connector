@@ -6,14 +6,21 @@ import com.singlestore.kafka.utils.JdbcHelper;
 import com.singlestore.kafka.utils.TableKey;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.common.config.ConfigDef.Type;
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.config.types.Password;
 
 import java.sql.SQLException;
 import java.util.*;
 import java.util.stream.Collectors;
+import org.apache.kafka.connect.data.Field;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class SingleStoreSinkConfig extends AbstractConfig {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(SingleStoreSinkConfig.class);
+
     private static final String CONNECTION_GROUP = "Connection";
     private static final String RETRY_GROUP = "Retry";
     private static final String SINGLESTORE_GROUP = "SingleStore";
@@ -51,6 +58,12 @@ public class SingleStoreSinkConfig extends AbstractConfig {
     public static final String SQL_PARAMETERS = "params.<value>";
     private static final String SQL_PARAMETERS_DOC = "Specify a specific MySQL or JDBC parameter which will be injected into the connection URI";
     private static final String SQL_PARAMETERS_DISPLAY = "Additional SQL Parameters";
+
+    public static final String CUSTOM_METRIC_TAGS = "custom.metric.tags";
+    private static final String CUSTOM_METRIC_TAGS_DOC = "The custom metric tags will accept key-value pairs to customize the MBean object name "
+        + "which should be appended the end of regular name, each key would represent a tag for the MBean object name, "
+        + "and the corresponding value would be the value of that tag the key is. For example: k1=v1,k2=v2";
+    private static final String CUSTOM_METRIC_TAGS_DISPLAY = "Customize metric tags";
 
     public static final String TABLE_KEY = "tableKey.<index_type>[.<name>]";
     private static final String TABLE_KEY_DOCS = "Specify additional keys to add to tables created by the connector; value of this property is the comma separated list with names of the columns to apply key; <index_type> one of (`PRIMARY`, `COLUMNSTORE`, `UNIQUE`, `SHARD`, `KEY`)";
@@ -137,7 +150,7 @@ public class SingleStoreSinkConfig extends AbstractConfig {
                     ConfigDef.Importance.HIGH,
                     CLIENT_ENDPOINT_DOC,
                     CONNECTION_GROUP,
-                    1,
+                    2,
                     ConfigDef.Width.LONG,
                     CLIENT_ENDPOINT_DISPLAY
             )
@@ -148,7 +161,7 @@ public class SingleStoreSinkConfig extends AbstractConfig {
                     ConfigDef.Importance.HIGH,
                     CONNECTION_DATABASE_DOC,
                     CONNECTION_GROUP,
-                    2,
+                    3,
                     ConfigDef.Width.MEDIUM,
                     CONNECTION_DATABASE_DISPLAY
             )
@@ -159,7 +172,7 @@ public class SingleStoreSinkConfig extends AbstractConfig {
                     ConfigDef.Importance.HIGH,
                     CONNECTION_USER_DOC,
                     CONNECTION_GROUP,
-                    3,
+                    4,
                     ConfigDef.Width.MEDIUM,
                     CONNECTION_USER_DISPLAY
             )
@@ -170,7 +183,7 @@ public class SingleStoreSinkConfig extends AbstractConfig {
                     ConfigDef.Importance.HIGH,
                     CONNECTION_PASSWORD_DOC,
                     CONNECTION_GROUP,
-                    4,
+                    5,
                     ConfigDef.Width.MEDIUM,
                     CONNECTION_PASSWORD_DISPLAY
             )
@@ -181,7 +194,7 @@ public class SingleStoreSinkConfig extends AbstractConfig {
                     ConfigDef.Importance.MEDIUM,
                     DML_ENDPOINTS_DOC,
                     CONNECTION_GROUP,
-                    5,
+                    6,
                     ConfigDef.Width.LONG,
                     DML_ENDPOINTS_DISPLAY
             )
@@ -192,7 +205,7 @@ public class SingleStoreSinkConfig extends AbstractConfig {
                     ConfigDef.Importance.LOW,
                     SQL_PARAMETERS_DOC,
                     CONNECTION_GROUP,
-                    6,
+                    7,
                     ConfigDef.Width.MEDIUM,
                     SQL_PARAMETERS_DISPLAY
             )
@@ -202,9 +215,19 @@ public class SingleStoreSinkConfig extends AbstractConfig {
                     ConfigDef.Importance.LOW,
                     TABLE_KEY_DOCS,
                     CONNECTION_GROUP,
-                    7,
+                    8,
                     ConfigDef.Width.MEDIUM,
                     TABLE_KEY_DISPLAY
+            )
+            .define(CUSTOM_METRIC_TAGS,
+                ConfigDef.Type.LIST,
+                null,
+                ConfigDef.Importance.LOW,
+                CUSTOM_METRIC_TAGS_DOC,
+                CONNECTION_GROUP,
+                9,
+                ConfigDef.Width.MEDIUM,
+                CUSTOM_METRIC_TAGS_DISPLAY
             )
             .define(FIELDS_WHITELIST,
                     ConfigDef.Type.LIST,
@@ -349,6 +372,7 @@ public class SingleStoreSinkConfig extends AbstractConfig {
     public final String recordToTableMappingField;
     public final Map<String, String> recordToTableMap;
     public boolean upsert;
+    public final Map<String, String> customMetricTags;
 
 
     public SingleStoreSinkConfig(Map<String, String> props) {
@@ -399,6 +423,7 @@ public class SingleStoreSinkConfig extends AbstractConfig {
         this.recordToTableMappingField = getString(RECORD_TO_TABLE_MAPPING_FIELD);
         this.recordToTableMap = getRecordToTableMap(props);
         this.upsert = getBoolean(UPSERT);
+        this.customMetricTags = getCustomMetricTags();
 
         if (!topicToTableMap.isEmpty() && recordToTableMappingField != null) {
             throw new ConfigException("Configurations \"singlestore.recordToTableMappingField\" and \"singlestore.tableName\" are mutually exclusive");
@@ -448,6 +473,28 @@ public class SingleStoreSinkConfig extends AbstractConfig {
 
                 map.get(table).add(new ColumnMapping(column, props.get(key)));
             });
+
+        return map;
+    }
+
+    private Map<String, String> getCustomMetricTags() {
+        Map<String, String> map = new HashMap<>();
+
+        List<String> tags = getList(CUSTOM_METRIC_TAGS);
+        if (tags == null) {
+            return map;
+        }
+
+        for (String tag : tags) {
+            String[] items = tag.split("=");
+            if (items.length != 2) {
+                throw new ConfigException(String.format("Invalid tag in the %s configuration: \"%s\"", CUSTOM_METRIC_TAGS, tag));
+            }
+            if (map.containsKey(items[0])) {
+                LOGGER.warn("There are duplicated key-value pairs in the {} configuration", CUSTOM_METRIC_TAGS);
+            }
+            map.put(items[0], items[1]);
+        }
 
         return map;
     }
