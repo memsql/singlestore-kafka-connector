@@ -38,8 +38,8 @@ public class SingleStoreSinkTask extends SinkTask {
 
     @Override
     public void put(Collection<SinkRecord> records) {
-        metrics.markTaskRunning();
         if (!records.isEmpty()) {
+            metrics.markTaskRunning();
             try {
                 SinkRecord first = records.iterator().next();
                 log.debug(
