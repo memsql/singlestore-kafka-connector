@@ -275,9 +275,9 @@ The connector currently exports these task metrics:
 
 Metrics are exported per task and follow the task lifecycle:
 
-- metric MBean is registered when a task starts
-- task status is updated while the task runs
-- metric MBean is unregistered when the task stops
+1. metric MBean is registered when a task starts
+2. task status is updated while the task runs
+3. metric MBean is unregistered when the task stops
 
 
 ## Setting up development environment
