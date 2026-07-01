@@ -32,7 +32,7 @@ public class SingleStoreDbWriter {
         this.config = config;
     }
 
-    public long write(Collection<SinkRecord> rawRecords) throws SQLException {
+    public void write(Collection<SinkRecord> rawRecords) throws SQLException {
         Collection<SinkRecord> records = new DataTransform(config.fieldsWhitelist, config.fieldsBlacklist)
                 .selectFields(rawRecords);
         Map<String, Collection<SinkRecord>> tableToRecords = new HashMap<>();
@@ -78,7 +78,7 @@ public class SingleStoreDbWriter {
                 String metaId = String.format("%s-%s-%s", first.topic(), first.kafkaPartition(), first.kafkaOffset());
                 if (JdbcHelper.metadataRecordExists(connection, metaId, config)) {
                     // If metadata record already exists, skip writing this batch of data
-                    return 0;
+                    return;
                 }
                 connection.setAutoCommit(false);
                 Integer recordsCount = records.size();
@@ -87,8 +87,6 @@ public class SingleStoreDbWriter {
                     metadataStmt.executeUpdate();
                 }
             }
-
-            long insertedRowsTotal = 0;
 
             // TODO: investigate parallelization of this loop
             for (Map.Entry<String, Collection<SinkRecord>> entry: tableToRecords.entrySet()) {
@@ -102,7 +100,7 @@ public class SingleStoreDbWriter {
 
                     DataExtension dataExtension = getDataExtension(baseStream);
                     try (OutputStream outputStream = dataExtension.getOutputStream()) {
-                        insertedRowsTotal += write(firstTableRecord, dataExtension, table, outputStream, tableRecords, stmt);
+                        write(firstTableRecord, dataExtension, table, outputStream, tableRecords, stmt);
                     }
                 }
             }
@@ -110,20 +108,19 @@ public class SingleStoreDbWriter {
             if (config.metadataTableAllow) {
                 connection.commit();
             }
-            return insertedRowsTotal;
         } catch (IOException ex) {
             throw new ConnectException(ex.getLocalizedMessage());
         }
     }
 
-    private long write(SinkRecord record, DataExtension dataCompression, String table,
+    private void write(SinkRecord record, DataExtension dataCompression, String table,
                          OutputStream outputStream, Collection<SinkRecord> records, Statement stmt) throws IOException, SQLException {
         CsvDbWriter dbWriter = new CsvDbWriter(config, record, table);
         String dataQuery = dbWriter.generateQuery(dataCompression.getExt());
         dbWriter.writeData(outputStream, records);
         outputStream.close();
         log.trace("Executing SQL:\n{}", dataQuery);
-        return stmt.executeUpdate(dataQuery);
+        stmt.executeUpdate(dataQuery);
     }
 
     private DataExtension getDataExtension(OutputStream baseStream) {
