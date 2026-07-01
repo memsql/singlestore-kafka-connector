@@ -381,4 +381,37 @@ public class SingleStoreSinkConfigTest extends IntegrationBase {
         config = new SingleStoreSinkConfig(props);
         assertEquals(config.filter, props.get(SingleStoreSinkConfig.FILTER));
     }
+
+    @Test
+    public void successCustomMetricTagsParameter() {
+        Map<String, String> props = getMinimalRequiredParameters();
+        props.put(SingleStoreSinkConfig.CUSTOM_METRIC_TAGS, "team=data,cc-team=analytics,slack=alerts");
+
+        SingleStoreSinkConfig config = new SingleStoreSinkConfig(props);
+
+        assertEquals(3, config.customMetricTags.size());
+        assertEquals("data", config.customMetricTags.get("team"));
+        assertEquals("analytics", config.customMetricTags.get("cc-team"));
+        assertEquals("alerts", config.customMetricTags.get("slack"));
+    }
+
+    @Test
+    public void failCustomMetricTagsWithInvalidTag() {
+        Map<String, String> props = getMinimalRequiredParameters();
+        props.put(SingleStoreSinkConfig.CUSTOM_METRIC_TAGS, "team=data,invalid-tag");
+
+        ConfigException ex = assertThrows(ConfigException.class, () -> new SingleStoreSinkConfig(props));
+        assertEquals("Invalid tag in the custom.metric.tags configuration: \"invalid-tag\"", ex.getLocalizedMessage());
+    }
+
+    @Test
+    public void successCustomMetricTagsWithDuplicateKeyTag() {
+        Map<String, String> props = getMinimalRequiredParameters();
+        props.put(SingleStoreSinkConfig.CUSTOM_METRIC_TAGS, "team=data,team=platform");
+
+        SingleStoreSinkConfig config = new SingleStoreSinkConfig(props);
+
+        assertEquals(1, config.customMetricTags.size());
+        assertEquals("platform", config.customMetricTags.get("team"));
+    }
 }

@@ -30,6 +30,7 @@ specified before starting kafka-connect job.
 | `fields.blacklist`                                          | Comma-separated list of top-level fields to omit from the row (e.g. columns with `DEFAULT` / `ON UPDATE`). Applied after the whitelist when both are set. (default: none excluded)                                                                                                                                                                                            |
 | `retry.backoff.ms`                                          | The time in milliseconds to wait following an error before a retry attempt is made. (default 3000)                                                                                                                                                                         |
 | `tableKey.<index_type>[.name]`                              | Specify additional keys to add to tables created by the connector; value of this property is the comma separated list with names of the columns to apply key; <index_type> one of (`PRIMARY`, `COLUMNSTORE`, `UNIQUE`, `SHARD`, `KEY`);                                    |
+| `custom.metric.tags`                                        | Comma-separated list of key-value pairs (`key=value`) added as extra JMX tags to task metric ObjectNames. Example: `team=data,env=prod`.                                                                                                                                  |
 | `singlestore.loadDataCompression`                           | Compress data on load; one of (`GZip`, `LZ4`, `Skip`) (default: GZip)                                                                                                                                                                                                      |
 | `singlestore.metadata.allow`                                | Allows or denies the use of an additional meta-table to save the recording results (default: true)                                                                                                                                                                         |
 | `singlestore.metadata.table`                                | Specify the name of the table to save kafka transaction metadata (default: `kafka_connect_transaction_metadata`)                                                                                                                                                           |
@@ -246,6 +247,37 @@ Finally, update your Kafka Connector JSON configuration to enable the mTLS conne
     ...
 }
 ```
+
+
+## Metrics
+
+The connector exports task-level metrics via JMX.
+
+### Metric name
+
+Each task registers a JMX MBean with the following ObjectName format:
+
+`singlestore.kafka:type=connector-metrics,context=sink,connector-name=<connector-name>,task=<task-id>[,<custom-tags>]`
+
+- `connector-name` comes from the Kafka Connect connector `name` property.
+- `task` is the Kafka Connect task id (`0`, `1`, ...).
+- optional `custom-tags` come from `custom.metric.tags` configuration.
+
+### Exported metrics
+
+The connector currently exports these task metrics:
+
+- `TaskStatus`: current task state. Values are `unassigned`, `running`, `failed`, or `stopped`.
+- `RecordsProcessedTotal`: cumulative number of Kafka records accepted by the task and successfully processed by `put(...)`.
+- `WriteErrorsTotal`: cumulative number of write attempts that failed.
+
+### Lifecycle behavior
+
+Metrics are exported per task and follow the task lifecycle:
+
+1. metric MBean is registered when a task starts
+2. task status is updated while the task runs
+3. metric MBean is unregistered when the task stops
 
 
 ## Setting up development environment
