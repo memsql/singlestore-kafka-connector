@@ -33,15 +33,33 @@ if [[ "${EXISTS}" -eq 0 ]]; then
 fi
 
 singlestore-wait-start() {
-  echo -n "Waiting for SingleStore to start..."
+  local timeout_secs="${SINGLESTORE_START_TIMEOUT_SECS:-120}"
+  local elapsed=0
+
+  if ! command -v mysql >/dev/null 2>&1; then
+    echo "ERROR: mysql client is not installed on the runner" >&2
+    exit 1
+  fi
+
+  echo "Waiting for SingleStore to start (timeout=${timeout_secs}s)..."
   while true; do
-      if mysql -u root -h 127.0.0.1 -P 5506 -p"${SINGLESTORE_PASSWORD}" -e "select 1" >/dev/null 2>/dev/null; then
-          break
+      if mysql -u root -h 127.0.0.1 -P 5506 -p"${SINGLESTORE_PASSWORD}" -e "select 1" >/dev/null 2>&1; then
+          echo "Success!"
+          return 0
       fi
-      echo -n "."
-      sleep 0.2
+      if (( elapsed >= timeout_secs )); then
+          echo
+          echo "ERROR: SingleStore did not become ready within ${timeout_secs}s" >&2
+          echo "Container status:" >&2
+          docker ps -a --filter "name=${CONTAINER_NAME}" >&2 || true
+          echo "Container logs:" >&2
+          docker logs "${CONTAINER_NAME}" >&2 || true
+          exit 1
+      fi
+      echo "  still waiting... (${elapsed}s)"
+      sleep 2
+      elapsed=$((elapsed + 2))
   done
-  echo ". Success!"
 }
 
 singlestore-wait-start

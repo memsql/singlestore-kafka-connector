@@ -56,10 +56,18 @@ jobs:
           cache: maven
       - name: Setup test cluster
         run: ./scripts/setup-cluster.sh
+        timeout-minutes: 10
         env:
           SINGLESTORE_LICENSE: ${{ secrets.SINGLESTORE_LICENSE }}
           SINGLESTORE_PASSWORD: ${{ secrets.SINGLESTORE_PASSWORD }}
           SINGLESTORE_VERSION: ${{ matrix.singlestore_version }}
+      - name: Cluster diagnostics
+        if: always()
+        run: |
+          which mysql || echo "MYSQL CLIENT MISSING"
+          docker ps -a
+          docker inspect -f '{{.State.Status}} exit={{.State.ExitCode}}' singlestore-integration || true
+          docker logs singlestore-integration 2>&1 | tail -100
       - run: mvn -B test
         env:
           SINGLESTORE_PASSWORD: ${{ secrets.SINGLESTORE_PASSWORD }}
