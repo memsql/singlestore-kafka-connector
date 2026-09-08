@@ -7,21 +7,69 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
 
     steps:
       - uses: actions/checkout@v5
-      - name: Set up JDK 8
+      - name: Set up JDK 11
         uses: actions/setup-java@v5
         with:
-          java-version: '8'
+          java-version: '11'
           distribution: 'temurin'
           cache: maven
       - name: Set Release Version
         run: |
           VERSION=${GITHUB_REF_NAME#v}
           mvn versions:set -DnewVersion=$VERSION
+          echo "RELEASE_VERSION=${VERSION}" >> "$GITHUB_ENV"
+      - name: Install Jsign
+        run: |
+          wget https://github.com/ebourg/jsign/releases/download/7.0/jsign_7.0_all.deb
+          sudo dpkg -i jsign_7.0_all.deb
+      - name: Azure Login
+        if: ${{ success() }}
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Fetch and mask Azure Access Token
+        run: |
+          TOKEN=$(az account get-access-token --resource https://codesigning.azure.net --query accessToken -o tsv)
+          echo "::add-mask::$TOKEN"
+          echo "AZURE_ACCESS_TOKEN=$TOKEN" >> $GITHUB_ENV
       - name: Build archive
-        run: mvn -B package --file pom.xml -DskipTests
+        env:
+          JSIGN_JAR: /usr/share/jsign/jsign-7.0.jar
+          ENDPOINT: ${{ vars.AZURE_SIGNING_ENDPOINT }}
+          ALIAS: ${{ vars.AZURE_SIGNING_ACCOUNT }}/${{ vars.AZURE_SIGNING_PROFILE }}
+        run: mvn -B package --file pom.xml -DskipTests -DskipJsign=false
+      # The Trusted Signing root is not shipped in the JDK truststore, so without
+      # it jarsigner reports the signer and timestamp chains as unverifiable.
+      - name: Trust the Azure Trusted Signing root CA
+        if: ${{ success() }}
+        run: |
+          EXPECTED_SHA256="53:67:F2:0C:7A:DE:0E:2B:CA:79:09:15:05:6D:08:6B:72:0C:33:C1:FA:2A:26:61:AC:F7:87:E3:29:2E:12:70"
+          curl -fsSL -o msroot2020.crt \
+            "https://www.microsoft.com/pkiops/certs/Microsoft%20Identity%20Verification%20Root%20Certificate%20Authority%202020.crt"
+          ACTUAL_SHA256=$(openssl x509 -inform DER -in msroot2020.crt -noout -fingerprint -sha256 | cut -d= -f2)
+          if [[ "$ACTUAL_SHA256" != "$EXPECTED_SHA256" ]]; then
+            echo "Unexpected root CA fingerprint: $ACTUAL_SHA256" >&2
+            exit 1
+          fi
+          # setup-java installs the JDK as root; the runner user cannot write cacerts.
+          sudo "$JAVA_HOME/bin/keytool" -importcert -noprompt \
+            -alias microsoft-identity-verification-root-ca-2020 \
+            -cacerts \
+            -storepass changeit \
+            -file msroot2020.crt
+      - name: Verify signed JARs
+        if: ${{ success() }}
+        run: |
+          jarsigner -verify -strict \
+            "target/singlestore-kafka-connector-${{ env.RELEASE_VERSION }}.jar"
       - name: Release on GitHub
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
@@ -39,4 +87,8 @@ jobs:
           cp ci/settings.xml ~/.m2/settings.xml
       - name: Release to Maven Central
         if: ${{ success() }}
-        run: mvn -s ci/settings.xml clean deploy -DskipTests -Dsonatype.username=${{ secrets.SONATYPE_USER }} -Dsonatype.password=${{ secrets.SONATYPE_PASSWORD }}
+        env:
+          JSIGN_JAR: /usr/share/jsign/jsign-7.0.jar
+          ENDPOINT: ${{ vars.AZURE_SIGNING_ENDPOINT }}
+          ALIAS: ${{ vars.AZURE_SIGNING_ACCOUNT }}/${{ vars.AZURE_SIGNING_PROFILE }}
+        run: mvn -s ci/settings.xml clean deploy -DskipTests -DskipJsign=false -Dsonatype.username=${{ secrets.SONATYPE_USER }} -Dsonatype.password=${{ secrets.SONATYPE_PASSWORD }}

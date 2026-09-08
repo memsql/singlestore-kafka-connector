@@ -302,6 +302,7 @@ To release a new version:
    The package version is derived from the tag (the leading `v` is stripped). This triggers the [Release workflow](.github/workflows/release.yml), which:
 
    - Builds the package
+   - Signs the JAR with Azure Trusted Signing and verifies the signature
    - Creates a [GitHub Release](https://github.com/memsql/singlestore-kafka-connector/releases) with auto-generated release notes and a Confluent Hub archive (`singlestore-singlestore-kafka-connector-<version>.zip`)
    - Publishes the package to [Maven Central](https://mvnrepository.com/artifact/com.singlestore/singlestore-kafka-connector)
 
