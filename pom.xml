@@ -44,6 +44,7 @@
         <junit.version>4.13.1</junit.version>
         <!--Maven Plugins-->
         <maven-compiler-plugin.version>3.8.1</maven-compiler-plugin.version>
+        <skipJsign>true</skipJsign>
     </properties>
 
     <scm>
@@ -116,6 +117,34 @@
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jarsigner-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>jsign</id>
+                        <phase>package</phase>
+                        <goals><goal>sign</goal></goals>
+                        <configuration>
+                            <skip>${skipJsign}</skip>
+                            <keystore>NONE</keystore>
+                            <storetype>TRUSTEDSIGNING</storetype>
+                            <storepass>${env.AZURE_ACCESS_TOKEN}</storepass>
+                            <providerClass>net.jsign.jca.JsignJcaProvider</providerClass>
+                            <providerArg>${env.ENDPOINT}</providerArg>
+                            <alias>${env.ALIAS}</alias>
+                            <tsa>http://timestamp.acs.microsoft.com</tsa>
+                            <arguments>
+                                <argument>-J-cp</argument>
+                                <argument>-J${env.JSIGN_JAR}</argument>
+                                <argument>-J--add-modules</argument>
+                                <argument>-Jjava.sql</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-gpg-plugin</artifactId>
