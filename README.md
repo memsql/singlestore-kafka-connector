@@ -96,7 +96,7 @@ To overwrite the name of this table, use `singlestore.metadata.table` option.
 
 `singlestore.upsert` loads rows with `LOAD DATA ... REPLACE`. That statement replaces every column of the existing row.
 
-`singlestore.onDuplicateKeySQL` loads rows with batched `INSERT ... ON DUPLICATE KEY UPDATE` statements, the same approach as the [SingleStore Spark connector](https://github.com/memsql/singlestore-spark-connector#inserting-rows-into-the-table-with-on-duplicate-key-update). The table needs a `PRIMARY KEY` or `UNIQUE` index. New rows are inserted with every mapped column. When a key already exists, SingleStore runs only the assignments in `singlestore.onDuplicateKeySQL`. Columns omitted from that list keep their current values. Columns that are absent from the Kafka record are left out of the `INSERT`, so database defaults stay in place on insert and existing values stay in place on update.
+`singlestore.onDuplicateKeySQL` loads rows with batched `INSERT ... ON DUPLICATE KEY UPDATE` statements, the same approach as the [SingleStore Spark connector](https://github.com/memsql/singlestore-spark-connector#inserting-rows-into-the-table-with-on-duplicate-key-update). The table needs a `PRIMARY KEY` or `UNIQUE` index. New rows are inserted with every mapped column. When a key already exists, SingleStore runs only the assignments in `singlestore.onDuplicateKeySQL`. Columns omitted from that list keep their current values. As with `LOAD DATA`, the column list comes from the first record written to each table in a batch. A later record that lacks one of those fields writes `NULL` to that column.
 
 ```
 "singlestore.onDuplicateKeySQL": "`data` = VALUES(`data`)",
@@ -106,6 +106,10 @@ To overwrite the name of this table, use `singlestore.metadata.table` option.
 For a row `(id=1, data='old', created_at='2020-01-01')` and an incoming record `(id=1, data='new', created_at='2024-01-01')`, the assignment above stores `data='new'` and leaves `created_at` unchanged.
 
 The assignment list can also be an expression, for example `` `age` = `age` + 1 ``.
+
+All `INSERT` statements for one batch of records run in a single transaction, even when `singlestore.metadata.allow` is `false`. If any statement fails, the whole batch is rolled back and retried, so assignments such as `` `age` = `age` + 1 `` are not applied twice.
+
+Binary values are sent as raw bytes and stored unchanged. `LOAD DATA` decodes binary values as UTF-8 text, so it replaces bytes that are not valid UTF-8.
 
 Rows are applied in the order they are received. Concurrent tasks that update the same keys can deadlock when they apply those keys in different orders.
 

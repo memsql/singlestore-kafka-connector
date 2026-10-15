@@ -7,6 +7,8 @@ import com.vdurmont.semver4j.Semver;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.errors.RetriableException;
+import org.apache.kafka.connect.runtime.WorkerSinkTaskContext;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.junit.Test;
 
@@ -26,6 +28,7 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 public class OnDuplicateKeyUpdateTest extends IntegrationBase {
@@ -430,6 +433,258 @@ public class OnDuplicateKeyUpdateTest extends IntegrationBase {
     }
 
     @Test
+    public void failedBatchRollsBackEarlierStatements() throws SQLException {
+        String table = "odku_rollback";
+        executeQuery("DROP TABLE IF EXISTS testdb." + table);
+        executeQuery(rowstore(table, "id INT PRIMARY KEY, data JSON"));
+
+        Schema schema = SchemaBuilder.struct()
+                .field("id", Schema.INT32_SCHEMA)
+                .field("data", Schema.STRING_SCHEMA)
+                .build();
+        Map<String, String> props = ConfigHelper.getMinimalRequiredParameters();
+        props.put(SingleStoreSinkConfig.METADATA_TABLE_ALLOW, "false");
+        props.put(SingleStoreSinkConfig.ON_DUPLICATE_KEY_SQL, UPDATE_DATA);
+        props.put(SingleStoreSinkConfig.INSERT_BATCH_SIZE, "1");
+
+        SingleStoreSinkTask task = new SingleStoreSinkTask();
+        task.initialize(new WorkerSinkTaskContext(null, null, null));
+        task.start(props);
+        List<SinkRecord> records = Arrays.asList(
+                new SinkRecord(table, 0, null, null, schema, new Struct(schema).put("id", 1).put("data", "{\"a\":1}"), 0),
+                new SinkRecord(table, 0, null, null, schema, new Struct(schema).put("id", 2).put("data", "not json"), 1));
+        assertThrows(RetriableException.class, () -> task.put(records));
+        task.stop();
+
+        ResultSet rs = executeQueryWithResultSet("SELECT COUNT(*) FROM testdb.odku_rollback");
+        assertTrue(rs.next());
+        assertEquals(0, rs.getInt(1));
+    }
+
+    @Test
+    public void failedBatchRollsBackMetadataAndRetrySucceeds() throws SQLException {
+        executeQuery("DROP TABLE IF EXISTS testdb.`kafka_connect_transaction_metadata`");
+        String table = "odku_rollback_meta";
+        executeQuery("DROP TABLE IF EXISTS testdb." + table);
+        executeQuery(rowstore(table, "id INT PRIMARY KEY, data JSON"));
+
+        Schema schema = SchemaBuilder.struct()
+                .field("id", Schema.INT32_SCHEMA)
+                .field("data", Schema.STRING_SCHEMA)
+                .build();
+        Map<String, String> props = ConfigHelper.getMinimalRequiredParameters();
+        props.put(SingleStoreSinkConfig.METADATA_TABLE_ALLOW, "true");
+        props.put(SingleStoreSinkConfig.ON_DUPLICATE_KEY_SQL, UPDATE_DATA);
+        props.put(SingleStoreSinkConfig.INSERT_BATCH_SIZE, "1");
+
+        SingleStoreSinkTask task = new SingleStoreSinkTask();
+        task.initialize(new WorkerSinkTaskContext(null, null, null));
+        task.start(props);
+        SinkRecord valid = new SinkRecord(table, 0, null, null, schema,
+                new Struct(schema).put("id", 1).put("data", "{\"a\":1}"), 0);
+        assertThrows(RetriableException.class, () -> task.put(Arrays.asList(valid, new SinkRecord(table, 0, null, null,
+                schema, new Struct(schema).put("id", 2).put("data", "not json"), 1))));
+
+        ResultSet rs = executeQueryWithResultSet("SELECT COUNT(*) FROM testdb.odku_rollback_meta");
+        assertTrue(rs.next());
+        assertEquals(0, rs.getInt(1));
+        ResultSet meta = executeQueryWithResultSet(
+                "SELECT COUNT(*) FROM testdb.kafka_connect_transaction_metadata WHERE id = 'odku_rollback_meta-0-0'");
+        assertTrue(meta.next());
+        assertEquals(0, meta.getInt(1));
+
+        task.put(Arrays.asList(valid, new SinkRecord(table, 0, null, null, schema,
+                new Struct(schema).put("id", 2).put("data", "{\"b\":2}"), 1)));
+        task.stop();
+
+        rs = executeQueryWithResultSet("SELECT COUNT(*) FROM testdb.odku_rollback_meta");
+        assertTrue(rs.next());
+        assertEquals(2, rs.getInt(1));
+        meta = executeQueryWithResultSet(
+                "SELECT count FROM testdb.kafka_connect_transaction_metadata WHERE id = 'odku_rollback_meta-0-0'");
+        assertTrue(meta.next());
+        assertEquals(2, meta.getInt("count"));
+        assertFalse(meta.next());
+    }
+
+    @Test
+    public void multiTableWrite() throws SQLException {
+        Schema schema = SchemaBuilder.struct()
+                .field("tableId", Schema.STRING_SCHEMA)
+                .field("id", Schema.INT32_SCHEMA)
+                .field("data", Schema.STRING_SCHEMA)
+                .field("keep", Schema.STRING_SCHEMA)
+                .build();
+        Map<String, String> props = props(UPDATE_DATA);
+        props.put("singlestore.recordToTable.mappingField", "tableId");
+        props.put("singlestore.recordToTable.mapping.t1", "odku_multi1");
+        props.put("singlestore.recordToTable.mapping.t2", "odku_multi2");
+        props.put(SingleStoreSinkConfig.INSERT_BATCH_SIZE, "1");
+        String columns = "tableId TEXT, id INT PRIMARY KEY, data TEXT, keep TEXT";
+        executeQuery("DROP TABLE IF EXISTS testdb.odku_multi1");
+        executeQuery("DROP TABLE IF EXISTS testdb.odku_multi2");
+        executeQuery(rowstore("odku_multi1", columns));
+        executeQuery(rowstore("odku_multi2", columns));
+
+        put(props, Arrays.asList(
+                multiTableRow(schema, "t1", 1, "a", "keep1"),
+                multiTableRow(schema, "t2", 1, "b", "keep2")
+        ), null, false);
+        put(props, Arrays.asList(
+                multiTableRow(schema, "t2", 1, "b2", "changed"),
+                multiTableRow(schema, "t1", 1, "a2", "changed"),
+                multiTableRow(schema, "t1", 2, "new", "fresh"),
+                multiTableRow(schema, "unmapped", 3, "skip", "skip")
+        ), null, false);
+
+        ResultSet rs = executeQueryWithResultSet("SELECT id, data, keep FROM testdb.odku_multi1 ORDER BY id");
+        assertTrue(rs.next());
+        assertEquals("a2", rs.getString("data"));
+        assertEquals("keep1", rs.getString("keep"));
+        assertTrue(rs.next());
+        assertEquals("new", rs.getString("data"));
+        assertEquals("fresh", rs.getString("keep"));
+        assertFalse(rs.next());
+
+        rs = executeQueryWithResultSet("SELECT id, data, keep FROM testdb.odku_multi2");
+        assertTrue(rs.next());
+        assertEquals("b2", rs.getString("data"));
+        assertEquals("keep2", rs.getString("keep"));
+        assertFalse(rs.next());
+    }
+
+    @Test
+    public void filterAcrossBatches() throws SQLException {
+        Schema schema = SchemaBuilder.struct()
+                .field("id", Schema.INT32_SCHEMA)
+                .field("data", Schema.STRING_SCHEMA)
+                .field("keep", Schema.STRING_SCHEMA)
+                .build();
+        String table = "odku_filter_batches";
+        Map<String, String> props = props(UPDATE_DATA);
+        props.put(SingleStoreSinkConfig.FILTER, "id % 2 = 0");
+        props.put(SingleStoreSinkConfig.INSERT_BATCH_SIZE, "2");
+
+        put(props, Collections.singletonList(row(schema, 2, "old", "stay", table)),
+                rowstore(table, "id INT PRIMARY KEY, data TEXT, keep TEXT"), true);
+
+        List<SinkRecord> records = new ArrayList<>();
+        for (int id = 1; id <= 5; id++) {
+            records.add(row(schema, id, "v" + id, "k" + id, table));
+        }
+        put(props, records, null, false);
+
+        ResultSet rs = executeQueryWithResultSet("SELECT id, data, keep FROM testdb.odku_filter_batches ORDER BY id");
+        assertTrue(rs.next());
+        assertEquals(2, rs.getInt("id"));
+        assertEquals("v2", rs.getString("data"));
+        assertEquals("stay", rs.getString("keep"));
+        assertTrue(rs.next());
+        assertEquals(4, rs.getInt("id"));
+        assertEquals("v4", rs.getString("data"));
+        assertEquals("k4", rs.getString("keep"));
+        assertFalse(rs.next());
+    }
+
+    @Test
+    public void filterMatchesNoRows() throws SQLException {
+        Schema schema = SchemaBuilder.struct()
+                .field("id", Schema.INT32_SCHEMA)
+                .field("data", Schema.STRING_SCHEMA)
+                .field("keep", Schema.STRING_SCHEMA)
+                .build();
+        String table = "odku_filter_none";
+        executeQuery("DROP TABLE IF EXISTS testdb." + table);
+        executeQuery(rowstore(table, "id INT PRIMARY KEY, data TEXT, keep TEXT"));
+        executeQuery("INSERT INTO testdb.odku_filter_none VALUES (1, 'old', 'stay')");
+
+        Map<String, String> props = props(UPDATE_DATA);
+        props.put(SingleStoreSinkConfig.FILTER, "id > 100");
+        put(props, Arrays.asList(
+                row(schema, 1, "new", "changed", table),
+                row(schema, 2, "new", "changed", table)
+        ), null, false);
+
+        ResultSet rs = executeQueryWithResultSet("SELECT id, data, keep FROM testdb.odku_filter_none");
+        assertTrue(rs.next());
+        assertEquals("old", rs.getString("data"));
+        assertEquals("stay", rs.getString("keep"));
+        assertFalse(rs.next());
+    }
+
+    @Test
+    public void primitiveRecords() throws SQLException {
+        String table = "odku_primitive";
+        Map<String, String> props = props("`hits` = `hits` + 1");
+        executeQuery("DROP TABLE IF EXISTS testdb." + table);
+        executeQuery(rowstore(table, "data VARCHAR(10) PRIMARY KEY, hits INT DEFAULT 0"));
+
+        put(props, Arrays.asList(
+                createRecord(null, "a", table),
+                createRecord(null, "b", table),
+                createRecord(null, "a", table)
+        ), null, false);
+        put(props, Collections.singletonList(createRecord(Schema.STRING_SCHEMA, "b", table)), null, false);
+
+        ResultSet rs = executeQueryWithResultSet("SELECT data, hits FROM testdb.odku_primitive ORDER BY data");
+        assertTrue(rs.next());
+        assertEquals("a", rs.getString("data"));
+        assertEquals(1, rs.getInt("hits"));
+        assertTrue(rs.next());
+        assertEquals("b", rs.getString("data"));
+        assertEquals(1, rs.getInt("hits"));
+        assertFalse(rs.next());
+    }
+
+    @Test
+    public void expressionAssignment() throws SQLException {
+        Schema schema = SchemaBuilder.struct()
+                .field("id", Schema.INT32_SCHEMA)
+                .field("counter", Schema.INT32_SCHEMA)
+                .build();
+        String table = "odku_expression";
+        Map<String, String> props = props("`counter` = `counter` + 1");
+        SinkRecord record = createRecord(schema, new Struct(schema).put("id", 1).put("counter", 1), table);
+
+        put(props, Collections.singletonList(record), rowstore(table, "id INT PRIMARY KEY, counter INT"), true);
+        put(props, Arrays.asList(record, record), null, false);
+
+        ResultSet rs = executeQueryWithResultSet("SELECT counter FROM testdb.odku_expression");
+        assertTrue(rs.next());
+        assertEquals(3, rs.getInt("counter"));
+        assertFalse(rs.next());
+    }
+
+    @Test
+    public void schemalessMissingFieldWritesNull() throws SQLException {
+        String table = "odku_missing_field";
+        Map<String, String> props = props("`name` = VALUES(`name`)");
+
+        Map<Object, Object> existing = new LinkedHashMap<>();
+        existing.put("id", 1);
+        existing.put("name", "a");
+        put(props, Collections.singletonList(createRecord(null, existing, table)),
+                rowstore(table, "id INT PRIMARY KEY, name TEXT DEFAULT 'default'"), true);
+
+        Map<Object, Object> first = new LinkedHashMap<>();
+        first.put("id", 2);
+        first.put("name", "b");
+        put(props, Arrays.asList(
+                createRecord(null, first, table),
+                createRecord(null, Collections.singletonMap("id", 1), table),
+                createRecord(null, Collections.singletonMap("id", 3), table)), null, false);
+
+        ResultSet rs = executeQueryWithResultSet("SELECT id, name FROM testdb.odku_missing_field ORDER BY id");
+        assertTrue(rs.next());
+        assertNull(rs.getString("name"));
+        assertTrue(rs.next());
+        assertEquals("b", rs.getString("name"));
+        assertTrue(rs.next());
+        assertNull(rs.getString("name"));
+        assertFalse(rs.next());
+    }
+
+    @Test
     public void autoCreatedTablePartialUpdate() throws SQLException {
         Schema schema = SchemaBuilder.struct()
                 .field("id", Schema.INT32_SCHEMA)
@@ -461,6 +716,14 @@ public class OnDuplicateKeyUpdateTest extends IntegrationBase {
                 .put("id", id)
                 .put("data", data)
                 .put("keep", keep), topic);
+    }
+
+    private static SinkRecord multiTableRow(Schema schema, String tableId, int id, String data, String keep) {
+        return createRecord(schema, new Struct(schema)
+                .put("tableId", tableId)
+                .put("id", id)
+                .put("data", data)
+                .put("keep", keep), "odku_multi");
     }
 
     private static Struct struct(Schema schema) {

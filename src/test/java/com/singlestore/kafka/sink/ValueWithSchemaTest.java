@@ -259,5 +259,11 @@ public class ValueWithSchemaTest {
         assertEquals(Collections.singletonList(10),
                 new ValueWithSchema(createRecord(Schema.INT32_SCHEMA, 10))
                         .toSqlValues(Collections.singletonList("data"), null));
+        assertEquals(Collections.singletonList("abc"),
+                new ValueWithSchema(createRecord(null, "abc"))
+                        .toSqlValues(Collections.singletonList("data"), null));
+        assertEquals(Collections.singletonList((byte) 0),
+                new ValueWithSchema(createRecord(null, false))
+                        .toSqlValues(Collections.singletonList("data"), null));
     }
 }

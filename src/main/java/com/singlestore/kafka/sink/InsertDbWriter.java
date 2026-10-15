@@ -110,7 +110,7 @@ public class InsertDbWriter {
                     throw new ConnectException("Failed to serialize record for INSERT", ex);
                 }
                 for (Object value : values) {
-                    bind(stmt, index++, value);
+                    stmt.setObject(index++, value);
                 }
             }
             stmt.executeUpdate();
@@ -135,29 +135,5 @@ public class InsertDbWriter {
             return columnMappings.stream().map(ColumnMapping::getColumnName).collect(Collectors.toList());
         }
         return new ValueWithSchema(record).getColumns();
-    }
-
-    private static void bind(PreparedStatement stmt, int index, Object value) throws SQLException {
-        if (value == null) {
-            stmt.setObject(index, null);
-        } else if (value instanceof byte[]) {
-            stmt.setBytes(index, (byte[]) value);
-        } else if (value instanceof Byte) {
-            stmt.setByte(index, (Byte) value);
-        } else if (value instanceof Short) {
-            stmt.setShort(index, (Short) value);
-        } else if (value instanceof Integer) {
-            stmt.setInt(index, (Integer) value);
-        } else if (value instanceof Long) {
-            stmt.setLong(index, (Long) value);
-        } else if (value instanceof Float) {
-            stmt.setFloat(index, (Float) value);
-        } else if (value instanceof Double) {
-            stmt.setDouble(index, (Double) value);
-        } else if (value instanceof String) {
-            stmt.setString(index, (String) value);
-        } else {
-            stmt.setObject(index, value);
-        }
     }
 }

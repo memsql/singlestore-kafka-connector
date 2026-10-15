@@ -73,13 +73,17 @@ public class SingleStoreDbWriter {
         try (Connection connection = writeToReferenceTable
             ? JdbcHelper.getDDLConnection(config)
             : JdbcHelper.getDMLConnection(config)) {
-            if (config.metadataTableAllow) {
-                String metaId = String.format("%s-%s-%s", first.topic(), first.kafkaPartition(), first.kafkaOffset());
-                if (JdbcHelper.metadataRecordExists(connection, metaId, config)) {
-                    // If metadata record already exists, skip writing this batch of data
-                    return;
-                }
+            // INSERT batches must commit together so a retried put does not re-apply rows committed before the failure
+            boolean useTransaction = config.metadataTableAllow || config.onDuplicateKeySQL != null;
+            String metaId = String.format("%s-%s-%s", first.topic(), first.kafkaPartition(), first.kafkaOffset());
+            if (config.metadataTableAllow && JdbcHelper.metadataRecordExists(connection, metaId, config)) {
+                // If metadata record already exists, skip writing this batch of data
+                return;
+            }
+            if (useTransaction) {
                 connection.setAutoCommit(false);
+            }
+            if (config.metadataTableAllow) {
                 Integer recordsCount = records.size();
                 try (PreparedStatement metadataStmt = SingleStoreDialect.getInsertIntoMetadataQuery(connection, config.metadataTableName, metaId, recordsCount)) {
                     log.trace("Executing SQL:\n{}", metadataStmt);
@@ -103,7 +107,7 @@ public class SingleStoreDbWriter {
                 }
             }
 
-            if (config.metadataTableAllow) {
+            if (useTransaction) {
                 connection.commit();
             }
         } catch (IOException ex) {
