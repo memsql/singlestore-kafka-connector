@@ -126,8 +126,25 @@ public class SingleStoreSinkConfig extends AbstractConfig {
     private static final String RECORD_TO_TABLE_MAPPING_DISPLAY = "The SingleStoreDB table name to use for record-to-table mapping";
 
     private static  final String UPSERT = "singlestore.upsert";
-    private static  final String UPSERT_DOC = "Update a row in case of a duplicate key";
+    private static  final String UPSERT_DOC = "Replaces the existing row when a duplicate key is found (LOAD DATA REPLACE). "
+            + "Use singlestore.onDuplicateKeySQL to update selected columns and leave the others unchanged.";
     private static  final String UPSERT_DISPLAY = "Change the behavior to update the row with the same key instead of throwing an error";
+
+    public static final String ON_DUPLICATE_KEY_SQL = "singlestore.onDuplicateKeySQL";
+    private static final String ON_DUPLICATE_KEY_SQL_DOC =
+            "Assignment list for INSERT ... ON DUPLICATE KEY UPDATE. When set, the connector writes batched INSERT statements "
+                    + "instead of LOAD DATA. On a duplicate PRIMARY KEY or UNIQUE index, only these assignments run, so columns omitted "
+                    + "from the list keep their current values. Example: `data` = VALUES(`data`). "
+                    + "The value is inserted directly into the query and is not SQL-injection safe. "
+                    + "Mutually exclusive with singlestore.upsert. "
+                    + "This does not work for columnstore tables on SingleStoreDB 7.1.";
+    private static final String ON_DUPLICATE_KEY_SQL_DISPLAY = "On Duplicate Key SQL";
+
+    public static final String INSERT_BATCH_SIZE = "singlestore.insertBatchSize";
+    public static final int DEFAULT_INSERT_BATCH_SIZE = 10000;
+    private static final String INSERT_BATCH_SIZE_DOC =
+            "Maximum number of rows in one INSERT statement when singlestore.onDuplicateKeySQL is set (default: 10000).";
+    private static final String INSERT_BATCH_SIZE_DISPLAY = "Insert Batch Size";
 
     private static final ConfigDef.Range NON_NEGATIVE_INT_VALIDATOR = ConfigDef.Range.atLeast(0);
 
@@ -350,7 +367,26 @@ public class SingleStoreSinkConfig extends AbstractConfig {
                 SINGLESTORE_GROUP,
                 4,
                 ConfigDef.Width.MEDIUM,
-                UPSERT_DISPLAY);
+                UPSERT_DISPLAY)
+            .define(ON_DUPLICATE_KEY_SQL,
+                ConfigDef.Type.STRING,
+                null,
+                ConfigDef.Importance.MEDIUM,
+                ON_DUPLICATE_KEY_SQL_DOC,
+                SINGLESTORE_GROUP,
+                5,
+                ConfigDef.Width.LONG,
+                ON_DUPLICATE_KEY_SQL_DISPLAY)
+            .define(INSERT_BATCH_SIZE,
+                ConfigDef.Type.INT,
+                DEFAULT_INSERT_BATCH_SIZE,
+                ConfigDef.Range.atLeast(1),
+                ConfigDef.Importance.LOW,
+                INSERT_BATCH_SIZE_DOC,
+                SINGLESTORE_GROUP,
+                6,
+                ConfigDef.Width.MEDIUM,
+                INSERT_BATCH_SIZE_DISPLAY);
 
     public final String ddlEndpoint;
     public final List<String> dmlEndpoints;
@@ -372,6 +408,8 @@ public class SingleStoreSinkConfig extends AbstractConfig {
     public final String recordToTableMappingField;
     public final Map<String, String> recordToTableMap;
     public boolean upsert;
+    public final String onDuplicateKeySQL;
+    public final int insertBatchSize;
     public final Map<String, String> customMetricTags;
 
 
@@ -423,7 +461,13 @@ public class SingleStoreSinkConfig extends AbstractConfig {
         this.recordToTableMappingField = getString(RECORD_TO_TABLE_MAPPING_FIELD);
         this.recordToTableMap = getRecordToTableMap(props);
         this.upsert = getBoolean(UPSERT);
+        this.onDuplicateKeySQL = getOnDuplicateKeySQL();
+        this.insertBatchSize = getInt(INSERT_BATCH_SIZE);
         this.customMetricTags = getCustomMetricTags();
+
+        if (this.upsert && this.onDuplicateKeySQL != null) {
+            throw new ConfigException("Configurations \"singlestore.upsert\" and \"singlestore.onDuplicateKeySQL\" are mutually exclusive");
+        }
 
         if (!topicToTableMap.isEmpty() && recordToTableMappingField != null) {
             throw new ConfigException("Configurations \"singlestore.recordToTableMappingField\" and \"singlestore.tableName\" are mutually exclusive");
@@ -442,6 +486,18 @@ public class SingleStoreSinkConfig extends AbstractConfig {
             configException.initCause(ex); // Attaches the full stack trace and nested exceptions
             throw configException;
         }
+    }
+
+    private String getOnDuplicateKeySQL() {
+        String value = getString(ON_DUPLICATE_KEY_SQL);
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        if (trimmed.isEmpty()) {
+            throw new ConfigException("Configuration \"singlestore.onDuplicateKeySQL\" must not be empty");
+        }
+        return trimmed;
     }
 
     private DataCompression getDataCompression() {

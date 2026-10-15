@@ -414,4 +414,45 @@ public class SingleStoreSinkConfigTest extends IntegrationBase {
         assertEquals(1, config.customMetricTags.size());
         assertEquals("platform", config.customMetricTags.get("team"));
     }
+
+    @Test
+    public void successOnDuplicateKeySQL() {
+        Map<String, String> props = getMinimalRequiredParameters();
+        SingleStoreSinkConfig defaults = new SingleStoreSinkConfig(props);
+        assertNull(defaults.onDuplicateKeySQL);
+        assertEquals(SingleStoreSinkConfig.DEFAULT_INSERT_BATCH_SIZE, defaults.insertBatchSize);
+        assertFalse(defaults.upsert);
+
+        props.put(SingleStoreSinkConfig.ON_DUPLICATE_KEY_SQL, "  `data` = VALUES(`data`)  ");
+        props.put(SingleStoreSinkConfig.INSERT_BATCH_SIZE, "250");
+        SingleStoreSinkConfig config = new SingleStoreSinkConfig(props);
+        assertEquals("`data` = VALUES(`data`)", config.onDuplicateKeySQL);
+        assertEquals(250, config.insertBatchSize);
+    }
+
+    @Test
+    public void failEmptyOnDuplicateKeySQL() {
+        Map<String, String> props = getMinimalRequiredParameters();
+        props.put(SingleStoreSinkConfig.ON_DUPLICATE_KEY_SQL, "   ");
+        ConfigException ex = assertThrows(ConfigException.class, () -> new SingleStoreSinkConfig(props));
+        assertEquals("Configuration \"singlestore.onDuplicateKeySQL\" must not be empty", ex.getLocalizedMessage());
+    }
+
+    @Test
+    public void failUpsertWithOnDuplicateKeySQL() {
+        Map<String, String> props = getMinimalRequiredParameters();
+        props.put("singlestore.upsert", "true");
+        props.put(SingleStoreSinkConfig.ON_DUPLICATE_KEY_SQL, "`data` = VALUES(`data`)");
+        ConfigException ex = assertThrows(ConfigException.class, () -> new SingleStoreSinkConfig(props));
+        assertEquals("Configurations \"singlestore.upsert\" and \"singlestore.onDuplicateKeySQL\" are mutually exclusive",
+                ex.getLocalizedMessage());
+    }
+
+    @Test
+    public void failInsertBatchSizeBelowOne() {
+        Map<String, String> props = getMinimalRequiredParameters();
+        props.put(SingleStoreSinkConfig.INSERT_BATCH_SIZE, "0");
+        ConfigException ex = assertThrows(ConfigException.class, () -> new SingleStoreSinkConfig(props));
+        assertTrue(ex.getLocalizedMessage().contains(SingleStoreSinkConfig.INSERT_BATCH_SIZE));
+    }
 }

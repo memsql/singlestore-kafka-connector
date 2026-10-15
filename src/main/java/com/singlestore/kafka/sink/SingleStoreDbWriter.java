@@ -72,8 +72,7 @@ public class SingleStoreDbWriter {
         // TODO think about caching connection instead of opening it each time
         try (Connection connection = writeToReferenceTable
             ? JdbcHelper.getDDLConnection(config)
-            : JdbcHelper.getDMLConnection(config);
-             Statement stmt = connection.createStatement()) {
+            : JdbcHelper.getDMLConnection(config)) {
             if (config.metadataTableAllow) {
                 String metaId = String.format("%s-%s-%s", first.topic(), first.kafkaPartition(), first.kafkaOffset());
                 if (JdbcHelper.metadataRecordExists(connection, metaId, config)) {
@@ -88,19 +87,18 @@ public class SingleStoreDbWriter {
                 }
             }
 
-            // TODO: investigate parallelization of this loop
-            for (Map.Entry<String, Collection<SinkRecord>> entry: tableToRecords.entrySet()) {
-                String table = entry.getKey();
-                Collection<SinkRecord> tableRecords = entry.getValue();
-                SinkRecord firstTableRecord = tableRecords.iterator().next();
-
-                try (PipedOutputStream baseStream  = new PipedOutputStream();
-                     InputStream inputStream = new PipedInputStream(baseStream, BUFFER_SIZE)) {
-                    ((com.singlestore.jdbc.Statement)stmt).setNextLocalInfileInputStream(inputStream);
-
-                    DataExtension dataExtension = getDataExtension(baseStream);
-                    try (OutputStream outputStream = dataExtension.getOutputStream()) {
-                        write(firstTableRecord, dataExtension, table, outputStream, tableRecords, stmt);
+            if (config.onDuplicateKeySQL != null) {
+                for (Map.Entry<String, Collection<SinkRecord>> entry: tableToRecords.entrySet()) {
+                    String table = entry.getKey();
+                    Collection<SinkRecord> tableRecords = entry.getValue();
+                    SinkRecord firstTableRecord = tableRecords.iterator().next();
+                    new InsertDbWriter(config, firstTableRecord, table).write(connection, tableRecords);
+                }
+            } else {
+                try (Statement stmt = connection.createStatement()) {
+                    // TODO: investigate parallelization of this loop
+                    for (Map.Entry<String, Collection<SinkRecord>> entry: tableToRecords.entrySet()) {
+                        writeWithLoadData(stmt, entry.getKey(), entry.getValue());
                     }
                 }
             }
@@ -110,6 +108,19 @@ public class SingleStoreDbWriter {
             }
         } catch (IOException ex) {
             throw new ConnectException(ex.getLocalizedMessage());
+        }
+    }
+
+    private void writeWithLoadData(Statement stmt, String table, Collection<SinkRecord> tableRecords) throws IOException, SQLException {
+        SinkRecord firstTableRecord = tableRecords.iterator().next();
+        try (PipedOutputStream baseStream  = new PipedOutputStream();
+             InputStream inputStream = new PipedInputStream(baseStream, BUFFER_SIZE)) {
+            ((com.singlestore.jdbc.Statement)stmt).setNextLocalInfileInputStream(inputStream);
+
+            DataExtension dataExtension = getDataExtension(baseStream);
+            try (OutputStream outputStream = dataExtension.getOutputStream()) {
+                write(firstTableRecord, dataExtension, table, outputStream, tableRecords, stmt);
+            }
         }
     }
 
