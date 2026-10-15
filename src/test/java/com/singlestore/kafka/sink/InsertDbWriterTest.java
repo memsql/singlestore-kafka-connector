@@ -45,7 +45,7 @@ public class InsertDbWriterTest {
                 Arrays.asList("id", "data"), null, "id > 1", "partial", UPDATE, 10);
         assertEquals(
                 "INSERT INTO `partial` (`id`, `data`) SELECT `id`, `data` FROM "
-                        + "(SELECT ? AS `id`, ? AS `data` UNION ALL SELECT ? AS `id`, ? AS `data`) "
+                        + "(SELECT ? AS `id`, ? AS `data`) "
                         + "AS `_singlestore_kafka_incoming` WHERE id > 1 "
                         + "ON DUPLICATE KEY UPDATE `data` = VALUES(`data`)",
                 writer.generateQuery(2));

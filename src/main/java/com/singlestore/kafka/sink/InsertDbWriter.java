@@ -75,7 +75,7 @@ public class InsertDbWriter {
                     quotedTable, columnNames, valueTuples(rowCount), update);
         }
         return String.format("INSERT INTO %s (%s) SELECT %s FROM (%s) AS `_singlestore_kafka_incoming` WHERE %s %s",
-                quotedTable, columnNames, columnNames, filteredRows(rowCount), filter, update);
+                quotedTable, columnNames, columnNames, filteredRow(), filter, update);
     }
 
     static List<List<SinkRecord>> partition(Collection<SinkRecord> records, int batchSize) {
@@ -98,23 +98,36 @@ public class InsertDbWriter {
     }
 
     private void executeBatch(Connection connection, List<SinkRecord> batch) throws SQLException {
-        String query = generateQuery(batch.size());
+        String query = generateQuery(filter == null ? batch.size() : 1);
         log.trace("Executing SQL:\n{}", query);
         try (PreparedStatement stmt = connection.prepareStatement(query)) {
-            int index = 1;
-            for (SinkRecord record : batch) {
-                List<Object> values;
-                try {
-                    values = new ValueWithSchema(record).toSqlValues(columns, columnMappings);
-                } catch (IOException ex) {
-                    throw new ConnectException("Failed to serialize record for INSERT", ex);
+            if (filter == null) {
+                int index = 1;
+                for (SinkRecord record : batch) {
+                    index = bindRecord(stmt, record, index);
                 }
-                for (Object value : values) {
-                    stmt.setObject(index++, value);
+                stmt.executeUpdate();
+            } else {
+                for (SinkRecord record : batch) {
+                    bindRecord(stmt, record, 1);
+                    stmt.addBatch();
                 }
+                stmt.executeBatch();
             }
-            stmt.executeUpdate();
         }
+    }
+
+    private int bindRecord(PreparedStatement stmt, SinkRecord record, int index) throws SQLException {
+        List<Object> values;
+        try {
+            values = new ValueWithSchema(record).toSqlValues(columns, columnMappings);
+        } catch (IOException ex) {
+            throw new ConnectException("Failed to serialize record for INSERT", ex);
+        }
+        for (Object value : values) {
+            stmt.setObject(index++, value);
+        }
+        return index;
     }
 
     private String valueTuples(int rowCount) {
@@ -122,11 +135,10 @@ public class InsertDbWriter {
         return String.join(", ", Collections.nCopies(rowCount, tuple));
     }
 
-    private String filteredRows(int rowCount) {
-        String row = "SELECT " + columns.stream()
+    private String filteredRow() {
+        return "SELECT " + columns.stream()
                 .map(column -> "? AS " + SingleStoreDialect.quoteIdentifier(column))
                 .collect(Collectors.joining(", "));
-        return String.join(" UNION ALL ", Collections.nCopies(rowCount, row));
     }
 
     private static List<String> resolveColumns(SingleStoreSinkConfig config, SinkRecord record, String table) {

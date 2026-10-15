@@ -143,7 +143,7 @@ public class SingleStoreSinkConfig extends AbstractConfig {
     public static final String INSERT_BATCH_SIZE = "singlestore.insertBatchSize";
     public static final int DEFAULT_INSERT_BATCH_SIZE = 10000;
     private static final String INSERT_BATCH_SIZE_DOC =
-            "Maximum number of rows in one INSERT statement when singlestore.onDuplicateKeySQL is set (default: 10000).";
+            "Maximum number of rows in one database batch when singlestore.onDuplicateKeySQL is set (default: 10000).";
     private static final String INSERT_BATCH_SIZE_DISPLAY = "Insert Batch Size";
 
     private static final ConfigDef.Range NON_NEGATIVE_INT_VALIDATOR = ConfigDef.Range.atLeast(0);
