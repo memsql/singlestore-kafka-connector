@@ -94,7 +94,7 @@ public class SingleStoreDbWriter {
                     stmt.executeUpdate(createTemporaryTable);
 
                     CsvDbWriter csvWriter = new CsvDbWriter(
-                            config, firstTableRecord, insertWriter.getTemporaryTable(), table,
+                            config, insertWriter.getTemporaryTable(), table, insertWriter.getColumns(),
                             null, false, insertWriter.getOrderColumn(), insertWriter.getStagingColumns());
                     writeWithLoadData(stmt, csvWriter, tableRecords);
                 }

@@ -105,15 +105,11 @@ For a row `(id=1, data='old', created_at='2020-01-01')` and an incoming record `
 
 The assignment list can also be an expression, for example `` `age` = `age` + 1 ``.
 
-Binary values are loaded through `LOAD DATA` and decoded as UTF-8, so bytes that are not valid UTF-8 can change.
-
 Keep `singlestore.metadata.allow` enabled. It is strongly recommended. The temporary staging load is session-local and does not modify the destination table. The destination updates follow the same transaction behavior as ordinary `LOAD DATA` writes. With metadata disabled, each destination table commits separately. If a later table fails, earlier tables keep their updates and Kafka retries the batch. Assignments such as `` `data` = VALUES(`data`) `` write the same values again. Expressions such as `` `age` = `age` + 1 `` run again.
 
 Rows are applied in the order they are received. Concurrent tasks that update the same keys can deadlock when they apply those keys in different orders.
 
-`singlestore.onDuplicateKeySQL` is inserted directly into the statement and is not SQL-injection safe. It cannot be combined with `singlestore.upsert`. `singlestore.filter` is applied by the final `INSERT ... SELECT`, so rows that fail the predicate are not inserted or updated.
-
-This statement does not work for columnstore tables on SingleStoreDB 7.1.
+`singlestore.onDuplicateKeySQL` is inserted directly into the statement and is not SQL-injection safe. It cannot be combined with `singlestore.upsert`. `singlestore.filter` is applied by the final `INSERT ... SELECT`, so rows that fail the predicate are not inserted or updated. In that statement the destination column names are aliases in the `SELECT` list, so the filter relies on SingleStore's support for referencing `SELECT` aliases in `WHERE`. Write the filter against destination column names, as with ordinary `LOAD DATA` writes.
 
 Use `fields.blacklist` for columns that the connector should never write, such as columns with `DEFAULT` or `ON UPDATE`.
 
@@ -133,8 +129,10 @@ Use `fields.blacklist` for columns that the connector should never write, such a
 | FLOAT32    | FLOAT            |
 | FLOAT64    | DOUBLE           |
 | BOOLEAN    | TINYINT          |
-| BYTES      | TEXT             |
-| STRING     | VARBINARY(1024)  |
+| BYTES      | VARBINARY(1024)  |
+| STRING     | TEXT             |
+
+`BYTES` values are written through `LOAD DATA` as UTF-8 text in every write mode, so bytes that are not valid UTF-8 can change.
 
 ## Table keys
 

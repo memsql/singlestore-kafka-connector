@@ -23,17 +23,13 @@ public class CsvDbWriter {
     String orderColumn;
 
     public CsvDbWriter(SingleStoreSinkConfig config, SinkRecord record, String table) {
-        this(config, record, table, table, config.filter, config.upsert, null, null);
+        this(config, table, table, resolveColumns(config, record, table), config.filter, config.upsert, null, null);
     }
 
-    CsvDbWriter(SingleStoreSinkConfig config, SinkRecord record, String table, String mappingTable,
+    CsvDbWriter(SingleStoreSinkConfig config, String table, String mappingTable, List<String> columns,
                 String filter, boolean upsert, String orderColumn, List<String> loadColumns) {
         this.columnMappings = config.tableToColumnToFieldMap.get(mappingTable);
-        if (columnMappings != null) {
-            this.columns = columnMappings.stream().map(ColumnMapping::getColumnName).collect(Collectors.toList());
-        } else {
-            this.columns = new ValueWithSchema(record).getColumns();
-        }
+        this.columns = columns;
         this.loadColumns = loadColumns == null ? this.columns : loadColumns;
         this.filter = filter;
         this.table = table;
@@ -67,5 +63,13 @@ public class CsvDbWriter {
             outputStream.write(value);
             outputStream.write('\n');
         }
+    }
+
+    static List<String> resolveColumns(SingleStoreSinkConfig config, SinkRecord record, String table) {
+        List<ColumnMapping> columnMappings = config.tableToColumnToFieldMap.get(table);
+        if (columnMappings != null) {
+            return columnMappings.stream().map(ColumnMapping::getColumnName).collect(Collectors.toList());
+        }
+        return new ValueWithSchema(record).getColumns();
     }
 }

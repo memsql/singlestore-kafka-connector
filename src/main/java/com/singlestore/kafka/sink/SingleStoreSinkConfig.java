@@ -136,8 +136,7 @@ public class SingleStoreSinkConfig extends AbstractConfig {
                     + "into the destination table. On a duplicate PRIMARY KEY or UNIQUE index, only these assignments run, so columns omitted "
                     + "from the list keep their current values. Example: `data` = VALUES(`data`). "
                     + "The value is inserted directly into the query and is not SQL-injection safe. "
-                    + "Mutually exclusive with singlestore.upsert. "
-                    + "This does not work for columnstore tables on SingleStoreDB 7.1.";
+                    + "Mutually exclusive with singlestore.upsert.";
     private static final String ON_DUPLICATE_KEY_SQL_DISPLAY = "On Duplicate Key SQL";
 
     private static final ConfigDef.Range NON_NEGATIVE_INT_VALIDATOR = ConfigDef.Range.atLeast(0);

@@ -1,7 +1,5 @@
 package com.singlestore.kafka.sink;
 
-import com.singlestore.kafka.utils.ColumnMapping;
-import com.singlestore.kafka.utils.ValueWithSchema;
 import org.apache.kafka.connect.sink.SinkRecord;
 
 import java.util.List;
@@ -31,7 +29,7 @@ public class InsertDbWriter {
     private final String orderColumn;
 
     public InsertDbWriter(SingleStoreSinkConfig config, SinkRecord record, String table) {
-        this(resolveColumns(config, record, table),
+        this(CsvDbWriter.resolveColumns(config, record, table),
                 config.filter,
                 table,
                 config.onDuplicateKeySQL,
@@ -76,6 +74,10 @@ public class InsertDbWriter {
                 onDuplicateKeySQL);
     }
 
+    public List<String> getColumns() {
+        return columns;
+    }
+
     public String getTemporaryTable() {
         return temporaryTable;
     }
@@ -101,13 +103,5 @@ public class InsertDbWriter {
             result = "_" + result;
         }
         return result;
-    }
-
-    private static List<String> resolveColumns(SingleStoreSinkConfig config, SinkRecord record, String table) {
-        List<ColumnMapping> columnMappings = config.tableToColumnToFieldMap.get(table);
-        if (columnMappings != null) {
-            return columnMappings.stream().map(ColumnMapping::getColumnName).collect(Collectors.toList());
-        }
-        return new ValueWithSchema(record).getColumns();
     }
 }
