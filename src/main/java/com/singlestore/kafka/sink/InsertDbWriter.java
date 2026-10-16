@@ -15,6 +15,9 @@ import java.util.stream.IntStream;
  */
 public class InsertDbWriter {
 
+    // Temporary tables do not preserve LOAD DATA order. This column records the Kafka record
+    // order so duplicate keys are applied in that order: the later record wins for VALUES(...)
+    // assignments, and expressions such as `age` = `age` + 1 run once per record.
     private static final String ORDER_COLUMN = "_singlestore_kafka_order";
     private static final String STAGING_COLUMN_PREFIX = "_singlestore_kafka_column_";
     private static final String TEMPORARY_TABLE_PREFIX = "_singlestore_kafka_incoming_";

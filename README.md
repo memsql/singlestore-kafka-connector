@@ -101,7 +101,7 @@ To overwrite the name of this table, use `singlestore.metadata.table` option.
 "singlestore.onDuplicateKeySQL": "`data` = VALUES(`data`)"
 ```
 
-For a row `(id=1, data='old', created_at='2020-01-01')` and an incoming record `(id=1, data='new', created_at='2024-01-01')`, the assignment above stores `data='new'` and leaves `created_at` unchanged.
+For a row `(id=1, data='old', created_at='2020-01-01')` and an incoming record `(id=1, data='new', created_at='2024-01-01')`, the assignment above stores `data='new'` and leaves `created_at` unchanged. Because `id=1` already exists, SingleStore runs only `` `data` = VALUES(`data`) ``. `VALUES(data)` is the incoming `data` value. The incoming `created_at` is not assigned, so the stored value remains. A new key inserts every mapped column, including `created_at`.
 
 The assignment list can also be an expression, for example `` `age` = `age` + 1 ``.
 
