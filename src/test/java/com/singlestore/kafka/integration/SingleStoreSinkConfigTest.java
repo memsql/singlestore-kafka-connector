@@ -414,4 +414,35 @@ public class SingleStoreSinkConfigTest extends IntegrationBase {
         assertEquals(1, config.customMetricTags.size());
         assertEquals("platform", config.customMetricTags.get("team"));
     }
+
+    @Test
+    public void successOnDuplicateKeySQL() {
+        Map<String, String> props = getMinimalRequiredParameters();
+        SingleStoreSinkConfig defaults = new SingleStoreSinkConfig(props);
+        assertNull(defaults.onDuplicateKeySQL);
+        assertFalse(defaults.upsert);
+
+        props.put(SingleStoreSinkConfig.ON_DUPLICATE_KEY_SQL, "  `data` = VALUES(`data`)  ");
+        SingleStoreSinkConfig config = new SingleStoreSinkConfig(props);
+        assertEquals("`data` = VALUES(`data`)", config.onDuplicateKeySQL);
+    }
+
+    @Test
+    public void failEmptyOnDuplicateKeySQL() {
+        Map<String, String> props = getMinimalRequiredParameters();
+        props.put(SingleStoreSinkConfig.ON_DUPLICATE_KEY_SQL, "   ");
+        ConfigException ex = assertThrows(ConfigException.class, () -> new SingleStoreSinkConfig(props));
+        assertEquals("Configuration \"singlestore.onDuplicateKeySQL\" must not be empty", ex.getLocalizedMessage());
+    }
+
+    @Test
+    public void failUpsertWithOnDuplicateKeySQL() {
+        Map<String, String> props = getMinimalRequiredParameters();
+        props.put("singlestore.upsert", "true");
+        props.put(SingleStoreSinkConfig.ON_DUPLICATE_KEY_SQL, "`data` = VALUES(`data`)");
+        ConfigException ex = assertThrows(ConfigException.class, () -> new SingleStoreSinkConfig(props));
+        assertEquals("Configurations \"singlestore.upsert\" and \"singlestore.onDuplicateKeySQL\" are mutually exclusive",
+                ex.getLocalizedMessage());
+    }
+
 }

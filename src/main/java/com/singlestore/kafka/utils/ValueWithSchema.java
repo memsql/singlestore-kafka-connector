@@ -31,6 +31,7 @@ public class ValueWithSchema {
     Boolean isStruct;
 
     private static final ValueWithSchema NULL_VALUE = new ValueWithSchema(null, null);
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     static String DEFAULT_COLUMN_NAME = "data";
 
@@ -135,7 +136,7 @@ public class ValueWithSchema {
             if (value instanceof Boolean) {
                 return (Boolean) value ? "1" : "0";
             } else if (value instanceof Map || value instanceof List) {
-                ObjectWriter ow = new ObjectMapper().writer();
+                ObjectWriter ow = OBJECT_MAPPER.writer();
                 String json = ow.writeValueAsString(value);
                 return escapeCSV(json);
             } else if (value instanceof byte[]) {

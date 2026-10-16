@@ -31,7 +31,9 @@ specified before starting kafka-connect job.
 | `retry.backoff.ms`                                          | The time in milliseconds to wait following an error before a retry attempt is made. (default 3000)                                                                                                                                                                         |
 | `tableKey.<index_type>[.name]`                              | Specify additional keys to add to tables created by the connector; value of this property is the comma separated list with names of the columns to apply key; <index_type> one of (`PRIMARY`, `COLUMNSTORE`, `UNIQUE`, `SHARD`, `KEY`);                                    |
 | `custom.metric.tags`                                        | Comma-separated list of key-value pairs (`key=value`) added as extra JMX tags to task metric ObjectNames. Example: `team=data,env=prod`.                                                                                                                                  |
-| `singlestore.loadDataCompression`                           | Compress data on load; one of (`GZip`, `LZ4`, `Skip`) (default: GZip)                                                                                                                                                                                                      |
+| `singlestore.loadDataCompression`                           | Compress data on load; one of (`GZip`, `LZ4`, `Skip`) (default: GZip).                                                                                                                                                                                                     |
+| `singlestore.upsert`                                        | Replace the existing row when a duplicate key is found (`LOAD DATA ... REPLACE`). Mutually exclusive with `singlestore.onDuplicateKeySQL`.                                                                                                                                  |
+| `singlestore.onDuplicateKeySQL`                             | Assignment list for `INSERT ... ON DUPLICATE KEY UPDATE`. Rows are loaded into a temporary table before being inserted into the destination. On a duplicate key, only these assignments run. Example: `data = VALUES(data)`. Inserted directly into the query and not SQL-injection safe.                                                    |
 | `singlestore.metadata.allow`                                | Allows or denies the use of an additional meta-table to save the recording results (default: true)                                                                                                                                                                         |
 | `singlestore.metadata.table`                                | Specify the name of the table to save kafka transaction metadata (default: `kafka_connect_transaction_metadata`)                                                                                                                                                           |
 | `singlestore.tableName.<topicName>=<tableName>`             | Specify an explicit table name to use for the specified topic                                                                                                                                                                                                              |
@@ -89,6 +91,28 @@ Because of this, if some error occurred, no data will be actually added to the d
 
 To overwrite the name of this table, use `singlestore.metadata.table` option.
 
+## Updating existing rows
+
+`singlestore.upsert` loads rows with `LOAD DATA ... REPLACE`. That statement replaces every column of the existing row.
+
+`singlestore.onDuplicateKeySQL` first uses `LOAD DATA` to load incoming rows into a temporary table, then runs `INSERT ... SELECT ... ON DUPLICATE KEY UPDATE` against the destination table. The table needs a `PRIMARY KEY` or `UNIQUE` index. New rows are inserted with every mapped column. When a key already exists, SingleStore runs only the assignments in `singlestore.onDuplicateKeySQL`. Columns omitted from that list keep their current values. As with `LOAD DATA`, the column list comes from the first record written to each table in a batch. A later record that lacks one of those fields writes `NULL` to that column.
+
+```
+"singlestore.onDuplicateKeySQL": "`data` = VALUES(`data`)"
+```
+
+For a row `(id=1, data='old', created_at='2020-01-01')` and an incoming record `(id=1, data='new', created_at='2024-01-01')`, the assignment above stores `data='new'` and leaves `created_at` unchanged. Because `id=1` already exists, SingleStore runs only `` `data` = VALUES(`data`) ``. `VALUES(data)` is the incoming `data` value. The incoming `created_at` is not assigned, so the stored value remains. A new key inserts every mapped column, including `created_at`.
+
+The assignment list can also be an expression, for example `` `age` = `age` + 1 ``.
+
+Keep `singlestore.metadata.allow` enabled. It is strongly recommended. The temporary staging load is session-local and does not modify the destination table. The destination updates follow the same transaction behavior as ordinary `LOAD DATA` writes. With metadata disabled, each destination table commits separately. If a later table fails, earlier tables keep their updates and Kafka retries the batch. Assignments such as `` `data` = VALUES(`data`) `` write the same values again. Expressions such as `` `age` = `age` + 1 `` run again.
+
+Rows are applied in the order they are received. Concurrent tasks that update the same keys can deadlock when they apply those keys in different orders.
+
+`singlestore.onDuplicateKeySQL` is inserted directly into the statement and is not SQL-injection safe. It cannot be combined with `singlestore.upsert`. `singlestore.filter` is applied by the final `INSERT ... SELECT`, so rows that fail the predicate are not inserted or updated. In that statement the destination column names are aliases in the `SELECT` list, so the filter relies on SingleStore's support for referencing `SELECT` aliases in `WHERE`. Write the filter against destination column names, as with ordinary `LOAD DATA` writes.
+
+Use `fields.blacklist` for columns that the connector should never write, such as columns with `DEFAULT` or `ON UPDATE`.
+
 ## Data Types
 
 `singlestore-kafka-connector` makes such conversions from Kafka types to SingleStore types:
@@ -105,8 +129,10 @@ To overwrite the name of this table, use `singlestore.metadata.table` option.
 | FLOAT32    | FLOAT            |
 | FLOAT64    | DOUBLE           |
 | BOOLEAN    | TINYINT          |
-| BYTES      | TEXT             |
-| STRING     | VARBINARY(1024)  |
+| BYTES      | VARBINARY(1024)  |
+| STRING     | TEXT             |
+
+`BYTES` values are written through `LOAD DATA` as UTF-8 text in every write mode, so bytes that are not valid UTF-8 can change.
 
 ## Table keys
 
