@@ -31,10 +31,9 @@ specified before starting kafka-connect job.
 | `retry.backoff.ms`                                          | The time in milliseconds to wait following an error before a retry attempt is made. (default 3000)                                                                                                                                                                         |
 | `tableKey.<index_type>[.name]`                              | Specify additional keys to add to tables created by the connector; value of this property is the comma separated list with names of the columns to apply key; <index_type> one of (`PRIMARY`, `COLUMNSTORE`, `UNIQUE`, `SHARD`, `KEY`);                                    |
 | `custom.metric.tags`                                        | Comma-separated list of key-value pairs (`key=value`) added as extra JMX tags to task metric ObjectNames. Example: `team=data,env=prod`.                                                                                                                                  |
-| `singlestore.loadDataCompression`                           | Compress data on load; one of (`GZip`, `LZ4`, `Skip`) (default: GZip). Used by `LOAD DATA`. Ignored when `singlestore.onDuplicateKeySQL` is set.                                                                                                                            |
+| `singlestore.loadDataCompression`                           | Compress data on load; one of (`GZip`, `LZ4`, `Skip`) (default: GZip).                                                                                                                                                                                                     |
 | `singlestore.upsert`                                        | Replace the existing row when a duplicate key is found (`LOAD DATA ... REPLACE`). Mutually exclusive with `singlestore.onDuplicateKeySQL`.                                                                                                                                  |
-| `singlestore.onDuplicateKeySQL`                             | Assignment list for `INSERT ... ON DUPLICATE KEY UPDATE`. When set, rows are written with batched `INSERT` statements. On a duplicate `PRIMARY KEY` or `UNIQUE` index, only these assignments run, so other columns keep their current values. Example: `data = VALUES(data)`. Inserted directly into the query and not SQL-injection safe. |
-| `singlestore.insertBatchSize`                               | Maximum number of rows in one database batch when `singlestore.onDuplicateKeySQL` is set (default: `10000`).                                                                                                                                                                  |
+| `singlestore.onDuplicateKeySQL`                             | Assignment list for `INSERT ... ON DUPLICATE KEY UPDATE`. Rows are loaded into a temporary table before being inserted into the destination. On a duplicate key, only these assignments run. Example: `data = VALUES(data)`. Inserted directly into the query and not SQL-injection safe.                                                    |
 | `singlestore.metadata.allow`                                | Allows or denies the use of an additional meta-table to save the recording results (default: true)                                                                                                                                                                         |
 | `singlestore.metadata.table`                                | Specify the name of the table to save kafka transaction metadata (default: `kafka_connect_transaction_metadata`)                                                                                                                                                           |
 | `singlestore.tableName.<topicName>=<tableName>`             | Specify an explicit table name to use for the specified topic                                                                                                                                                                                                              |
@@ -96,24 +95,23 @@ To overwrite the name of this table, use `singlestore.metadata.table` option.
 
 `singlestore.upsert` loads rows with `LOAD DATA ... REPLACE`. That statement replaces every column of the existing row.
 
-`singlestore.onDuplicateKeySQL` loads rows with batched `INSERT ... ON DUPLICATE KEY UPDATE` statements, the same approach as the [SingleStore Spark connector](https://github.com/memsql/singlestore-spark-connector#inserting-rows-into-the-table-with-on-duplicate-key-update). The table needs a `PRIMARY KEY` or `UNIQUE` index. New rows are inserted with every mapped column. When a key already exists, SingleStore runs only the assignments in `singlestore.onDuplicateKeySQL`. Columns omitted from that list keep their current values. As with `LOAD DATA`, the column list comes from the first record written to each table in a batch. A later record that lacks one of those fields writes `NULL` to that column.
+`singlestore.onDuplicateKeySQL` first uses `LOAD DATA` to load incoming rows into a temporary table, then runs `INSERT ... SELECT ... ON DUPLICATE KEY UPDATE` against the destination table. The table needs a `PRIMARY KEY` or `UNIQUE` index. New rows are inserted with every mapped column. When a key already exists, SingleStore runs only the assignments in `singlestore.onDuplicateKeySQL`. Columns omitted from that list keep their current values. As with `LOAD DATA`, the column list comes from the first record written to each table in a batch. A later record that lacks one of those fields writes `NULL` to that column.
 
 ```
-"singlestore.onDuplicateKeySQL": "`data` = VALUES(`data`)",
-"singlestore.insertBatchSize": "1000"
+"singlestore.onDuplicateKeySQL": "`data` = VALUES(`data`)"
 ```
 
 For a row `(id=1, data='old', created_at='2020-01-01')` and an incoming record `(id=1, data='new', created_at='2024-01-01')`, the assignment above stores `data='new'` and leaves `created_at` unchanged.
 
 The assignment list can also be an expression, for example `` `age` = `age` + 1 ``.
 
-All `INSERT` statements for one batch of records run in a single transaction, even when `singlestore.metadata.allow` is `false`. If any statement fails, the whole batch is rolled back and retried, so assignments such as `` `age` = `age` + 1 `` are not applied twice.
+Binary values are loaded through `LOAD DATA` and decoded as UTF-8, so bytes that are not valid UTF-8 can change.
 
-Binary values are sent as raw bytes and stored unchanged. `LOAD DATA` decodes binary values as UTF-8 text, so it replaces bytes that are not valid UTF-8.
+Keep `singlestore.metadata.allow` enabled. It is strongly recommended. The temporary staging load is session-local and does not modify the destination table. The destination updates follow the same transaction behavior as ordinary `LOAD DATA` writes. With metadata disabled, each destination table commits separately. If a later table fails, earlier tables keep their updates and Kafka retries the batch. Assignments such as `` `data` = VALUES(`data`) `` write the same values again. Expressions such as `` `age` = `age` + 1 `` run again.
 
 Rows are applied in the order they are received. Concurrent tasks that update the same keys can deadlock when they apply those keys in different orders.
 
-`singlestore.onDuplicateKeySQL` is inserted directly into the statement and is not SQL-injection safe. It cannot be combined with `singlestore.upsert`. `singlestore.insertBatchSize` limits how many rows go into one database batch (default `10000`). `singlestore.filter` still applies: rows that fail the predicate are dropped before the insert or update.
+`singlestore.onDuplicateKeySQL` is inserted directly into the statement and is not SQL-injection safe. It cannot be combined with `singlestore.upsert`. `singlestore.filter` is applied by the final `INSERT ... SELECT`, so rows that fail the predicate are not inserted or updated.
 
 This statement does not work for columnstore tables on SingleStoreDB 7.1.
 

@@ -420,14 +420,11 @@ public class SingleStoreSinkConfigTest extends IntegrationBase {
         Map<String, String> props = getMinimalRequiredParameters();
         SingleStoreSinkConfig defaults = new SingleStoreSinkConfig(props);
         assertNull(defaults.onDuplicateKeySQL);
-        assertEquals(SingleStoreSinkConfig.DEFAULT_INSERT_BATCH_SIZE, defaults.insertBatchSize);
         assertFalse(defaults.upsert);
 
         props.put(SingleStoreSinkConfig.ON_DUPLICATE_KEY_SQL, "  `data` = VALUES(`data`)  ");
-        props.put(SingleStoreSinkConfig.INSERT_BATCH_SIZE, "250");
         SingleStoreSinkConfig config = new SingleStoreSinkConfig(props);
         assertEquals("`data` = VALUES(`data`)", config.onDuplicateKeySQL);
-        assertEquals(250, config.insertBatchSize);
     }
 
     @Test
@@ -448,11 +445,4 @@ public class SingleStoreSinkConfigTest extends IntegrationBase {
                 ex.getLocalizedMessage());
     }
 
-    @Test
-    public void failInsertBatchSizeBelowOne() {
-        Map<String, String> props = getMinimalRequiredParameters();
-        props.put(SingleStoreSinkConfig.INSERT_BATCH_SIZE, "0");
-        ConfigException ex = assertThrows(ConfigException.class, () -> new SingleStoreSinkConfig(props));
-        assertTrue(ex.getLocalizedMessage().contains(SingleStoreSinkConfig.INSERT_BATCH_SIZE));
-    }
 }

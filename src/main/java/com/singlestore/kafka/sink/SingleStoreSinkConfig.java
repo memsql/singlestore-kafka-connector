@@ -132,19 +132,13 @@ public class SingleStoreSinkConfig extends AbstractConfig {
 
     public static final String ON_DUPLICATE_KEY_SQL = "singlestore.onDuplicateKeySQL";
     private static final String ON_DUPLICATE_KEY_SQL_DOC =
-            "Assignment list for INSERT ... ON DUPLICATE KEY UPDATE. When set, the connector writes batched INSERT statements "
-                    + "instead of LOAD DATA. On a duplicate PRIMARY KEY or UNIQUE index, only these assignments run, so columns omitted "
+            "Assignment list for INSERT ... ON DUPLICATE KEY UPDATE. Rows are loaded into a temporary table, then inserted "
+                    + "into the destination table. On a duplicate PRIMARY KEY or UNIQUE index, only these assignments run, so columns omitted "
                     + "from the list keep their current values. Example: `data` = VALUES(`data`). "
                     + "The value is inserted directly into the query and is not SQL-injection safe. "
                     + "Mutually exclusive with singlestore.upsert. "
                     + "This does not work for columnstore tables on SingleStoreDB 7.1.";
     private static final String ON_DUPLICATE_KEY_SQL_DISPLAY = "On Duplicate Key SQL";
-
-    public static final String INSERT_BATCH_SIZE = "singlestore.insertBatchSize";
-    public static final int DEFAULT_INSERT_BATCH_SIZE = 10000;
-    private static final String INSERT_BATCH_SIZE_DOC =
-            "Maximum number of rows in one database batch when singlestore.onDuplicateKeySQL is set (default: 10000).";
-    private static final String INSERT_BATCH_SIZE_DISPLAY = "Insert Batch Size";
 
     private static final ConfigDef.Range NON_NEGATIVE_INT_VALIDATOR = ConfigDef.Range.atLeast(0);
 
@@ -376,17 +370,7 @@ public class SingleStoreSinkConfig extends AbstractConfig {
                 SINGLESTORE_GROUP,
                 5,
                 ConfigDef.Width.LONG,
-                ON_DUPLICATE_KEY_SQL_DISPLAY)
-            .define(INSERT_BATCH_SIZE,
-                ConfigDef.Type.INT,
-                DEFAULT_INSERT_BATCH_SIZE,
-                ConfigDef.Range.atLeast(1),
-                ConfigDef.Importance.LOW,
-                INSERT_BATCH_SIZE_DOC,
-                SINGLESTORE_GROUP,
-                6,
-                ConfigDef.Width.MEDIUM,
-                INSERT_BATCH_SIZE_DISPLAY);
+                ON_DUPLICATE_KEY_SQL_DISPLAY);
 
     public final String ddlEndpoint;
     public final List<String> dmlEndpoints;
@@ -409,7 +393,6 @@ public class SingleStoreSinkConfig extends AbstractConfig {
     public final Map<String, String> recordToTableMap;
     public boolean upsert;
     public final String onDuplicateKeySQL;
-    public final int insertBatchSize;
     public final Map<String, String> customMetricTags;
 
 
@@ -462,7 +445,6 @@ public class SingleStoreSinkConfig extends AbstractConfig {
         this.recordToTableMap = getRecordToTableMap(props);
         this.upsert = getBoolean(UPSERT);
         this.onDuplicateKeySQL = getOnDuplicateKeySQL();
-        this.insertBatchSize = getInt(INSERT_BATCH_SIZE);
         this.customMetricTags = getCustomMetricTags();
 
         if (this.upsert && this.onDuplicateKeySQL != null) {

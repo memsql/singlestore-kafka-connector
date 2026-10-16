@@ -1,89 +1,75 @@
 package com.singlestore.kafka.sink;
 
-import org.apache.kafka.connect.data.Schema;
-import org.apache.kafka.connect.sink.SinkRecord;
 import org.junit.Test;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import static com.singlestore.kafka.utils.SinkRecordCreator.createRecord;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
 
 public class InsertDbWriterTest {
 
     private static final String UPDATE = "`data` = VALUES(`data`)";
+    private static final String TEMPORARY_TABLE = "_incoming";
 
     @Test
-    public void generateQuery() {
+    public void generateQueries() {
         InsertDbWriter writer = writer(Arrays.asList("id", "data"), null, "partial");
 
         assertEquals(
-                "INSERT INTO `partial` (`id`, `data`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `data` = VALUES(`data`)",
-                writer.generateQuery(1));
+                "CREATE ROWSTORE TEMPORARY TABLE `_incoming` AS SELECT NULL :> BIGINT "
+                        + "AS `_singlestore_kafka_order`, `id` AS `_singlestore_kafka_column_0`, "
+                        + "`data` AS `_singlestore_kafka_column_1` FROM `partial` WHERE 1=0",
+                writer.generateCreateTemporaryTableQuery());
         assertEquals(
-                "INSERT INTO `partial` (`id`, `data`) VALUES (?, ?), (?, ?) ON DUPLICATE KEY UPDATE `data` = VALUES(`data`)",
-                writer.generateQuery(2));
+                "INSERT INTO `partial` (`id`, `data`) SELECT `_singlestore_kafka_column_0` AS `id`, "
+                        + "`_singlestore_kafka_column_1` AS `data` FROM `_incoming` "
+                        + "ORDER BY `_singlestore_kafka_order` ON DUPLICATE KEY UPDATE `data` = VALUES(`data`)",
+                writer.generateInsertQuery());
     }
 
     @Test
     public void generateQueryEscapesIdentifiers() {
         InsertDbWriter writer = new InsertDbWriter(
-                Collections.singletonList("c`d"), null, null, "a`b", "`age` = `age` + 1", 10);
+                Collections.singletonList("c`d"), null, "a`b", "`age` = `age` + 1", "t`mp");
         assertEquals(
-                "INSERT INTO `a``b` (`c``d`) VALUES (?) ON DUPLICATE KEY UPDATE `age` = `age` + 1",
-                writer.generateQuery(1));
+                "CREATE ROWSTORE TEMPORARY TABLE `t``mp` AS SELECT NULL :> BIGINT "
+                        + "AS `_singlestore_kafka_order`, `c``d` AS `_singlestore_kafka_column_0` "
+                        + "FROM `a``b` WHERE 1=0",
+                writer.generateCreateTemporaryTableQuery());
+        assertEquals(
+                "INSERT INTO `a``b` (`c``d`) SELECT `_singlestore_kafka_column_0` AS `c``d` FROM `t``mp` "
+                        + "ORDER BY `_singlestore_kafka_order` ON DUPLICATE KEY UPDATE `age` = `age` + 1",
+                writer.generateInsertQuery());
     }
 
     @Test
     public void generateQueryWithFilter() {
-        InsertDbWriter writer = new InsertDbWriter(
-                Arrays.asList("id", "data"), null, "id > 1", "partial", UPDATE, 10);
+        InsertDbWriter writer = writer(Arrays.asList("id", "data"), "id > 1", "partial");
         assertEquals(
-                "INSERT INTO `partial` (`id`, `data`) SELECT `id`, `data` FROM "
-                        + "(SELECT ? AS `id`, ? AS `data`) "
-                        + "AS `_singlestore_kafka_incoming` WHERE id > 1 "
+                "INSERT INTO `partial` (`id`, `data`) SELECT `_singlestore_kafka_column_0` AS `id`, "
+                        + "`_singlestore_kafka_column_1` AS `data` FROM `_incoming` "
+                        + "WHERE id > 1 ORDER BY `_singlestore_kafka_order` "
                         + "ON DUPLICATE KEY UPDATE `data` = VALUES(`data`)",
-                writer.generateQuery(2));
+                writer.generateInsertQuery());
     }
 
     @Test
-    public void partitionPreservesOrder() {
-        List<SinkRecord> records = new ArrayList<>();
-        for (int i = 0; i < 5; i++) {
-            records.add(createRecord(Schema.INT32_SCHEMA, i));
-        }
-
-        List<List<SinkRecord>> batches = InsertDbWriter.partition(records, 2);
-        assertEquals(3, batches.size());
-        assertEquals(2, batches.get(0).size());
-        assertEquals(2, batches.get(1).size());
-        assertEquals(1, batches.get(2).size());
-        assertEquals(0, batches.get(0).get(0).value());
-        assertEquals(1, batches.get(0).get(1).value());
-        assertEquals(4, batches.get(2).get(0).value());
-
-        assertEquals(1, InsertDbWriter.partition(records, 10).size());
-        assertEquals(5, InsertDbWriter.partition(records, 1).size());
-        assertTrue(InsertDbWriter.partition(Collections.emptyList(), 2).isEmpty());
+    public void avoidsOrderColumnCollision() {
+        List<String> columns = Arrays.asList("_singlestore_kafka_order", "data");
+        InsertDbWriter writer = writer(columns, null, "partial");
+        assertEquals("__singlestore_kafka_order", writer.getOrderColumn());
     }
 
     @Test
     public void rejectsInvalidArguments() {
         assertThrows(IllegalArgumentException.class,
-                () -> new InsertDbWriter(Collections.singletonList("id"), null, null, "t", " ", 1));
-        assertThrows(IllegalArgumentException.class,
-                () -> new InsertDbWriter(Collections.singletonList("id"), null, null, "t", UPDATE, 0));
-        InsertDbWriter writer = writer(Collections.singletonList("id"), null, "t");
-        assertThrows(IllegalArgumentException.class, () -> writer.generateQuery(0));
-        assertThrows(IllegalArgumentException.class, () -> InsertDbWriter.partition(Collections.emptyList(), 0));
+                () -> new InsertDbWriter(Collections.singletonList("id"), null, "t", " ", TEMPORARY_TABLE));
     }
 
     private static InsertDbWriter writer(List<String> columns, String filter, String table) {
-        return new InsertDbWriter(columns, null, filter, table, UPDATE, 10);
+        return new InsertDbWriter(columns, filter, table, UPDATE, TEMPORARY_TABLE);
     }
 }

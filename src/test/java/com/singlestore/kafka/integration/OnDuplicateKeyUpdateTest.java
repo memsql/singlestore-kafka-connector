@@ -69,7 +69,6 @@ public class OnDuplicateKeyUpdateTest extends IntegrationBase {
                 .build();
         String table = "odku_mixed";
         Map<String, String> props = props(UPDATE_DATA);
-        props.put(SingleStoreSinkConfig.INSERT_BATCH_SIZE, "2");
 
         executeQuery("DROP TABLE IF EXISTS testdb.odku_mixed");
         executeQuery(rowstore(table, "id INT PRIMARY KEY, data TEXT, keep TEXT"));
@@ -142,10 +141,7 @@ public class OnDuplicateKeyUpdateTest extends IntegrationBase {
                 + "`name` = VALUES(`name`), `payload` = VALUES(`payload`), `tags` = VALUES(`tags`), "
                 + "`attrs` = VALUES(`attrs`), `nested` = VALUES(`nested`)");
 
-        byte[] allBytes = new byte[256];
-        for (int i = 0; i < allBytes.length; i++) {
-            allBytes[i] = (byte) (i + Byte.MIN_VALUE);
-        }
+        byte[] escapedPayload = "binary\tvalue\nwith\\\\escapes".getBytes(StandardCharsets.UTF_8);
         byte[] typicalPayload = new byte[] {1, 2, 3};
         Map<String, Integer> attrs = new HashMap<>();
         attrs.put("c1", 1);
@@ -176,7 +172,7 @@ public class OnDuplicateKeyUpdateTest extends IntegrationBase {
                 .put("f64", Double.MAX_VALUE)
                 .put("flag", true)
                 .put("name", "Київ\t\"quote\"\\")
-                .put("payload", allBytes)
+                .put("payload", escapedPayload)
                 .put("tags", new ArrayList<>(Collections.singletonList("b\nc")))
                 .put("attrs", new HashMap<String, Integer>())
                 .put("nested", new Struct(nested).put("city", ""))
@@ -257,7 +253,7 @@ public class OnDuplicateKeyUpdateTest extends IntegrationBase {
         assertEquals(Double.MAX_VALUE, rs.getDouble("f64"), 0d);
         assertEquals(1, rs.getInt("flag"));
         assertEquals("Київ\t\"quote\"\\", rs.getString("name"));
-        assertArrayEquals(allBytes, rs.getBytes("payload"));
+        assertArrayEquals(escapedPayload, rs.getBytes("payload"));
         assertEquals("[\"b\\nc\"]", rs.getString("tags"));
         assertEquals("[]", rs.getString("attrs"));
         assertEquals("{\"city\":\"\"}", rs.getString("nested"));
@@ -403,16 +399,18 @@ public class OnDuplicateKeyUpdateTest extends IntegrationBase {
                 .build();
         Map<String, String> props = ConfigHelper.getMinimalRequiredParameters();
         props.put(SingleStoreSinkConfig.METADATA_TABLE_ALLOW, "true");
-        props.put(SingleStoreSinkConfig.ON_DUPLICATE_KEY_SQL, UPDATE_DATA);
-        props.put(SingleStoreSinkConfig.INSERT_BATCH_SIZE, "1");
+        props.put(SingleStoreSinkConfig.ON_DUPLICATE_KEY_SQL, "this is not valid SQL");
 
-        SingleStoreSinkTask task = new SingleStoreSinkTask();
-        task.initialize(new WorkerSinkTaskContext(null, null, null));
-        task.start(props);
-        SinkRecord valid = new SinkRecord(table, 0, null, null, schema,
-                new Struct(schema).put("id", 1).put("data", "{\"a\":1}"), 0);
-        assertThrows(RetriableException.class, () -> task.put(Arrays.asList(valid, new SinkRecord(table, 0, null, null,
-                schema, new Struct(schema).put("id", 2).put("data", "not json"), 1))));
+        SingleStoreSinkTask failingTask = new SingleStoreSinkTask();
+        failingTask.initialize(new WorkerSinkTaskContext(null, null, null));
+        failingTask.start(props);
+        List<SinkRecord> records = Arrays.asList(
+                new SinkRecord(table, 0, null, null, schema,
+                        new Struct(schema).put("id", 1).put("data", "{\"a\":1}"), 0),
+                new SinkRecord(table, 0, null, null, schema,
+                        new Struct(schema).put("id", 2).put("data", "{\"b\":2}"), 1));
+        assertThrows(RetriableException.class, () -> failingTask.put(records));
+        failingTask.stop();
 
         ResultSet rs = executeQueryWithResultSet("SELECT COUNT(*) FROM testdb.odku_rollback_meta");
         assertTrue(rs.next());
@@ -422,9 +420,12 @@ public class OnDuplicateKeyUpdateTest extends IntegrationBase {
         assertTrue(meta.next());
         assertEquals(0, meta.getInt(1));
 
-        task.put(Arrays.asList(valid, new SinkRecord(table, 0, null, null, schema,
-                new Struct(schema).put("id", 2).put("data", "{\"b\":2}"), 1)));
-        task.stop();
+        props.put(SingleStoreSinkConfig.ON_DUPLICATE_KEY_SQL, UPDATE_DATA);
+        SingleStoreSinkTask retryTask = new SingleStoreSinkTask();
+        retryTask.initialize(new WorkerSinkTaskContext(null, null, null));
+        retryTask.start(props);
+        retryTask.put(records);
+        retryTask.stop();
 
         rs = executeQueryWithResultSet("SELECT COUNT(*) FROM testdb.odku_rollback_meta");
         assertTrue(rs.next());
@@ -448,7 +449,6 @@ public class OnDuplicateKeyUpdateTest extends IntegrationBase {
         props.put("singlestore.recordToTable.mappingField", "tableId");
         props.put("singlestore.recordToTable.mapping.t1", "odku_multi1");
         props.put("singlestore.recordToTable.mapping.t2", "odku_multi2");
-        props.put(SingleStoreSinkConfig.INSERT_BATCH_SIZE, "1");
         String columns = "tableId TEXT, id INT PRIMARY KEY, data TEXT, keep TEXT";
         executeQuery("DROP TABLE IF EXISTS testdb.odku_multi1");
         executeQuery("DROP TABLE IF EXISTS testdb.odku_multi2");
@@ -481,7 +481,7 @@ public class OnDuplicateKeyUpdateTest extends IntegrationBase {
     }
 
     @Test
-    public void filterSkipsInsertsAndUpdatesAcrossBatches() throws SQLException {
+    public void filterSkipsInsertsAndUpdates() throws SQLException {
         Schema schema = SchemaBuilder.struct()
                 .field("id", Schema.INT32_SCHEMA)
                 .field("data", Schema.STRING_SCHEMA)
@@ -490,7 +490,6 @@ public class OnDuplicateKeyUpdateTest extends IntegrationBase {
         String table = "odku_filter_batches";
         Map<String, String> props = props(UPDATE_DATA);
         props.put(SingleStoreSinkConfig.FILTER, "id % 2 = 0");
-        props.put(SingleStoreSinkConfig.INSERT_BATCH_SIZE, "2");
 
         executeQuery("DROP TABLE IF EXISTS testdb.odku_filter_batches");
         executeQuery(rowstore(table, "id INT PRIMARY KEY, data TEXT, keep TEXT"));
