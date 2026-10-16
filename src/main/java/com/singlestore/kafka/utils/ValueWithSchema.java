@@ -249,50 +249,6 @@ public class ValueWithSchema {
         }
     }
 
-    /**
-     * Values to bind into an INSERT statement, in column order.
-     * JSON values are serialized to strings. Booleans are 0 or 1. Binary values stay byte arrays.
-     */
-    public List<Object> toSqlValues(List<String> columns, List<ColumnMapping> columnMappings) throws IOException {
-        ArrayList<Object> fields = new ArrayList<>();
-        if (columnMappings != null) {
-            for (ColumnMapping mapping : columnMappings) {
-                fields.add(this.getByPath(mapping.getFieldPath()).toSqlValue());
-            }
-        } else if (schema != null && schema.type() != Schema.Type.STRUCT) {
-            fields.add(this.toSqlValue());
-        } else if (schema == null && !(value instanceof Map)) {
-            fields.add(this.toSqlValue());
-        } else {
-            for (String column : columns) {
-                fields.add(this.getByKey(column).toSqlValue());
-            }
-        }
-        return fields;
-    }
-
-    public Object toSqlValue() throws IOException {
-        if (value == null) {
-            return null;
-        } else if (schema == null) {
-            if (value instanceof Boolean) {
-                return (Boolean) value ? (byte) 1 : (byte) 0;
-            } else if (value instanceof Map || value instanceof List) {
-                return OBJECT_MAPPER.writeValueAsString(value);
-            } else {
-                return value;
-            }
-        } else if (schema.type().isPrimitive()) {
-            if (value instanceof Boolean) {
-                return (Boolean) value ? (byte) 1 : (byte) 0;
-            } else {
-                return value;
-            }
-        } else {
-            return toJSON(schema, value);
-        }
-    }
-
     public List<String> getColumns() {
         if (!isStruct()) {
             return Collections.singletonList(getDefaultColumnName(schema));

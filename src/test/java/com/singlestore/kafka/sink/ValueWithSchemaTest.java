@@ -16,7 +16,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -195,75 +194,5 @@ public class ValueWithSchemaTest {
                 new ColumnMapping("c2", "f3.c1"),
                 new ColumnMapping("c3", "f10")
             )));
-    }
-
-    @Test
-    public void toSqlValuePreservesTypes() throws IOException {
-        assertEquals((byte) 1, new ValueWithSchema(createRecord(null, true)).toSqlValue());
-        assertEquals((byte) 0, new ValueWithSchema(createRecord(Schema.BOOLEAN_SCHEMA, false)).toSqlValue());
-        assertEquals((byte) 10, new ValueWithSchema(createRecord(Schema.INT8_SCHEMA, (byte) 10)).toSqlValue());
-        assertEquals((short) 10, new ValueWithSchema(createRecord(Schema.INT16_SCHEMA, (short) 10)).toSqlValue());
-        assertEquals(10, new ValueWithSchema(createRecord(Schema.INT32_SCHEMA, 10)).toSqlValue());
-        assertEquals(10L, new ValueWithSchema(createRecord(Schema.INT64_SCHEMA, 10L)).toSqlValue());
-        assertEquals(10.5f, new ValueWithSchema(createRecord(Schema.FLOAT32_SCHEMA, 10.5f)).toSqlValue());
-        assertEquals(10.5d, new ValueWithSchema(createRecord(Schema.FLOAT64_SCHEMA, 10.5d)).toSqlValue());
-        assertNull(new ValueWithSchema(createRecord(Schema.OPTIONAL_STRING_SCHEMA, null)).toSqlValue());
-
-        assertEquals("a\t\nb\\c", new ValueWithSchema(createRecord(Schema.STRING_SCHEMA, "a\t\nb\\c")).toSqlValue());
-
-        byte[] bytes = new byte[] {0, 1, (byte) 255};
-        assertArrayEquals(bytes, (byte[]) new ValueWithSchema(createRecord(Schema.BYTES_SCHEMA, bytes)).toSqlValue());
-        assertArrayEquals(bytes, (byte[]) new ValueWithSchema(createRecord(null, bytes)).toSqlValue());
-
-        assertEquals("[\"asd\",\"bcd\"]", new ValueWithSchema(createRecord(
-                SchemaBuilder.array(Schema.STRING_SCHEMA).build(),
-                Arrays.asList("asd", "bcd"))).toSqlValue());
-
-        Map<String, Integer> mp = new HashMap<>();
-        mp.put("c1", 1);
-        assertEquals("[{\"key\":\"c1\",\"value\":1}]", new ValueWithSchema(createRecord(
-                SchemaBuilder.map(Schema.STRING_SCHEMA, Schema.INT32_SCHEMA).build(), mp)).toSqlValue());
-
-        Schema nested = SchemaBuilder.struct().field("city", Schema.STRING_SCHEMA).build();
-        assertEquals("{\"city\":\"Kyiv\"}", new ValueWithSchema(createRecord(nested,
-                new Struct(nested).put("city", "Kyiv"))).toSqlValue());
-
-        assertEquals("[\"asd\",\"bcd\"]", new ValueWithSchema(createRecord(null, Arrays.asList("asd", "bcd"))).toSqlValue());
-        assertEquals("{\"k\":\"v\"}", new ValueWithSchema(createRecord(null, Collections.singletonMap("k", "v"))).toSqlValue());
-    }
-
-    @Test
-    public void toSqlValuesUsesColumnOrderAndMappings() throws IOException {
-        Schema nested = SchemaBuilder.struct().field("city", Schema.STRING_SCHEMA).build();
-        Schema schema = SchemaBuilder.struct()
-                .field("id", Schema.INT32_SCHEMA)
-                .field("flag", Schema.BOOLEAN_SCHEMA)
-                .field("nested", nested)
-                .build();
-        Struct value = new Struct(schema)
-                .put("id", 7)
-                .put("flag", true)
-                .put("nested", new Struct(nested).put("city", "Kyiv"));
-
-        List<Object> values = new ValueWithSchema(createRecord(schema, value))
-                .toSqlValues(Arrays.asList("flag", "id", "missing"), null);
-        assertEquals(Arrays.asList((byte) 1, 7, null), values);
-
-        List<Object> mapped = new ValueWithSchema(createRecord(schema, value)).toSqlValues(null, Arrays.asList(
-                new ColumnMapping("c1", "nested.city"),
-                new ColumnMapping("c2", "flag"),
-                new ColumnMapping("c3", "absent")
-        ));
-        assertEquals(Arrays.asList("Kyiv", (byte) 1, null), mapped);
-
-        assertEquals(Collections.singletonList(10),
-                new ValueWithSchema(createRecord(Schema.INT32_SCHEMA, 10))
-                        .toSqlValues(Collections.singletonList("data"), null));
-        assertEquals(Collections.singletonList("abc"),
-                new ValueWithSchema(createRecord(null, "abc"))
-                        .toSqlValues(Collections.singletonList("data"), null));
-        assertEquals(Collections.singletonList((byte) 0),
-                new ValueWithSchema(createRecord(null, false))
-                        .toSqlValues(Collections.singletonList("data"), null));
     }
 }
