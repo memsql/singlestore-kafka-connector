@@ -7,7 +7,9 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 
 public class InsertDbWriterTest {
 
@@ -169,16 +171,25 @@ public class InsertDbWriterTest {
     }
 
     @Test
-    public void temporaryTableNameIsStableAndTruncated() {
-        assertEquals("_ssk_orders", InsertDbWriter.temporaryTableName("orders"));
-        assertEquals(InsertDbWriter.temporaryTableName("orders"), InsertDbWriter.temporaryTableName("orders"));
+    public void temporaryTableNameIsStableAndHashed() {
+        String ordersTable = InsertDbWriter.temporaryTableName("orders");
+        assertTrue(ordersTable.startsWith("_ssk_orders_"));
+        assertEquals(76, ordersTable.length());
+        assertEquals(ordersTable, InsertDbWriter.temporaryTableName("orders"));
+        assertNotEquals(ordersTable, InsertDbWriter.temporaryTableName("orders2"));
 
         String longName = repeat('a', 300);
-        assertEquals("_ssk_" + repeat('a', 251), InsertDbWriter.temporaryTableName(longName));
-        assertEquals(256, InsertDbWriter.temporaryTableName(repeat('a', 251)).length());
+        String temporaryTable = InsertDbWriter.temporaryTableName(longName);
+        assertTrue(temporaryTable.startsWith("_ssk_" + repeat('a', 128) + "_"));
+        assertEquals(198, temporaryTable.length());
 
-        String surrogateAtLimit = repeat('a', 250) + "\uD83D\uDE00";
-        assertEquals("_ssk_" + repeat('a', 250), InsertDbWriter.temporaryTableName(surrogateAtLimit));
+        assertNotEquals(
+                InsertDbWriter.temporaryTableName(repeat('a', 300) + "1"),
+                InsertDbWriter.temporaryTableName(repeat('a', 300) + "2"));
+
+        String supplementaryCharacterAtLimit = repeat('a', 127) + "\uD83D\uDE00" + repeat('b', 130);
+        assertTrue(InsertDbWriter.temporaryTableName(supplementaryCharacterAtLimit)
+                .startsWith("_ssk_" + repeat('a', 127) + "\uD83D\uDE00_"));
     }
 
     @Test

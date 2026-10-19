@@ -2,6 +2,9 @@ package com.singlestore.kafka.sink;
 
 import org.apache.kafka.connect.sink.SinkRecord;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -23,10 +26,10 @@ public class InsertDbWriter {
     // both tables.
     private static final String STAGING_COLUMN_PREFIX = "_singlestore_kafka_column_";
     private static final String SOURCE_ALIAS = "_singlestore_kafka_src";
-    // The temporary table name must stay the same across batches so SingleStore can reuse
-    // compiled plans for the LOAD DATA and INSERT ... SELECT statements.
+    // The temporary table name must be stable and unique to the destination table so
+    // SingleStore can reuse compiled plans without collisions in multi-table batches.
     private static final String TEMPORARY_TABLE_PREFIX = "_ssk_";
-    private static final int MAX_IDENTIFIER_LENGTH = 256;
+    private static final int TEMPORARY_TABLE_PREFIX_CHARACTERS = 128;
 
     private final List<String> columns;
     private final String filter;
@@ -122,15 +125,30 @@ public class InsertDbWriter {
     }
 
     static String temporaryTableName(String table) {
-        String name = TEMPORARY_TABLE_PREFIX + table;
-        if (name.length() <= MAX_IDENTIFIER_LENGTH) {
-            return name;
+        return TEMPORARY_TABLE_PREFIX
+                + characterPrefix(table, TEMPORARY_TABLE_PREFIX_CHARACTERS)
+                + "_"
+                + sha256(table);
+    }
+
+    private static String characterPrefix(String value, int maxCharacters) {
+        int characterCount = value.codePointCount(0, value.length());
+        int end = value.offsetByCodePoints(0, Math.min(characterCount, maxCharacters));
+        return value.substring(0, end);
+    }
+
+    private static String sha256(String value) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256")
+                    .digest(value.getBytes(StandardCharsets.UTF_8));
+            StringBuilder result = new StringBuilder(digest.length * 2);
+            for (byte b : digest) {
+                result.append(String.format("%02x", b & 0xff));
+            }
+            return result.toString();
+        } catch (NoSuchAlgorithmException ex) {
+            throw new IllegalStateException("SHA-256 is not available", ex);
         }
-        int end = MAX_IDENTIFIER_LENGTH;
-        if (Character.isHighSurrogate(name.charAt(end - 1))) {
-            end--;
-        }
-        return name.substring(0, end);
     }
 
     private static String uniqueOrderColumn(List<String> columns) {
