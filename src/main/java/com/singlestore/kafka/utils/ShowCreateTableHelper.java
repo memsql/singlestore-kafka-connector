@@ -1,5 +1,6 @@
-package com.singlestore.kafka.sink;
+package com.singlestore.kafka.utils;
 
+import com.singlestore.kafka.sink.SingleStoreDialect;
 import org.apache.kafka.connect.errors.ConnectException;
 
 import java.util.ArrayList;
@@ -11,19 +12,19 @@ import java.util.StringJoiner;
  * Reads the column definitions and shard key out of a SHOW CREATE TABLE statement.
  * Indexes and other key clauses are omitted.
  */
-class ShowCreateTable {
+public class ShowCreateTableHelper {
 
     private final List<String> columnDefinitions;
     private final List<String> columnNames;
     private final String shardKey;
 
-    private ShowCreateTable(List<String> columnDefinitions, List<String> columnNames, String shardKey) {
+    private ShowCreateTableHelper(List<String> columnDefinitions, List<String> columnNames, String shardKey) {
         this.columnDefinitions = Collections.unmodifiableList(new ArrayList<>(columnDefinitions));
         this.columnNames = Collections.unmodifiableList(new ArrayList<>(columnNames));
         this.shardKey = shardKey;
     }
 
-    static ShowCreateTable parse(String statement) {
+    public static ShowCreateTableHelper parse(String statement) {
         if (statement == null || statement.trim().isEmpty()) {
             throw new ConnectException("SHOW CREATE TABLE returned an empty statement");
         }
@@ -48,14 +49,14 @@ class ShowCreateTable {
         if (columnDefinitions.isEmpty()) {
             throw new ConnectException("SHOW CREATE TABLE did not contain any columns");
         }
-        return new ShowCreateTable(columnDefinitions, columnNames, shardKey);
+        return new ShowCreateTableHelper(columnDefinitions, columnNames, shardKey);
     }
 
-    List<String> columnNames() {
+    public List<String> columnNames() {
         return columnNames;
     }
 
-    String toCreateTemporaryTable(String temporaryTable, String orderColumn) {
+    public String toCreateTemporaryTable(String temporaryTable, String orderColumn) {
         StringJoiner definitions = new StringJoiner(", ");
         for (String column : columnDefinitions) {
             definitions.add(column);

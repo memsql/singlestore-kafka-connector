@@ -1,4 +1,4 @@
-package com.singlestore.kafka.sink;
+package com.singlestore.kafka.utils;
 
 import org.apache.kafka.connect.errors.ConnectException;
 import org.junit.Test;
@@ -10,11 +10,11 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
-public class ShowCreateTableTest {
+public class ShowCreateTableHelperTest {
 
     @Test
     public void readsColumnsAndOmitsIndexes() {
-        ShowCreateTable table = ShowCreateTable.parse("CREATE TABLE `t` (\n"
+        ShowCreateTableHelper table = ShowCreateTableHelper.parse("CREATE TABLE `t` (\n"
                 + "  `id` bigint(20) NOT NULL,\n"
                 + "  `doc` JSON COLLATE utf8mb4_bin,\n"
                 + "  `vec` vector(3, F32) DEFAULT NULL,\n"
@@ -43,7 +43,7 @@ public class ShowCreateTableTest {
 
     @Test
     public void keepsCommasAndParenthesesInsideColumnDefinitions() {
-        ShowCreateTable table = ShowCreateTable.parse("CREATE TABLE `t` (\n"
+        ShowCreateTableHelper table = ShowCreateTableHelper.parse("CREATE TABLE `t` (\n"
                 + "  `e` enum('a,b','c)') DEFAULT 'a,b',\n"
                 + "  `d` decimal(10,2) DEFAULT '1.00',\n"
                 + "  `s` varchar(10) DEFAULT 'it''s, (x)',\n"
@@ -65,7 +65,7 @@ public class ShowCreateTableTest {
 
     @Test
     public void unescapesQuotedIdentifiers() {
-        ShowCreateTable table = ShowCreateTable.parse(
+        ShowCreateTableHelper table = ShowCreateTableHelper.parse(
                 "CREATE TABLE `a``b(` (`c``,d` int, `KEY` int, `(x)` int, PRIMARY KEY (`c``,d`))");
         assertEquals(Arrays.asList("c`,d", "KEY", "(x)"), table.columnNames());
     }
@@ -82,7 +82,7 @@ public class ShowCreateTableTest {
 
     @Test
     public void omitsConstraintsThatAreNotShardKeys() {
-        ShowCreateTable table = ShowCreateTable.parse(
+        ShowCreateTableHelper table = ShowCreateTableHelper.parse(
                 "CREATE TABLE `t` (`id` int, CONSTRAINT `SHARD` UNIQUE KEY (`id`), CONSTRAINT `KEY` PRIMARY KEY (`id`))");
         assertEquals("CREATE ROWSTORE TEMPORARY TABLE `tmp` (`id` int, `ord` BIGINT NULL)",
                 table.toCreateTemporaryTable("tmp", "ord"));
@@ -120,13 +120,13 @@ public class ShowCreateTableTest {
 
     @Test
     public void columnNamesAreImmutable() {
-        ShowCreateTable table = ShowCreateTable.parse("CREATE TABLE `t` (`id` int)");
+        ShowCreateTableHelper table = ShowCreateTableHelper.parse("CREATE TABLE `t` (`id` int)");
         assertThrows(UnsupportedOperationException.class, () -> table.columnNames().add("x"));
         assertEquals(Collections.singletonList("id"), table.columnNames());
     }
 
     private static void assertShardKey(String shardKey) {
-        ShowCreateTable table = ShowCreateTable.parse(
+        ShowCreateTableHelper table = ShowCreateTableHelper.parse(
                 "CREATE TABLE `t` (`id` int, PRIMARY KEY (`id`), " + shardKey + ")");
         assertEquals(
                 "CREATE ROWSTORE TEMPORARY TABLE `tmp` (`id` int, `ord` BIGINT NULL, " + shardKey + ")",
@@ -134,7 +134,7 @@ public class ShowCreateTableTest {
     }
 
     private static void assertColumn(String definition, String expected) {
-        ShowCreateTable table = ShowCreateTable.parse(
+        ShowCreateTableHelper table = ShowCreateTableHelper.parse(
                 "CREATE TABLE `t` (" + definition + ", KEY (`id`))");
         assertEquals(
                 "CREATE ROWSTORE TEMPORARY TABLE `tmp` (" + expected + ", `ord` BIGINT NULL)",
@@ -142,7 +142,7 @@ public class ShowCreateTableTest {
     }
 
     private static void assertRejected(String statement, String message) {
-        ConnectException ex = assertThrows(ConnectException.class, () -> ShowCreateTable.parse(statement));
+        ConnectException ex = assertThrows(ConnectException.class, () -> ShowCreateTableHelper.parse(statement));
         assertTrue(ex.getMessage(), ex.getMessage().contains(message));
     }
 }

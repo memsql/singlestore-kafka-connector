@@ -1,5 +1,6 @@
 package com.singlestore.kafka.sink;
 
+import com.singlestore.kafka.utils.ShowCreateTableHelper;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.sink.SinkRecord;
 
@@ -39,7 +40,7 @@ public class InsertDbWriter {
     private final String onDuplicateKeySQL;
     private final String temporaryTable;
     private final String orderColumn;
-    private final ShowCreateTable showCreateTable;
+    private final ShowCreateTableHelper showCreateTable;
 
     public InsertDbWriter(SingleStoreSinkConfig config, SinkRecord record, String table,
                           String onDuplicateKeySQL, String showCreateTable) {
@@ -61,7 +62,7 @@ public class InsertDbWriter {
         this.table = table;
         this.onDuplicateKeySQL = Objects.requireNonNull(onDuplicateKeySQL, "onDuplicateKeySQL");
         this.temporaryTable = temporaryTable;
-        this.showCreateTable = ShowCreateTable.parse(showCreateTable);
+        this.showCreateTable = ShowCreateTableHelper.parse(showCreateTable);
         this.orderColumn = uniqueOrderColumn(this.showCreateTable.columnNames());
     }
 
