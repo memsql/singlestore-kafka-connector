@@ -37,7 +37,9 @@ public class InsertDbWriterTest {
                 writer.generateCreateTemporaryTableQuery());
         assertEquals("DROP TEMPORARY TABLE IF EXISTS `_incoming`", writer.generateDropTemporaryTableQuery());
         assertEquals(
-                "INSERT INTO `partial` (`id`, `data`) SELECT `id`, `data` FROM `_incoming` "
+                "INSERT INTO `partial` (`id`, `data`) SELECT `_singlestore_kafka_column_0`, `_singlestore_kafka_column_1` "
+                        + "FROM (SELECT `id` AS `_singlestore_kafka_column_0`, `data` AS `_singlestore_kafka_column_1`, "
+                        + "`_singlestore_kafka_order` FROM `_incoming`) AS `_singlestore_kafka_src` "
                         + "ORDER BY `_singlestore_kafka_order` ON DUPLICATE KEY UPDATE `data` = VALUES(`data`)",
                 writer.generateInsertQuery());
     }
@@ -57,8 +59,10 @@ public class InsertDbWriterTest {
                 writer.generateCreateTemporaryTableQuery());
         assertEquals("DROP TEMPORARY TABLE IF EXISTS `t``mp`", writer.generateDropTemporaryTableQuery());
         assertEquals(
-                "INSERT INTO `a``b` (`c``d`) SELECT `c``d` FROM `t``mp` "
-                        + "ORDER BY `_singlestore_kafka_order` ON DUPLICATE KEY UPDATE `age` = `age` + 1",
+                "INSERT INTO `a``b` (`c``d`) SELECT `_singlestore_kafka_column_0` "
+                        + "FROM (SELECT `c``d` AS `_singlestore_kafka_column_0`, `_singlestore_kafka_order` FROM `t``mp`) "
+                        + "AS `_singlestore_kafka_src` ORDER BY `_singlestore_kafka_order` "
+                        + "ON DUPLICATE KEY UPDATE `age` = `age` + 1",
                 writer.generateInsertQuery());
     }
 
@@ -114,9 +118,10 @@ public class InsertDbWriterTest {
     public void generateQueryWithFilter() {
         InsertDbWriter writer = writer(Arrays.asList("id", "data"), "id > 1", "partial");
         assertEquals(
-                "INSERT INTO `partial` (`id`, `data`) SELECT `id`, `data` FROM `_incoming` "
-                        + "WHERE id > 1 ORDER BY `_singlestore_kafka_order` "
-                        + "ON DUPLICATE KEY UPDATE `data` = VALUES(`data`)",
+                "INSERT INTO `partial` (`id`, `data`) SELECT `_singlestore_kafka_column_0`, `_singlestore_kafka_column_1` "
+                        + "FROM (SELECT `id` AS `_singlestore_kafka_column_0`, `data` AS `_singlestore_kafka_column_1`, "
+                        + "`_singlestore_kafka_order` FROM `_incoming` WHERE id > 1) AS `_singlestore_kafka_src` "
+                        + "ORDER BY `_singlestore_kafka_order` ON DUPLICATE KEY UPDATE `data` = VALUES(`data`)",
                 writer.generateInsertQuery());
     }
 
@@ -134,8 +139,11 @@ public class InsertDbWriterTest {
         assertEquals("__singlestore_kafka_order", writer.getOrderColumn());
         assertEquals(
                 "INSERT INTO `partial` (`_SINGLESTORE_KAFKA_ORDER`, `data`) "
-                        + "SELECT `_SINGLESTORE_KAFKA_ORDER`, `data` FROM `_incoming` "
-                        + "ORDER BY `__singlestore_kafka_order` ON DUPLICATE KEY UPDATE `data` = VALUES(`data`)",
+                        + "SELECT `_singlestore_kafka_column_0`, `_singlestore_kafka_column_1` "
+                        + "FROM (SELECT `_SINGLESTORE_KAFKA_ORDER` AS `_singlestore_kafka_column_0`, "
+                        + "`data` AS `_singlestore_kafka_column_1`, `__singlestore_kafka_order` FROM `_incoming`) "
+                        + "AS `_singlestore_kafka_src` ORDER BY `__singlestore_kafka_order` "
+                        + "ON DUPLICATE KEY UPDATE `data` = VALUES(`data`)",
                 writer.generateInsertQuery());
     }
 
@@ -144,6 +152,20 @@ public class InsertDbWriterTest {
         List<String> columns = Arrays.asList("_singlestore_kafka_order", "__SINGLESTORE_KAFKA_ORDER");
         InsertDbWriter writer = writer(columns, null, "partial", showCreate(columns));
         assertEquals("___singlestore_kafka_order", writer.getOrderColumn());
+    }
+
+    @Test
+    public void avoidsStagingAliasCollisionWithDestinationColumn() {
+        String showCreate = "CREATE TABLE `partial` ("
+                + "`id` int, `_SINGLESTORE_KAFKA_COLUMN_0` int, PRIMARY KEY (`id`))";
+        InsertDbWriter writer = new InsertDbWriter(
+                Collections.singletonList("id"), null, "partial", "`id` = `id` + 1", TEMPORARY_TABLE, showCreate);
+        assertEquals(
+                "INSERT INTO `partial` (`id`) SELECT `__singlestore_kafka_column_0` "
+                        + "FROM (SELECT `id` AS `__singlestore_kafka_column_0`, `_singlestore_kafka_order` FROM `_incoming`) "
+                        + "AS `_singlestore_kafka_src` ORDER BY `_singlestore_kafka_order` "
+                        + "ON DUPLICATE KEY UPDATE `id` = `id` + 1",
+                writer.generateInsertQuery());
     }
 
     @Test
