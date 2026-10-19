@@ -54,7 +54,8 @@ class ShowCreateTable {
                 columnDefinitions.add(stripAutoIncrement(clause));
                 columnNames.add(readQuotedIdentifier(clause));
             } else {
-                throw new ConnectException("Unrecognized clause in SHOW CREATE TABLE: " + clause);
+                throw new ConnectException("Unrecognized clause in SHOW CREATE TABLE: " + clause
+                        + ". singlestore.onDuplicateKeyUpdate cannot build a staging table for this table definition.");
             }
         }
         if (columnDefinitions.isEmpty()) {
@@ -177,8 +178,8 @@ class ShowCreateTable {
     /**
      * Removes AUTO_INCREMENT [AS SEQUENCE] from a column definition and makes that column
      * nullable. SingleStore requires an AUTO_INCREMENT column to be part of an index, and
-     * indexes are not copied to the staging table. A nullable staging column lets LOAD DATA
-     * omit it, so the destination table keeps an existing value or generates a new one.
+     * indexes are not copied to the staging table. A nullable staging column keeps a NULL
+     * from the record as NULL, so the destination table generates a value for it.
      */
     private static String stripAutoIncrement(String column) {
         StringBuilder result = new StringBuilder();

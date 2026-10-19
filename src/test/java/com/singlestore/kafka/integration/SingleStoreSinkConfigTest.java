@@ -431,8 +431,8 @@ public class SingleStoreSinkConfigTest extends IntegrationBase {
         assertTrue(config.onDuplicateKeyUpdate);
         assertEquals("`data` = VALUES(`data`)", config.onDuplicateKeySQL);
         assertEquals("`status` = VALUES(`status`)", config.tableToOnDuplicateKeySQL.get("orders"));
-        assertEquals("`data` = VALUES(`data`)", config.onDuplicateKeySql("other"));
-        assertEquals("`status` = VALUES(`status`)", config.onDuplicateKeySql("orders"));
+        assertEquals("`data` = VALUES(`data`)", config.onDuplicateKeySQLForTable("other"));
+        assertEquals("`status` = VALUES(`status`)", config.onDuplicateKeySQLForTable("orders"));
     }
 
     @Test

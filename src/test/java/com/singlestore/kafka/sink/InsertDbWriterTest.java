@@ -170,11 +170,11 @@ public class InsertDbWriterTest {
     }
 
     @Test
-    public void temporaryTableNameIsStableAndHashed() {
+    public void temporaryTableNameIsStableAndHashedCaseSensitively() {
         String ordersTable = "_ssk_1c168adb00d208e42f93314529f1fa9c0427eb63233ceda95a5db52b7012a719";
         assertEquals(ordersTable, InsertDbWriter.temporaryTableName("orders"));
         assertEquals(69, ordersTable.length());
-        assertEquals(ordersTable, InsertDbWriter.temporaryTableName("Orders"));
+        assertNotEquals(ordersTable, InsertDbWriter.temporaryTableName("Orders"));
         assertNotEquals(ordersTable, InsertDbWriter.temporaryTableName("orders2"));
         assertNotEquals(ordersTable, InsertDbWriter.temporaryTableName("_ssk_orders"));
 

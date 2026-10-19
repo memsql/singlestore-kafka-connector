@@ -500,7 +500,7 @@ public class SingleStoreSinkConfig extends AbstractConfig {
         }
     }
 
-    public String onDuplicateKeySql(String table) {
+    public String onDuplicateKeySQLForTable(String table) {
         String specific = tableToOnDuplicateKeySQL.get(table);
         if (specific != null) {
             return specific;

@@ -88,7 +88,7 @@ public class JdbcHelper {
         try (Statement stmt = connection.createStatement();
              ResultSet resultSet = stmt.executeQuery(query)) {
             if (!resultSet.next()) {
-                throw new ConnectException(String.format("Table `%s` does not exist", table));
+                throw new ConnectException(String.format("SHOW CREATE TABLE returned no rows for table `%s`", table));
             }
             return resultSet.getString("Create Table");
         }

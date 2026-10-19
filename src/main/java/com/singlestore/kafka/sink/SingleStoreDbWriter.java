@@ -87,7 +87,7 @@ public class SingleStoreDbWriter {
                         String table = entry.getKey();
                         Collection<SinkRecord> tableRecords = entry.getValue();
                         SinkRecord firstTableRecord = tableRecords.iterator().next();
-                        String onDuplicateKeySQL = config.onDuplicateKeySql(table);
+                        String onDuplicateKeySQL = config.onDuplicateKeySQLForTable(table);
                         if (onDuplicateKeySQL == null) {
                             throw new ConnectException(String.format(
                                     "No assignment list is configured for table `%s`. Set \"singlestore.onDuplicateKeySQL\" or \"singlestore.onDuplicateKeySQL.%s\".",
@@ -104,7 +104,7 @@ public class SingleStoreDbWriter {
 
                         CsvDbWriter csvWriter = new CsvDbWriter(
                                 config, insertWriter.getTemporaryTable(), table, insertWriter.getColumns(),
-                                null, false, insertWriter.getOrderColumn(), null);
+                                null, false, insertWriter.getOrderColumn());
                         writeWithLoadData(stmt, csvWriter, tableRecords);
                     }
                 }

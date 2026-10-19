@@ -15,7 +15,6 @@ import java.util.stream.Collectors;
 public class CsvDbWriter {
 
     List<String> columns;
-    List<String> loadColumns;
     List<ColumnMapping> columnMappings;
     String filter;
     String table;
@@ -23,14 +22,13 @@ public class CsvDbWriter {
     String orderColumn;
 
     public CsvDbWriter(SingleStoreSinkConfig config, SinkRecord record, String table) {
-        this(config, table, table, resolveColumns(config, record, table), config.filter, config.upsert, null, null);
+        this(config, table, table, resolveColumns(config, record, table), config.filter, config.upsert, null);
     }
 
     CsvDbWriter(SingleStoreSinkConfig config, String table, String mappingTable, List<String> columns,
-                String filter, boolean upsert, String orderColumn, List<String> loadColumns) {
+                String filter, boolean upsert, String orderColumn) {
         this.columnMappings = config.tableToColumnToFieldMap.get(mappingTable);
         this.columns = columns;
-        this.loadColumns = loadColumns == null ? this.columns : loadColumns;
         this.filter = filter;
         this.table = table;
         this.upsert = upsert;
@@ -39,7 +37,7 @@ public class CsvDbWriter {
 
     public String generateQuery(String ext) {
         String queryPrefix = String.format("LOAD DATA LOCAL INFILE '###.%s'", ext);
-        List<String> queryColumns = new ArrayList<>(loadColumns);
+        List<String> queryColumns = new ArrayList<>(columns);
         if (orderColumn != null) {
             queryColumns.add(0, orderColumn);
         }

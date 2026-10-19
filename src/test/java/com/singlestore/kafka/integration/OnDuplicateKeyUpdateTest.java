@@ -3,7 +3,6 @@ package com.singlestore.kafka.integration;
 import com.singlestore.kafka.sink.SingleStoreSinkConfig;
 import com.singlestore.kafka.sink.SingleStoreSinkTask;
 import com.singlestore.kafka.utils.ConfigHelper;
-import com.vdurmont.semver4j.Semver;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.data.Struct;
@@ -34,7 +33,6 @@ import static org.junit.Assert.assertTrue;
 public class OnDuplicateKeyUpdateTest extends IntegrationBase {
 
     private static final String UPDATE_DATA = "`data` = VALUES(`data`)";
-    private static String rowstoreTableKind;
 
     @Test
     public void partialUpdateLeavesOtherColumnsUnchanged() throws SQLException {
@@ -47,7 +45,7 @@ public class OnDuplicateKeyUpdateTest extends IntegrationBase {
         Map<String, String> props = props(UPDATE_DATA);
 
         executeQuery("DROP TABLE IF EXISTS testdb.odku_partial");
-        executeQuery(rowstore(table, "id INT PRIMARY KEY, data TEXT, keep TEXT, extra TEXT"));
+        executeQuery(columnstore(table, "id INT PRIMARY KEY, data TEXT, keep TEXT, extra TEXT"));
         executeQuery("INSERT INTO testdb.odku_partial VALUES (1, 'a', 'original', 'set-by-db')");
         put(props, Collections.singletonList(row(schema, 1, "b", "replaced", table)), null, false);
 
@@ -71,7 +69,7 @@ public class OnDuplicateKeyUpdateTest extends IntegrationBase {
         Map<String, String> props = props(UPDATE_DATA);
 
         executeQuery("DROP TABLE IF EXISTS testdb.odku_mixed");
-        executeQuery(rowstore(table, "id INT PRIMARY KEY, data TEXT, keep TEXT"));
+        executeQuery(columnstore(table, "id INT PRIMARY KEY, data TEXT, keep TEXT"));
         executeQuery("INSERT INTO testdb.odku_mixed VALUES (1, 'v1', 'k1'), (2, 'v2', 'k2')");
 
         put(props, Arrays.asList(
@@ -107,7 +105,7 @@ public class OnDuplicateKeyUpdateTest extends IntegrationBase {
         put(props, Arrays.asList(
                 row(schema, 1, "a", "first-keep", table),
                 row(schema, 1, "b", "second-keep", table)
-        ), rowstore(table, "id INT PRIMARY KEY, data TEXT, keep TEXT"), true);
+        ), columnstore(table, "id INT PRIMARY KEY, data TEXT, keep TEXT"), true);
 
         ResultSet rs = executeQueryWithResultSet("SELECT * FROM testdb.odku_same_batch");
         assertTrue(rs.next());
@@ -181,7 +179,7 @@ public class OnDuplicateKeyUpdateTest extends IntegrationBase {
         put(props, Arrays.asList(
                 createRecord(schema, typical, table),
                 createRecord(schema, extreme, table)
-        ), rowstore(table, "id INT NOT NULL PRIMARY KEY, i8 TINYINT, i16 SMALLINT, i32 INT, i64 BIGINT, "
+        ), columnstore(table, "id INT NOT NULL PRIMARY KEY, i8 TINYINT, i16 SMALLINT, i32 INT, i64 BIGINT, "
                 + "f32 FLOAT, f64 DOUBLE, flag TINYINT, name TEXT, payload VARBINARY(1024), "
                 + "tags JSON, attrs JSON, nested JSON, note TEXT NOT NULL"), true);
 
@@ -283,7 +281,7 @@ public class OnDuplicateKeyUpdateTest extends IntegrationBase {
         Map<String, String> props = props("`name` = VALUES(`name`), `payload` = VALUES(`payload`), `meta` = VALUES(`meta`)");
 
         executeQuery("DROP TABLE IF EXISTS testdb.odku_schemaless");
-        executeQuery(rowstore(table, "id INT PRIMARY KEY, name TEXT, keep TEXT, payload VARBINARY(256), meta JSON"));
+        executeQuery(columnstore(table, "id INT PRIMARY KEY, name TEXT, keep TEXT, payload VARBINARY(256), meta JSON"));
         executeQuery("INSERT INTO testdb.odku_schemaless VALUES (1, 'a', 'stay', X'0001FF', '{\"k\":\"v\"}')");
 
         Map<Object, Object> second = new LinkedHashMap<>();
@@ -332,7 +330,7 @@ public class OnDuplicateKeyUpdateTest extends IntegrationBase {
         props.put("singlestore.columnToField.odku_mapping.c_keep", "keep");
 
         executeQuery("DROP TABLE IF EXISTS testdb.odku_mapping");
-        executeQuery(rowstore(table, "id INT PRIMARY KEY, c_name TEXT, c_keep TEXT"));
+        executeQuery(columnstore(table, "id INT PRIMARY KEY, c_name TEXT, c_keep TEXT"));
         executeQuery("INSERT INTO testdb.odku_mapping VALUES (1, 'Kyiv', 'stay')");
 
         Struct second = new Struct(schema)
@@ -353,7 +351,7 @@ public class OnDuplicateKeyUpdateTest extends IntegrationBase {
         executeQuery("DROP TABLE IF EXISTS testdb.`kafka_connect_transaction_metadata`");
         String table = "odku_metadata";
         executeQuery("DROP TABLE IF EXISTS testdb." + table);
-        executeQuery(rowstore(table, "id INT PRIMARY KEY, data TEXT, keep TEXT"));
+        executeQuery(columnstore(table, "id INT PRIMARY KEY, data TEXT, keep TEXT"));
 
         Schema schema = SchemaBuilder.struct()
                 .field("id", Schema.INT32_SCHEMA)
@@ -392,7 +390,7 @@ public class OnDuplicateKeyUpdateTest extends IntegrationBase {
         executeQuery("DROP TABLE IF EXISTS testdb.`kafka_connect_transaction_metadata`");
         String table = "odku_rollback_meta";
         executeQuery("DROP TABLE IF EXISTS testdb." + table);
-        executeQuery(rowstore(table, "id INT PRIMARY KEY, data JSON"));
+        executeQuery(columnstore(table, "id INT PRIMARY KEY, data JSON"));
 
         Schema schema = SchemaBuilder.struct()
                 .field("id", Schema.INT32_SCHEMA)
@@ -454,8 +452,8 @@ public class OnDuplicateKeyUpdateTest extends IntegrationBase {
         String columns = "tableId TEXT, id INT PRIMARY KEY, data TEXT, keep TEXT";
         executeQuery("DROP TABLE IF EXISTS testdb.odku_multi1");
         executeQuery("DROP TABLE IF EXISTS testdb.odku_multi2");
-        executeQuery(rowstore("odku_multi1", columns));
-        executeQuery(rowstore("odku_multi2", columns));
+        executeQuery(columnstore("odku_multi1", columns));
+        executeQuery(columnstore("odku_multi2", columns));
         executeQuery("INSERT INTO testdb.odku_multi1 VALUES ('t1', 1, 'a', 'keep1')");
         executeQuery("INSERT INTO testdb.odku_multi2 VALUES ('t2', 1, 'b', 'keep2')");
 
@@ -494,7 +492,7 @@ public class OnDuplicateKeyUpdateTest extends IntegrationBase {
         props.put(SingleStoreSinkConfig.FILTER, "id % 2 = 0");
 
         executeQuery("DROP TABLE IF EXISTS testdb.odku_filter_batches");
-        executeQuery(rowstore(table, "id INT PRIMARY KEY, data TEXT, keep TEXT"));
+        executeQuery(columnstore(table, "id INT PRIMARY KEY, data TEXT, keep TEXT"));
         executeQuery("INSERT INTO testdb.odku_filter_batches VALUES "
                 + "(1, 'old-filtered', 'stay-filtered'), (2, 'old', 'stay')");
 
@@ -525,7 +523,7 @@ public class OnDuplicateKeyUpdateTest extends IntegrationBase {
         String table = "odku_primitive";
         Map<String, String> props = props("`hits` = `hits` + 1");
         executeQuery("DROP TABLE IF EXISTS testdb." + table);
-        executeQuery(rowstore(table, "data VARCHAR(10) PRIMARY KEY, hits INT DEFAULT 0"));
+        executeQuery(columnstore(table, "data VARCHAR(10) PRIMARY KEY, hits INT DEFAULT 0"));
 
         put(props, Arrays.asList(
                 createRecord(null, "a", table),
@@ -555,7 +553,7 @@ public class OnDuplicateKeyUpdateTest extends IntegrationBase {
         SinkRecord record = createRecord(schema, new Struct(schema).put("id", 1).put("counter", 1), table);
 
         put(props, Arrays.asList(record, record, record),
-                rowstore(table, "id INT PRIMARY KEY, counter INT"), true);
+                columnstore(table, "id INT PRIMARY KEY, counter INT"), true);
 
         ResultSet rs = executeQueryWithResultSet("SELECT counter FROM testdb.odku_expression");
         assertTrue(rs.next());
@@ -580,7 +578,7 @@ public class OnDuplicateKeyUpdateTest extends IntegrationBase {
                 createRecord(null, first, table),
                 createRecord(null, Collections.singletonMap("id", 1), table),
                 createRecord(null, Collections.singletonMap("id", 3), table)),
-                rowstore(table, "id INT PRIMARY KEY, name TEXT DEFAULT 'default'"), true);
+                columnstore(table, "id INT PRIMARY KEY, name TEXT DEFAULT 'default'"), true);
 
         ResultSet rs = executeQueryWithResultSet("SELECT id, name FROM testdb.odku_missing_field ORDER BY id");
         assertTrue(rs.next());
@@ -624,8 +622,8 @@ public class OnDuplicateKeyUpdateTest extends IntegrationBase {
         Map<String, String> props = props(UPDATE_DATA);
 
         executeQuery("DROP TABLE IF EXISTS testdb." + table);
-        executeQuery(rowstore(table,
-                "id BIGINT AUTO_INCREMENT, biz INT NOT NULL, data TEXT, keep TEXT, PRIMARY KEY (biz), KEY (id)"));
+        executeQuery(columnstore(table,
+                "id BIGINT AUTO_INCREMENT, biz INT NOT NULL, data TEXT, keep TEXT, PRIMARY KEY (biz), KEY (id) USING HASH"));
         executeQuery("INSERT INTO testdb." + table + " (biz, data, keep) VALUES (1, 'a', 'stay')");
         ResultSet rs = executeQueryWithResultSet("SELECT id FROM testdb." + table + " WHERE biz = 1");
         assertTrue(rs.next());
@@ -668,8 +666,8 @@ public class OnDuplicateKeyUpdateTest extends IntegrationBase {
         String columns = "tableId TEXT, id INT PRIMARY KEY, data TEXT, keep TEXT";
         executeQuery("DROP TABLE IF EXISTS testdb.odku_per_table1");
         executeQuery("DROP TABLE IF EXISTS testdb.odku_per_table2");
-        executeQuery(rowstore("odku_per_table1", columns));
-        executeQuery(rowstore("odku_per_table2", columns));
+        executeQuery(columnstore("odku_per_table1", columns));
+        executeQuery(columnstore("odku_per_table2", columns));
         executeQuery("INSERT INTO testdb.odku_per_table1 VALUES ('t1', 1, 'a', 'keep1')");
         executeQuery("INSERT INTO testdb.odku_per_table2 VALUES ('t2', 1, 'b', 'keep2')");
 
@@ -702,7 +700,7 @@ public class OnDuplicateKeyUpdateTest extends IntegrationBase {
         String table = "odku_order_case";
         Map<String, String> props = props("`data` = VALUES(`data`)");
         executeQuery("DROP TABLE IF EXISTS testdb." + table);
-        executeQuery(rowstore(table, "id INT PRIMARY KEY, data TEXT, `" + order + "` INT"));
+        executeQuery(columnstore(table, "id INT PRIMARY KEY, data TEXT, `" + order + "` INT"));
         executeQuery("INSERT INTO testdb." + table + " VALUES (1, 'old', 0)");
 
         Struct first = new Struct(schema).put("id", 1).put("data", "first").put(order, 2);
@@ -745,13 +743,8 @@ public class OnDuplicateKeyUpdateTest extends IntegrationBase {
         return new Struct(schema);
     }
 
-    private static String rowstore(String table, String columns) throws SQLException {
-        if (rowstoreTableKind == null) {
-            rowstoreTableKind = getSingleStoreVersion().isGreaterThanOrEqualTo(new Semver("7.3.0"))
-                    ? "ROWSTORE TABLE"
-                    : "TABLE";
-        }
-        return "CREATE " + rowstoreTableKind + " testdb." + table + " (" + columns + ")";
+    private static String columnstore(String table, String columns) {
+        return "CREATE TABLE testdb." + table + " (" + columns + ", KEY () USING CLUSTERED COLUMNSTORE)";
     }
 
     private static void assertNullNumber(ResultSet rs, String column) throws SQLException {

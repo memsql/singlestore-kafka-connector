@@ -7,7 +7,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.StringJoiner;
 
@@ -19,7 +18,9 @@ public class InsertDbWriter {
 
     // Temporary tables do not preserve LOAD DATA order. This column records the Kafka record
     // order so duplicate keys are applied in that order: the later record wins for VALUES(...)
-    // assignments, and expressions such as `age` = `age` + 1 run once per record.
+    // assignments, and expressions such as `age` = `age` + 1 run once per record. The ORDER BY
+    // makes SingleStore gather the rows on the aggregator and insert them from there, instead of
+    // inserting on each partition in parallel.
     private static final String ORDER_COLUMN = "_singlestore_kafka_order";
     // Staging rows are projected under these names before ON DUPLICATE KEY UPDATE. The
     // temporary table keeps destination column names so LOAD DATA and singlestore.filter
@@ -27,7 +28,8 @@ public class InsertDbWriter {
     // both tables.
     private static final String STAGING_COLUMN_PREFIX = "_singlestore_kafka_column_";
     private static final String SOURCE_ALIAS = "_singlestore_kafka_src";
-    // Fixed-width hash of the case-folded destination name. The same table keeps the same
+    // Followed by a SHA-256 hash of the exact destination name, so every destination table gets
+    // its own fixed-length staging name regardless of the destination name's length or case.
     private static final String TEMPORARY_TABLE_PREFIX = "_ssk_";
 
     private final List<String> columns;
@@ -124,7 +126,7 @@ public class InsertDbWriter {
     }
 
     static String temporaryTableName(String table) {
-        return TEMPORARY_TABLE_PREFIX + sha256(table.toLowerCase(Locale.ROOT));
+        return TEMPORARY_TABLE_PREFIX + sha256(table);
     }
 
     private static String sha256(String value) {
