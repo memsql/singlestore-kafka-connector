@@ -133,7 +133,7 @@ TableScan db._ssk_<hash> AS _singlestore_kafka_src table_type:sharded_rowstore
 
 Without the ordering, each partition would insert its own rows in parallel, but the result for duplicate keys within a batch would be unpredictable. In a test on SingleStore 9.0 with 262,144 rows over 1,000 keys, the ordered statement left every key with its latest value, while the unordered one did so for only 35 keys. The ordered statement took about 9 times longer (1.1 s against 0.12 s). Expect this mode to be slower than `singlestore.upsert` and plain `LOAD DATA`. If throughput matters, tune the batch size with `consumer.override.max.poll.records` and the parallelism with `tasks.max`.
 
-The temporary table is built from the destination's `SHOW CREATE TABLE` output on every batch, so schema changes to the destination table are picked up immediately. If that output contains a clause the connector does not recognize, the task fails with an `Unrecognized clause in SHOW CREATE TABLE` error instead of guessing.
+The temporary table is built from the destination's `SHOW CREATE TABLE` output on every batch, so schema changes to the destination table are picked up immediately.
 
 `singlestore.onDuplicateKeySQL` is inserted directly into the statement and is not SQL-injection safe. It cannot be combined with `singlestore.upsert`. `singlestore.filter` is applied by the final `INSERT ... SELECT`, so rows that fail the predicate are not inserted or updated. The temporary table keeps the destination column names, so write the filter against those names, as with ordinary `LOAD DATA` writes.
 

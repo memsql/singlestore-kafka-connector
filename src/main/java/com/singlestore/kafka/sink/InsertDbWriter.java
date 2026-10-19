@@ -1,5 +1,6 @@
 package com.singlestore.kafka.sink;
 
+import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.sink.SinkRecord;
 
 import java.nio.charset.StandardCharsets;
@@ -52,6 +53,9 @@ public class InsertDbWriter {
 
     InsertDbWriter(List<String> columns, String filter, String table,
                    String onDuplicateKeySQL, String temporaryTable, String showCreateTable) {
+        if (columns == null || columns.isEmpty()) {
+            throw new ConnectException(String.format("No columns to write for table `%s`", table));
+        }
         this.columns = columns;
         this.filter = filter;
         this.table = table;

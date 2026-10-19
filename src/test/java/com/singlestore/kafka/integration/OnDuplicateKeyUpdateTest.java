@@ -6,6 +6,7 @@ import com.singlestore.kafka.utils.ConfigHelper;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.RetriableException;
 import org.apache.kafka.connect.runtime.WorkerSinkTaskContext;
 import org.apache.kafka.connect.sink.SinkRecord;
@@ -687,6 +688,28 @@ public class OnDuplicateKeyUpdateTest extends IntegrationBase {
         assertEquals("b", rs.getString("data"));
         assertEquals("changed", rs.getString("keep"));
         assertFalse(rs.next());
+    }
+
+    @Test
+    public void missingPerTableAssignmentListFails() {
+        Schema schema = SchemaBuilder.struct()
+                .field("id", Schema.INT32_SCHEMA)
+                .field("data", Schema.STRING_SCHEMA)
+                .field("keep", Schema.STRING_SCHEMA)
+                .build();
+        Map<String, String> props = new HashMap<>();
+        props.put(SingleStoreSinkConfig.ON_DUPLICATE_KEY_UPDATE, "true");
+        props.put(SingleStoreSinkConfig.ON_DUPLICATE_KEY_SQL + ".other_table", UPDATE_DATA);
+
+        ConnectException ex = assertThrows(ConnectException.class, () -> put(
+                props,
+                Collections.singletonList(row(schema, 1, "a", "keep", "odku_unconfigured_table")),
+                columnstore("odku_unconfigured_table", "id INT PRIMARY KEY, data TEXT, keep TEXT"),
+                true));
+        assertEquals(
+                "No assignment list is configured for table `odku_unconfigured_table`. "
+                        + "Set \"singlestore.onDuplicateKeySQL\" or \"singlestore.onDuplicateKeySQL.odku_unconfigured_table\".",
+                ex.getMessage());
     }
 
     @Test

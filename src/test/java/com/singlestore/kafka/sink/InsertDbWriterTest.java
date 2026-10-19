@@ -1,5 +1,6 @@
 package com.singlestore.kafka.sink;
 
+import org.apache.kafka.connect.errors.ConnectException;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -207,6 +208,13 @@ public class InsertDbWriterTest {
     public void rejectsMissingAssignmentList() {
         assertThrows(NullPointerException.class,
                 () -> new InsertDbWriter(Collections.singletonList("id"), null, "t", null, TEMPORARY_TABLE, null));
+    }
+
+    @Test
+    public void rejectsEmptyColumns() {
+        ConnectException ex = assertThrows(ConnectException.class,
+                () -> new InsertDbWriter(Collections.emptyList(), null, "t", UPDATE, TEMPORARY_TABLE, PARTIAL_SHOW_CREATE));
+        assertEquals("No columns to write for table `t`", ex.getMessage());
     }
 
     private static InsertDbWriter writer(List<String> columns, String filter, String table) {

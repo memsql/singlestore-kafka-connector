@@ -29,6 +29,8 @@ public class ShowCreateTableTest {
                 + "  COLUMN GROUP `cg` (*),\n"
                 + "  FOREIGN KEY (`id`) REFERENCES `other` (`id`),\n"
                 + "  CONSTRAINT `pk` PRIMARY KEY (`id`),\n"
+                + "  PROJECTION `p` (`id`),\n"
+                + "  UNKNOWN CLAUSE (`id`),\n"
                 + "  KEY `__UNORDERED` () USING CLUSTERED COLUMNSTORE\n"
                 + ") AUTOSTATS_CARDINALITY_MODE=INCREMENTAL AUTO_INCREMENT=10 SQL_MODE='STRICT_ALL_TABLES'");
 
@@ -113,7 +115,6 @@ public class ShowCreateTableTest {
         assertRejected("CREATE TABLE `t` (`id` int", "unbalanced parentheses");
         assertRejected("CREATE TABLE `t` (`id` int DEFAULT 'x)", "unterminated quoted value");
         assertRejected("CREATE TABLE `t` (PRIMARY KEY (`id`))", "did not contain any columns");
-        assertRejected("CREATE TABLE `t` (`id` int, UNKNOWN CLAUSE (`id`))", "Unrecognized clause");
         assertRejected("CREATE TABLE `t` (`id` int, SHARD KEY (`id`), SHARD KEY (`id`))", "more than one SHARD KEY");
     }
 

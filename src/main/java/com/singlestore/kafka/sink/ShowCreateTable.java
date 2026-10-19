@@ -3,12 +3,8 @@ package com.singlestore.kafka.sink;
 import org.apache.kafka.connect.errors.ConnectException;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
-import java.util.Set;
 import java.util.StringJoiner;
 
 /**
@@ -16,10 +12,6 @@ import java.util.StringJoiner;
  * Indexes and other key clauses are omitted.
  */
 class ShowCreateTable {
-
-    private static final Set<String> OMITTED_CLAUSES = new HashSet<>(Arrays.asList(
-            "PRIMARY", "UNIQUE", "KEY", "INDEX", "FULLTEXT", "SPATIAL", "CONSTRAINT",
-            "FOREIGN", "SORT", "VECTOR", "CHECK", "COLUMN", "MULTI"));
 
     private final List<String> columnDefinitions;
     private final List<String> columnNames;
@@ -48,14 +40,9 @@ class ShowCreateTable {
                     throw new ConnectException("SHOW CREATE TABLE contains more than one SHARD KEY");
                 }
                 shardKey = clause;
-            } else if (OMITTED_CLAUSES.contains(firstKeyword(clause))) {
-                continue;
             } else if (clause.charAt(0) == '`') {
                 columnDefinitions.add(stripAutoIncrement(clause));
                 columnNames.add(readQuotedIdentifier(clause));
-            } else {
-                throw new ConnectException("Unrecognized clause in SHOW CREATE TABLE: " + clause
-                        + ". singlestore.onDuplicateKeyUpdate cannot build a staging table for this table definition.");
             }
         }
         if (columnDefinitions.isEmpty()) {
@@ -262,15 +249,6 @@ class ShowCreateTable {
 
     private static boolean isIdentifierCharacter(char c) {
         return Character.isLetterOrDigit(c) || c == '_' || c == '$';
-    }
-
-    private static String firstKeyword(String clause) {
-        int index = skipWhitespace(clause, 0);
-        int end = index;
-        while (end < clause.length() && Character.isLetter(clause.charAt(end))) {
-            end++;
-        }
-        return clause.substring(index, end).toUpperCase(Locale.ROOT);
     }
 
     private static int skipWhitespace(String value, int index) {

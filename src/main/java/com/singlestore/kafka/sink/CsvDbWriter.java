@@ -2,6 +2,7 @@ package com.singlestore.kafka.sink;
 
 import com.singlestore.kafka.utils.ColumnMapping;
 import com.singlestore.kafka.utils.ValueWithSchema;
+import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.sink.SinkRecord;
 
 import java.io.IOException;
@@ -65,9 +66,12 @@ public class CsvDbWriter {
 
     static List<String> resolveColumns(SingleStoreSinkConfig config, SinkRecord record, String table) {
         List<ColumnMapping> columnMappings = config.tableToColumnToFieldMap.get(table);
-        if (columnMappings != null) {
-            return columnMappings.stream().map(ColumnMapping::getColumnName).collect(Collectors.toList());
+        List<String> columns = columnMappings != null
+                ? columnMappings.stream().map(ColumnMapping::getColumnName).collect(Collectors.toList())
+                : new ValueWithSchema(record).getColumns();
+        if (columns.isEmpty()) {
+            throw new ConnectException(String.format("No columns to write for table `%s`", table));
         }
-        return new ValueWithSchema(record).getColumns();
+        return columns;
     }
 }
