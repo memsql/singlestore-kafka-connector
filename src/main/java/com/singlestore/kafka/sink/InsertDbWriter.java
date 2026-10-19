@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.StringJoiner;
-import java.util.UUID;
 
 /**
  * Builds the temporary staging table and INSERT ... SELECT statement used for
@@ -24,7 +23,10 @@ public class InsertDbWriter {
     // both tables.
     private static final String STAGING_COLUMN_PREFIX = "_singlestore_kafka_column_";
     private static final String SOURCE_ALIAS = "_singlestore_kafka_src";
-    private static final String TEMPORARY_TABLE_PREFIX = "_singlestore_kafka_incoming_";
+    // The temporary table name must stay the same across batches so SingleStore can reuse
+    // compiled plans for the LOAD DATA and INSERT ... SELECT statements.
+    private static final String TEMPORARY_TABLE_PREFIX = "_ssk_";
+    private static final int MAX_IDENTIFIER_LENGTH = 256;
 
     private final List<String> columns;
     private final String filter;
@@ -40,7 +42,7 @@ public class InsertDbWriter {
                 config.filter,
                 table,
                 onDuplicateKeySQL,
-                TEMPORARY_TABLE_PREFIX + UUID.randomUUID().toString().replace("-", ""),
+                temporaryTableName(table),
                 showCreateTable);
     }
 
@@ -117,6 +119,18 @@ public class InsertDbWriter {
 
     public String getOrderColumn() {
         return orderColumn;
+    }
+
+    static String temporaryTableName(String table) {
+        String name = TEMPORARY_TABLE_PREFIX + table;
+        if (name.length() <= MAX_IDENTIFIER_LENGTH) {
+            return name;
+        }
+        int end = MAX_IDENTIFIER_LENGTH;
+        if (Character.isHighSurrogate(name.charAt(end - 1))) {
+            end--;
+        }
+        return name.substring(0, end);
     }
 
     private static String uniqueOrderColumn(List<String> columns) {

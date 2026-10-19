@@ -169,6 +169,38 @@ public class InsertDbWriterTest {
     }
 
     @Test
+    public void temporaryTableNameIsStableAndTruncated() {
+        assertEquals("_ssk_orders", InsertDbWriter.temporaryTableName("orders"));
+        assertEquals(InsertDbWriter.temporaryTableName("orders"), InsertDbWriter.temporaryTableName("orders"));
+
+        String longName = repeat('a', 300);
+        assertEquals("_ssk_" + repeat('a', 251), InsertDbWriter.temporaryTableName(longName));
+        assertEquals(256, InsertDbWriter.temporaryTableName(repeat('a', 251)).length());
+
+        String surrogateAtLimit = repeat('a', 250) + "\uD83D\uDE00";
+        assertEquals("_ssk_" + repeat('a', 250), InsertDbWriter.temporaryTableName(surrogateAtLimit));
+    }
+
+    @Test
+    public void stripsAutoIncrementFromStagingTable() {
+        String showCreate = "CREATE TABLE `auto` (\n"
+                + "  `id` bigint(20) NOT NULL AUTO_INCREMENT,\n"
+                + "  `biz` int(11) NOT NULL,\n"
+                + "  `data` text,\n"
+                + "  PRIMARY KEY (`biz`),\n"
+                + "  KEY `id` (`id`),\n"
+                + "  SHARD KEY `__SHARDKEY` (`biz`)\n"
+                + ") AUTO_INCREMENT=42";
+        InsertDbWriter writer = new InsertDbWriter(
+                Arrays.asList("biz", "data"), null, "auto", UPDATE, TEMPORARY_TABLE, showCreate);
+        assertEquals(
+                "CREATE ROWSTORE TEMPORARY TABLE `_incoming` (`id` bigint(20) NOT NULL, "
+                        + "`biz` int(11) NOT NULL, `data` text, "
+                        + "`_singlestore_kafka_order` BIGINT NULL, SHARD KEY `__SHARDKEY` (`biz`))",
+                writer.generateCreateTemporaryTableQuery());
+    }
+
+    @Test
     public void rejectsMissingAssignmentList() {
         assertThrows(NullPointerException.class,
                 () -> new InsertDbWriter(Collections.singletonList("id"), null, "t", null, TEMPORARY_TABLE, null));
@@ -180,6 +212,12 @@ public class InsertDbWriterTest {
 
     private static InsertDbWriter writer(List<String> columns, String filter, String table, String showCreate) {
         return new InsertDbWriter(columns, filter, table, UPDATE, TEMPORARY_TABLE, showCreate);
+    }
+
+    private static String repeat(char c, int count) {
+        char[] chars = new char[count];
+        Arrays.fill(chars, c);
+        return new String(chars);
     }
 
     private static String showCreate(List<String> columns) {

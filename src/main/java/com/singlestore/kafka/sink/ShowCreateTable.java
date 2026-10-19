@@ -19,7 +19,7 @@ class ShowCreateTable {
 
     private static final Set<String> OMITTED_CLAUSES = new HashSet<>(Arrays.asList(
             "PRIMARY", "UNIQUE", "KEY", "INDEX", "FULLTEXT", "SPATIAL", "CONSTRAINT",
-            "FOREIGN", "SORT", "VECTOR", "CHECK", "COLUMN"));
+            "FOREIGN", "SORT", "VECTOR", "CHECK", "COLUMN", "MULTI"));
 
     private final List<String> columnDefinitions;
     private final List<String> columnNames;
@@ -51,7 +51,7 @@ class ShowCreateTable {
             } else if (OMITTED_CLAUSES.contains(firstKeyword(clause))) {
                 continue;
             } else if (clause.charAt(0) == '`') {
-                columnDefinitions.add(clause);
+                columnDefinitions.add(stripAutoIncrement(clause));
                 columnNames.add(readQuotedIdentifier(clause));
             } else {
                 throw new ConnectException("Unrecognized clause in SHOW CREATE TABLE: " + clause);
@@ -174,20 +174,60 @@ class ShowCreateTable {
         return startsWithKeywords(clause, index, "SHARD", "KEY");
     }
 
+    /**
+     * Removes AUTO_INCREMENT [AS SEQUENCE] from a column definition. SingleStore requires an
+     * AUTO_INCREMENT column to be part of an index, and indexes are not copied to the staging table.
+     */
+    private static String stripAutoIncrement(String column) {
+        StringBuilder result = new StringBuilder();
+        int i = 0;
+        while (i < column.length()) {
+            char c = column.charAt(i);
+            if (isQuote(c)) {
+                int end = quotedEnd(column, i, c) + 1;
+                result.append(column, i, end);
+                i = end;
+                continue;
+            }
+            if (i == 0 || !isIdentifierCharacter(column.charAt(i - 1))) {
+                int end = keywordsEnd(column, i, "AUTO_INCREMENT");
+                if (end >= 0) {
+                    int sequenceEnd = keywordsEnd(column, end, "AS", "SEQUENCE");
+                    i = sequenceEnd >= 0 ? sequenceEnd : end;
+                    while (result.length() > 0 && Character.isWhitespace(result.charAt(result.length() - 1))) {
+                        result.setLength(result.length() - 1);
+                    }
+                    continue;
+                }
+            }
+            result.append(c);
+            i++;
+        }
+        return result.toString();
+    }
+
     private static boolean startsWithKeywords(String clause, int start, String... keywords) {
+        return keywordsEnd(clause, start, keywords) >= 0;
+    }
+
+    /**
+     * Returns the index after the matched keywords, or -1 when the clause does not
+     * contain them at {@code start}.
+     */
+    private static int keywordsEnd(String clause, int start, String... keywords) {
         int index = start;
         for (String keyword : keywords) {
             index = skipWhitespace(clause, index);
             if (!clause.regionMatches(true, index, keyword, 0, keyword.length())) {
-                return false;
+                return -1;
             }
             int end = index + keyword.length();
             if (end < clause.length() && isIdentifierCharacter(clause.charAt(end))) {
-                return false;
+                return -1;
             }
             index = end;
         }
-        return true;
+        return index;
     }
 
     private static boolean isIdentifierCharacter(char c) {

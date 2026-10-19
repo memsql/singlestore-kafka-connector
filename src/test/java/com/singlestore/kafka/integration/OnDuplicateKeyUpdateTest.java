@@ -614,6 +614,43 @@ public class OnDuplicateKeyUpdateTest extends IntegrationBase {
     }
 
     @Test
+    public void autoIncrementColumnKeepsExistingValueAndGeneratesNewOnes() throws SQLException {
+        Schema schema = SchemaBuilder.struct()
+                .field("biz", Schema.INT32_SCHEMA)
+                .field("data", Schema.STRING_SCHEMA)
+                .field("keep", Schema.STRING_SCHEMA)
+                .build();
+        String table = "odku_auto_increment";
+        Map<String, String> props = props(UPDATE_DATA);
+
+        executeQuery("DROP TABLE IF EXISTS testdb." + table);
+        executeQuery(rowstore(table,
+                "id BIGINT AUTO_INCREMENT, biz INT NOT NULL, data TEXT, keep TEXT, PRIMARY KEY (biz), KEY (id)"));
+        executeQuery("INSERT INTO testdb." + table + " (biz, data, keep) VALUES (1, 'a', 'stay')");
+        ResultSet rs = executeQueryWithResultSet("SELECT id FROM testdb." + table + " WHERE biz = 1");
+        assertTrue(rs.next());
+        long existingId = rs.getLong("id");
+
+        put(props, Arrays.asList(
+                createRecord(schema, new Struct(schema).put("biz", 1).put("data", "b").put("keep", "changed"), table),
+                createRecord(schema, new Struct(schema).put("biz", 2).put("data", "c").put("keep", "new"), table)
+        ), null, false);
+
+        rs = executeQueryWithResultSet("SELECT id, biz, data, keep FROM testdb." + table + " ORDER BY biz");
+        assertTrue(rs.next());
+        assertEquals(existingId, rs.getLong("id"));
+        assertEquals("b", rs.getString("data"));
+        assertEquals("stay", rs.getString("keep"));
+        assertTrue(rs.next());
+        assertEquals(2, rs.getInt("biz"));
+        assertTrue(rs.getLong("id") > 0);
+        assertTrue(rs.getLong("id") != existingId);
+        assertEquals("c", rs.getString("data"));
+        assertEquals("new", rs.getString("keep"));
+        assertFalse(rs.next());
+    }
+
+    @Test
     public void perTableAssignmentLists() throws SQLException {
         Schema schema = SchemaBuilder.struct()
                 .field("tableId", Schema.STRING_SCHEMA)
