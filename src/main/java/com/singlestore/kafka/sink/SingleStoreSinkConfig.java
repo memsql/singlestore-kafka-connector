@@ -146,6 +146,14 @@ public class SingleStoreSinkConfig extends AbstractConfig {
                     + "from the list keep their current values. Example: `data` = VALUES(`data`). "
                     + "The value is inserted directly into the query and is not SQL-injection safe.";
     private static final String ON_DUPLICATE_KEY_SQL_DISPLAY = "On Duplicate Key SQL";
+
+    public static final String ON_DUPLICATE_KEY_SQL_FOR_TABLE = ON_DUPLICATE_KEY_SQL + ".<tableName>";
+    private static final String ON_DUPLICATE_KEY_SQL_FOR_TABLE_DOC =
+            "Assignment list for one destination table when singlestore.onDuplicateKeyUpdate is true. "
+                    + "Overrides singlestore.onDuplicateKeySQL for that table. "
+                    + "<tableName> is case-sensitive and must exactly match the destination table name. "
+                    + "The value is inserted directly into the query and is not SQL-injection safe.";
+    private static final String ON_DUPLICATE_KEY_SQL_FOR_TABLE_DISPLAY = "On Duplicate Key SQL for table";
     private static final ConfigDef.Validator NON_EMPTY_STRING = new NonEmptyStringValidator();
 
     private static final ConfigDef.Range NON_NEGATIVE_INT_VALIDATOR = ConfigDef.Range.atLeast(0);
@@ -388,7 +396,17 @@ public class SingleStoreSinkConfig extends AbstractConfig {
                 SINGLESTORE_GROUP,
                 6,
                 ConfigDef.Width.LONG,
-                ON_DUPLICATE_KEY_SQL_DISPLAY);
+                ON_DUPLICATE_KEY_SQL_DISPLAY)
+            .define(ON_DUPLICATE_KEY_SQL_FOR_TABLE,
+                ConfigDef.Type.STRING,
+                null,
+                NON_EMPTY_STRING,
+                ConfigDef.Importance.MEDIUM,
+                ON_DUPLICATE_KEY_SQL_FOR_TABLE_DOC,
+                SINGLESTORE_GROUP,
+                7,
+                ConfigDef.Width.LONG,
+                ON_DUPLICATE_KEY_SQL_FOR_TABLE_DISPLAY);
 
     public final String ddlEndpoint;
     public final List<String> dmlEndpoints;
