@@ -13,46 +13,108 @@ public class InsertDbWriterTest {
 
     private static final String UPDATE = "`data` = VALUES(`data`)";
     private static final String TEMPORARY_TABLE = "_incoming";
+    private static final String PARTIAL_SHOW_CREATE = "CREATE TABLE `partial` (\n"
+            + "  `id` int(11) NOT NULL,\n"
+            + "  `data` text CHARACTER SET utf8 COLLATE utf8_general_ci,\n"
+            + "  `status` enum('a,b','c') DEFAULT NULL,\n"
+            + "  `amount` decimal(10,2) DEFAULT NULL,\n"
+            + "  PRIMARY KEY (`id`),\n"
+            + "  SHARD KEY `__SHARDKEY` (`id`),\n"
+            + "  KEY `status` (`status`) USING HASH,\n"
+            + "  SORT KEY `__UNORDERED` (`data`),\n"
+            + "  KEY `__UNORDERED` () USING CLUSTERED COLUMNSTORE\n"
+            + ") AUTOSTATS_CARDINALITY_MODE=INCREMENTAL";
 
     @Test
     public void generateQueries() {
         InsertDbWriter writer = writer(Arrays.asList("id", "data"), null, "partial");
 
         assertEquals(
-                "CREATE ROWSTORE TEMPORARY TABLE `_incoming` AS SELECT NULL :> BIGINT "
-                        + "AS `_singlestore_kafka_order`, `id` AS `_singlestore_kafka_column_0`, "
-                        + "`data` AS `_singlestore_kafka_column_1` FROM `partial` WHERE 1=0",
+                "CREATE ROWSTORE TEMPORARY TABLE `_incoming` (`id` int(11) NOT NULL, "
+                        + "`data` text CHARACTER SET utf8 COLLATE utf8_general_ci, "
+                        + "`status` enum('a,b','c') DEFAULT NULL, `amount` decimal(10,2) DEFAULT NULL, "
+                        + "`_singlestore_kafka_order` BIGINT NULL, SHARD KEY `__SHARDKEY` (`id`))",
                 writer.generateCreateTemporaryTableQuery());
         assertEquals("DROP TEMPORARY TABLE IF EXISTS `_incoming`", writer.generateDropTemporaryTableQuery());
         assertEquals(
-                "INSERT INTO `partial` (`id`, `data`) SELECT `_singlestore_kafka_column_0` AS `id`, "
-                        + "`_singlestore_kafka_column_1` AS `data` FROM `_incoming` "
+                "INSERT INTO `partial` (`id`, `data`) SELECT `id`, `data` FROM `_incoming` "
                         + "ORDER BY `_singlestore_kafka_order` ON DUPLICATE KEY UPDATE `data` = VALUES(`data`)",
                 writer.generateInsertQuery());
     }
 
     @Test
     public void generateQueryEscapesIdentifiers() {
+        String showCreate = "CREATE TABLE `a``b` (\n"
+                + "  `c``d` text,\n"
+                + "  UNIQUE KEY `c` (`c``d`),\n"
+                + "  SHARD KEY (`c``d`)\n"
+                + ")";
         InsertDbWriter writer = new InsertDbWriter(
-                Collections.singletonList("c`d"), null, "a`b", "`age` = `age` + 1", "t`mp");
+                Collections.singletonList("c`d"), null, "a`b", "`age` = `age` + 1", "t`mp", showCreate);
         assertEquals(
-                "CREATE ROWSTORE TEMPORARY TABLE `t``mp` AS SELECT NULL :> BIGINT "
-                        + "AS `_singlestore_kafka_order`, `c``d` AS `_singlestore_kafka_column_0` "
-                        + "FROM `a``b` WHERE 1=0",
+                "CREATE ROWSTORE TEMPORARY TABLE `t``mp` (`c``d` text, "
+                        + "`_singlestore_kafka_order` BIGINT NULL, SHARD KEY (`c``d`))",
                 writer.generateCreateTemporaryTableQuery());
         assertEquals("DROP TEMPORARY TABLE IF EXISTS `t``mp`", writer.generateDropTemporaryTableQuery());
         assertEquals(
-                "INSERT INTO `a``b` (`c``d`) SELECT `_singlestore_kafka_column_0` AS `c``d` FROM `t``mp` "
+                "INSERT INTO `a``b` (`c``d`) SELECT `c``d` FROM `t``mp` "
                         + "ORDER BY `_singlestore_kafka_order` ON DUPLICATE KEY UPDATE `age` = `age` + 1",
                 writer.generateInsertQuery());
+    }
+
+    @Test
+    public void omitsShardKeyWhenTheTableHasNone() {
+        String showCreate = "CREATE ROWSTORE REFERENCE TABLE `ref` (\n"
+                + "  `id` int(11) NOT NULL,\n"
+                + "  PRIMARY KEY (`id`)\n"
+                + ")";
+        InsertDbWriter writer = new InsertDbWriter(
+                Collections.singletonList("id"), null, "ref", UPDATE, TEMPORARY_TABLE, showCreate);
+        assertEquals(
+                "CREATE ROWSTORE TEMPORARY TABLE `_incoming` (`id` int(11) NOT NULL, "
+                        + "`_singlestore_kafka_order` BIGINT NULL)",
+                writer.generateCreateTemporaryTableQuery());
+    }
+
+    @Test
+    public void keepsNamedShardKeyConstraint() {
+        String showCreate = "CREATE TABLE `partial` (\n"
+                + "  `id` int(11) NOT NULL,\n"
+                + "  CONSTRAINT `sk` SHARD KEY (`id`),\n"
+                + "  CONSTRAINT `pk` PRIMARY KEY (`id`)\n"
+                + ")";
+        InsertDbWriter writer = new InsertDbWriter(
+                Collections.singletonList("id"), null, "partial", UPDATE, TEMPORARY_TABLE, showCreate);
+        assertEquals(
+                "CREATE ROWSTORE TEMPORARY TABLE `_incoming` (`id` int(11) NOT NULL, "
+                        + "`_singlestore_kafka_order` BIGINT NULL, CONSTRAINT `sk` SHARD KEY (`id`))",
+                writer.generateCreateTemporaryTableQuery());
+    }
+
+    @Test
+    public void keepsUnnamedShardKeyConstraintAndComplexColumnExpressions() {
+        String showCreate = "CREATE TABLE `partial` (\n"
+                + "  `id` int(11) NOT NULL,\n"
+                + "  `label` varchar(50) DEFAULT 'a,b)''c',\n"
+                + "  `computed` AS (concat(`label`, \",\", `id`)) PERSISTED varchar(100),\n"
+                + "  CONSTRAINT SHARD KEY (`id`),\n"
+                + "  KEY `idx` (`label`) USING HASH\n"
+                + ")";
+        InsertDbWriter writer = new InsertDbWriter(
+                Arrays.asList("id", "label"), null, "partial", UPDATE, TEMPORARY_TABLE, showCreate);
+        assertEquals(
+                "CREATE ROWSTORE TEMPORARY TABLE `_incoming` (`id` int(11) NOT NULL, "
+                        + "`label` varchar(50) DEFAULT 'a,b)''c', "
+                        + "`computed` AS (concat(`label`, \",\", `id`)) PERSISTED varchar(100), "
+                        + "`_singlestore_kafka_order` BIGINT NULL, CONSTRAINT SHARD KEY (`id`))",
+                writer.generateCreateTemporaryTableQuery());
     }
 
     @Test
     public void generateQueryWithFilter() {
         InsertDbWriter writer = writer(Arrays.asList("id", "data"), "id > 1", "partial");
         assertEquals(
-                "INSERT INTO `partial` (`id`, `data`) SELECT `_singlestore_kafka_column_0` AS `id`, "
-                        + "`_singlestore_kafka_column_1` AS `data` FROM `_incoming` "
+                "INSERT INTO `partial` (`id`, `data`) SELECT `id`, `data` FROM `_incoming` "
                         + "WHERE id > 1 ORDER BY `_singlestore_kafka_order` "
                         + "ON DUPLICATE KEY UPDATE `data` = VALUES(`data`)",
                 writer.generateInsertQuery());
@@ -61,36 +123,52 @@ public class InsertDbWriterTest {
     @Test
     public void avoidsOrderColumnCollision() {
         List<String> columns = Arrays.asList("_singlestore_kafka_order", "data");
-        InsertDbWriter writer = writer(columns, null, "partial");
+        InsertDbWriter writer = writer(columns, null, "partial", showCreate(columns));
         assertEquals("__singlestore_kafka_order", writer.getOrderColumn());
     }
 
     @Test
     public void avoidsOrderColumnCollisionIgnoringCase() {
-        InsertDbWriter writer = writer(Arrays.asList("_SINGLESTORE_KAFKA_ORDER", "data"), null, "partial");
+        List<String> columns = Arrays.asList("_SINGLESTORE_KAFKA_ORDER", "data");
+        InsertDbWriter writer = writer(columns, null, "partial", showCreate(columns));
         assertEquals("__singlestore_kafka_order", writer.getOrderColumn());
         assertEquals(
                 "INSERT INTO `partial` (`_SINGLESTORE_KAFKA_ORDER`, `data`) "
-                        + "SELECT `_singlestore_kafka_column_0` AS `_SINGLESTORE_KAFKA_ORDER`, "
-                        + "`_singlestore_kafka_column_1` AS `data` FROM `_incoming` "
+                        + "SELECT `_SINGLESTORE_KAFKA_ORDER`, `data` FROM `_incoming` "
                         + "ORDER BY `__singlestore_kafka_order` ON DUPLICATE KEY UPDATE `data` = VALUES(`data`)",
                 writer.generateInsertQuery());
     }
 
     @Test
     public void avoidsRepeatedOrderColumnCollisionIgnoringCase() {
-        InsertDbWriter writer = writer(
-                Arrays.asList("_singlestore_kafka_order", "__SINGLESTORE_KAFKA_ORDER"), null, "partial");
+        List<String> columns = Arrays.asList("_singlestore_kafka_order", "__SINGLESTORE_KAFKA_ORDER");
+        InsertDbWriter writer = writer(columns, null, "partial", showCreate(columns));
         assertEquals("___singlestore_kafka_order", writer.getOrderColumn());
     }
 
     @Test
     public void rejectsMissingAssignmentList() {
         assertThrows(NullPointerException.class,
-                () -> new InsertDbWriter(Collections.singletonList("id"), null, "t", null, TEMPORARY_TABLE));
+                () -> new InsertDbWriter(Collections.singletonList("id"), null, "t", null, TEMPORARY_TABLE, null));
     }
 
     private static InsertDbWriter writer(List<String> columns, String filter, String table) {
-        return new InsertDbWriter(columns, filter, table, UPDATE, TEMPORARY_TABLE);
+        return writer(columns, filter, table, PARTIAL_SHOW_CREATE);
+    }
+
+    private static InsertDbWriter writer(List<String> columns, String filter, String table, String showCreate) {
+        return new InsertDbWriter(columns, filter, table, UPDATE, TEMPORARY_TABLE, showCreate);
+    }
+
+    private static String showCreate(List<String> columns) {
+        StringBuilder body = new StringBuilder();
+        for (String column : columns) {
+            if (body.length() > 0) {
+                body.append(", ");
+            }
+            body.append(SingleStoreDialect.quoteIdentifier(column)).append(" text");
+        }
+        return "CREATE TABLE `partial` (" + body + ", PRIMARY KEY ("
+                + SingleStoreDialect.quoteIdentifier(columns.get(0)) + "))";
     }
 }

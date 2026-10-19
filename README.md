@@ -115,7 +115,7 @@ Keep `singlestore.metadata.allow` enabled. It is strongly recommended. The tempo
 
 Rows are applied in the order they are received. Concurrent tasks that update the same keys in different orders can block each other until SingleStore kills one of the statements.
 
-`singlestore.onDuplicateKeySQL` is inserted directly into the statement and is not SQL-injection safe. It cannot be combined with `singlestore.upsert`. `singlestore.filter` is applied by the final `INSERT ... SELECT`, so rows that fail the predicate are not inserted or updated. In that statement the destination column names are aliases in the `SELECT` list, so the filter relies on SingleStore's support for referencing `SELECT` aliases in `WHERE`. Write the filter against destination column names, as with ordinary `LOAD DATA` writes.
+`singlestore.onDuplicateKeySQL` is inserted directly into the statement and is not SQL-injection safe. It cannot be combined with `singlestore.upsert`. `singlestore.filter` is applied by the final `INSERT ... SELECT`, so rows that fail the predicate are not inserted or updated. The temporary table keeps the destination column names, so write the filter against those names, as with ordinary `LOAD DATA` writes.
 
 Use `fields.blacklist` for top-level record fields that the connector should never write, such as columns with `DEFAULT` or `ON UPDATE`. Blacklisting does not remove a destination column listed in `singlestore.columnToField`. Those columns are still included in the insert, and a missing source field is written as NULL. Leave them out of the explicit mappings and out of the update assignments.
 

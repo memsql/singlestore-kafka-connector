@@ -93,7 +93,9 @@ public class SingleStoreDbWriter {
                                     "No assignment list is configured for table `%s`. Set \"singlestore.onDuplicateKeySQL\" or \"singlestore.onDuplicateKeySQL.%s\".",
                                     table, table));
                         }
-                        InsertDbWriter insertWriter = new InsertDbWriter(config, firstTableRecord, table, onDuplicateKeySQL);
+                        String showCreateTable = JdbcHelper.showCreateTable(connection, table);
+                        InsertDbWriter insertWriter = new InsertDbWriter(
+                                config, firstTableRecord, table, onDuplicateKeySQL, showCreateTable);
                         insertWriters.put(table, insertWriter);
 
                         String createTemporaryTable = insertWriter.generateCreateTemporaryTableQuery();
@@ -102,7 +104,7 @@ public class SingleStoreDbWriter {
 
                         CsvDbWriter csvWriter = new CsvDbWriter(
                                 config, insertWriter.getTemporaryTable(), table, insertWriter.getColumns(),
-                                null, false, insertWriter.getOrderColumn(), insertWriter.getStagingColumns());
+                                null, false, insertWriter.getOrderColumn(), null);
                         writeWithLoadData(stmt, csvWriter, tableRecords);
                     }
                 }

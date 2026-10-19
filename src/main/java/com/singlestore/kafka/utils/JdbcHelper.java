@@ -82,6 +82,18 @@ public class JdbcHelper {
         }
     }
 
+    public static String showCreateTable(Connection connection, String table) throws SQLException {
+        String query = "SHOW CREATE TABLE " + SingleStoreDialect.quoteIdentifier(table);
+        log.trace("Executing SQL:\n{}", query);
+        try (Statement stmt = connection.createStatement();
+             ResultSet resultSet = stmt.executeQuery(query)) {
+            if (!resultSet.next()) {
+                throw new ConnectException(String.format("Table `%s` does not exist", table));
+            }
+            return resultSet.getString("Create Table");
+        }
+    }
+
     public static boolean isReferenceTable(SingleStoreSinkConfig config, String table) {
         String database = config.database;
         try (Connection connection = getDDLConnection(config);
