@@ -3,6 +3,7 @@ package com.singlestore.kafka.sink;
 import org.apache.kafka.connect.sink.SinkRecord;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -28,23 +29,20 @@ public class InsertDbWriter {
     private final String temporaryTable;
     private final String orderColumn;
 
-    public InsertDbWriter(SingleStoreSinkConfig config, SinkRecord record, String table) {
+    public InsertDbWriter(SingleStoreSinkConfig config, SinkRecord record, String table, String onDuplicateKeySQL) {
         this(CsvDbWriter.resolveColumns(config, record, table),
                 config.filter,
                 table,
-                config.onDuplicateKeySQL,
+                onDuplicateKeySQL,
                 TEMPORARY_TABLE_PREFIX + UUID.randomUUID().toString().replace("-", ""));
     }
 
     InsertDbWriter(List<String> columns, String filter, String table,
                    String onDuplicateKeySQL, String temporaryTable) {
-        if (onDuplicateKeySQL == null || onDuplicateKeySQL.trim().isEmpty()) {
-            throw new IllegalArgumentException("onDuplicateKeySQL must not be empty");
-        }
         this.columns = columns;
         this.filter = filter;
         this.table = table;
-        this.onDuplicateKeySQL = onDuplicateKeySQL;
+        this.onDuplicateKeySQL = Objects.requireNonNull(onDuplicateKeySQL, "onDuplicateKeySQL");
         this.temporaryTable = temporaryTable;
         this.orderColumn = uniqueOrderColumn(columns);
         this.stagingColumns = IntStream.range(0, columns.size())
@@ -59,6 +57,10 @@ public class InsertDbWriter {
                 SingleStoreDialect.quoteIdentifier(orderColumn),
                 aliasedColumns(columns, stagingColumns),
                 SingleStoreDialect.quoteIdentifier(table));
+    }
+
+    public String generateDropTemporaryTableQuery() {
+        return "DROP TEMPORARY TABLE IF EXISTS " + SingleStoreDialect.quoteIdentifier(temporaryTable);
     }
 
     public String generateInsertQuery() {
@@ -99,9 +101,18 @@ public class InsertDbWriter {
 
     private static String uniqueOrderColumn(List<String> columns) {
         String result = ORDER_COLUMN;
-        while (columns.contains(result)) {
+        while (containsIgnoreCase(columns, result)) {
             result = "_" + result;
         }
         return result;
+    }
+
+    private static boolean containsIgnoreCase(List<String> columns, String candidate) {
+        for (String column : columns) {
+            if (column.equalsIgnoreCase(candidate)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

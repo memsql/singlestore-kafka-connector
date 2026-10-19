@@ -362,6 +362,7 @@ public class OnDuplicateKeyUpdateTest extends IntegrationBase {
                 .build();
         Map<String, String> props = ConfigHelper.getMinimalRequiredParameters();
         props.put(SingleStoreSinkConfig.METADATA_TABLE_ALLOW, "true");
+        props.put(SingleStoreSinkConfig.ON_DUPLICATE_KEY_UPDATE, "true");
         props.put(SingleStoreSinkConfig.ON_DUPLICATE_KEY_SQL, UPDATE_DATA);
 
         Struct first = new Struct(schema).put("id", 1).put("data", "a").put("keep", "keep");
@@ -399,6 +400,7 @@ public class OnDuplicateKeyUpdateTest extends IntegrationBase {
                 .build();
         Map<String, String> props = ConfigHelper.getMinimalRequiredParameters();
         props.put(SingleStoreSinkConfig.METADATA_TABLE_ALLOW, "true");
+        props.put(SingleStoreSinkConfig.ON_DUPLICATE_KEY_UPDATE, "true");
         props.put(SingleStoreSinkConfig.ON_DUPLICATE_KEY_SQL, "this is not valid SQL");
 
         SingleStoreSinkTask failingTask = new SingleStoreSinkTask();
@@ -611,8 +613,78 @@ public class OnDuplicateKeyUpdateTest extends IntegrationBase {
         assertFalse(rs.next());
     }
 
+    @Test
+    public void perTableAssignmentLists() throws SQLException {
+        Schema schema = SchemaBuilder.struct()
+                .field("tableId", Schema.STRING_SCHEMA)
+                .field("id", Schema.INT32_SCHEMA)
+                .field("data", Schema.STRING_SCHEMA)
+                .field("keep", Schema.STRING_SCHEMA)
+                .build();
+        Map<String, String> props = new HashMap<>();
+        props.put(SingleStoreSinkConfig.ON_DUPLICATE_KEY_UPDATE, "true");
+        props.put(SingleStoreSinkConfig.ON_DUPLICATE_KEY_SQL + ".odku_per_table1", "`data` = VALUES(`data`)");
+        props.put(SingleStoreSinkConfig.ON_DUPLICATE_KEY_SQL + ".odku_per_table2", "`keep` = VALUES(`keep`)");
+        props.put("singlestore.recordToTable.mappingField", "tableId");
+        props.put("singlestore.recordToTable.mapping.t1", "odku_per_table1");
+        props.put("singlestore.recordToTable.mapping.t2", "odku_per_table2");
+        String columns = "tableId TEXT, id INT PRIMARY KEY, data TEXT, keep TEXT";
+        executeQuery("DROP TABLE IF EXISTS testdb.odku_per_table1");
+        executeQuery("DROP TABLE IF EXISTS testdb.odku_per_table2");
+        executeQuery(rowstore("odku_per_table1", columns));
+        executeQuery(rowstore("odku_per_table2", columns));
+        executeQuery("INSERT INTO testdb.odku_per_table1 VALUES ('t1', 1, 'a', 'keep1')");
+        executeQuery("INSERT INTO testdb.odku_per_table2 VALUES ('t2', 1, 'b', 'keep2')");
+
+        put(props, Arrays.asList(
+                multiTableRow(schema, "t1", 1, "a2", "changed"),
+                multiTableRow(schema, "t2", 1, "b2", "changed")
+        ), null, false);
+
+        ResultSet rs = executeQueryWithResultSet("SELECT data, keep FROM testdb.odku_per_table1");
+        assertTrue(rs.next());
+        assertEquals("a2", rs.getString("data"));
+        assertEquals("keep1", rs.getString("keep"));
+        assertFalse(rs.next());
+
+        rs = executeQueryWithResultSet("SELECT data, keep FROM testdb.odku_per_table2");
+        assertTrue(rs.next());
+        assertEquals("b", rs.getString("data"));
+        assertEquals("changed", rs.getString("keep"));
+        assertFalse(rs.next());
+    }
+
+    @Test
+    public void mixedCaseOrderColumnUsesArrivalOrder() throws SQLException {
+        String order = "_SINGLESTORE_KAFKA_ORDER";
+        Schema schema = SchemaBuilder.struct()
+                .field("id", Schema.INT32_SCHEMA)
+                .field("data", Schema.STRING_SCHEMA)
+                .field(order, Schema.INT32_SCHEMA)
+                .build();
+        String table = "odku_order_case";
+        Map<String, String> props = props("`data` = VALUES(`data`)");
+        executeQuery("DROP TABLE IF EXISTS testdb." + table);
+        executeQuery(rowstore(table, "id INT PRIMARY KEY, data TEXT, `" + order + "` INT"));
+        executeQuery("INSERT INTO testdb." + table + " VALUES (1, 'old', 0)");
+
+        Struct first = new Struct(schema).put("id", 1).put("data", "first").put(order, 2);
+        Struct second = new Struct(schema).put("id", 1).put("data", "second").put(order, 1);
+        put(props, Arrays.asList(
+                createRecord(schema, first, table),
+                createRecord(schema, second, table)
+        ), null, false);
+
+        ResultSet rs = executeQueryWithResultSet("SELECT data, `" + order + "` FROM testdb." + table);
+        assertTrue(rs.next());
+        assertEquals("second", rs.getString("data"));
+        assertEquals(0, rs.getInt(order));
+        assertFalse(rs.next());
+    }
+
     private static Map<String, String> props(String onDuplicateKeySQL) {
         Map<String, String> props = new HashMap<>();
+        props.put(SingleStoreSinkConfig.ON_DUPLICATE_KEY_UPDATE, "true");
         props.put(SingleStoreSinkConfig.ON_DUPLICATE_KEY_SQL, onDuplicateKeySQL);
         return props;
     }

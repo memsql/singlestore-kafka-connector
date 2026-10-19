@@ -81,53 +81,77 @@ public class SingleStoreDbWriter {
             }
 
             Map<String, InsertDbWriter> insertWriters = new HashMap<>();
-            if (config.onDuplicateKeySQL != null) {
-                for (Map.Entry<String, Collection<SinkRecord>> entry: tableToRecords.entrySet()) {
-                    String table = entry.getKey();
-                    Collection<SinkRecord> tableRecords = entry.getValue();
-                    SinkRecord firstTableRecord = tableRecords.iterator().next();
-                    InsertDbWriter insertWriter = new InsertDbWriter(config, firstTableRecord, table);
-                    insertWriters.put(table, insertWriter);
+            try {
+                if (config.onDuplicateKeyUpdate) {
+                    for (Map.Entry<String, Collection<SinkRecord>> entry: tableToRecords.entrySet()) {
+                        String table = entry.getKey();
+                        Collection<SinkRecord> tableRecords = entry.getValue();
+                        SinkRecord firstTableRecord = tableRecords.iterator().next();
+                        String onDuplicateKeySQL = config.onDuplicateKeySql(table);
+                        if (onDuplicateKeySQL == null) {
+                            throw new ConnectException(String.format(
+                                    "No assignment list is configured for table `%s`. Set \"singlestore.onDuplicateKeySQL\" or \"singlestore.onDuplicateKeySQL.%s\".",
+                                    table, table));
+                        }
+                        InsertDbWriter insertWriter = new InsertDbWriter(config, firstTableRecord, table, onDuplicateKeySQL);
+                        insertWriters.put(table, insertWriter);
 
-                    String createTemporaryTable = insertWriter.generateCreateTemporaryTableQuery();
-                    log.trace("Executing SQL:\n{}", createTemporaryTable);
-                    stmt.executeUpdate(createTemporaryTable);
+                        String createTemporaryTable = insertWriter.generateCreateTemporaryTableQuery();
+                        log.trace("Executing SQL:\n{}", createTemporaryTable);
+                        stmt.executeUpdate(createTemporaryTable);
 
-                    CsvDbWriter csvWriter = new CsvDbWriter(
-                            config, insertWriter.getTemporaryTable(), table, insertWriter.getColumns(),
-                            null, false, insertWriter.getOrderColumn(), insertWriter.getStagingColumns());
-                    writeWithLoadData(stmt, csvWriter, tableRecords);
+                        CsvDbWriter csvWriter = new CsvDbWriter(
+                                config, insertWriter.getTemporaryTable(), table, insertWriter.getColumns(),
+                                null, false, insertWriter.getOrderColumn(), insertWriter.getStagingColumns());
+                        writeWithLoadData(stmt, csvWriter, tableRecords);
+                    }
                 }
-            }
 
-            if (config.metadataTableAllow) {
-                connection.setAutoCommit(false);
-                Integer recordsCount = records.size();
-                try (PreparedStatement metadataStmt = SingleStoreDialect.getInsertIntoMetadataQuery(connection, config.metadataTableName, metaId, recordsCount)) {
-                    log.trace("Executing SQL:\n{}", metadataStmt);
-                    metadataStmt.executeUpdate();
+                if (config.metadataTableAllow) {
+                    connection.setAutoCommit(false);
+                    Integer recordsCount = records.size();
+                    try (PreparedStatement metadataStmt = SingleStoreDialect.getInsertIntoMetadataQuery(connection, config.metadataTableName, metaId, recordsCount)) {
+                        log.trace("Executing SQL:\n{}", metadataStmt);
+                        metadataStmt.executeUpdate();
+                    }
                 }
-            }
 
-            if (config.onDuplicateKeySQL != null) {
-                for (InsertDbWriter insertWriter: insertWriters.values()) {
-                    String insert = insertWriter.generateInsertQuery();
-                    log.trace("Executing SQL:\n{}", insert);
-                    stmt.executeUpdate(insert);
+                if (config.onDuplicateKeyUpdate) {
+                    for (InsertDbWriter insertWriter: insertWriters.values()) {
+                        String insert = insertWriter.generateInsertQuery();
+                        log.trace("Executing SQL:\n{}", insert);
+                        stmt.executeUpdate(insert);
+                    }
+                } else {
+                    // TODO: investigate parallelization of this loop
+                    for (Map.Entry<String, Collection<SinkRecord>> entry: tableToRecords.entrySet()) {
+                        SinkRecord firstTableRecord = entry.getValue().iterator().next();
+                        writeWithLoadData(stmt, new CsvDbWriter(config, firstTableRecord, entry.getKey()), entry.getValue());
+                    }
                 }
-            } else {
-                // TODO: investigate parallelization of this loop
-                for (Map.Entry<String, Collection<SinkRecord>> entry: tableToRecords.entrySet()) {
-                    SinkRecord firstTableRecord = entry.getValue().iterator().next();
-                    writeWithLoadData(stmt, new CsvDbWriter(config, firstTableRecord, entry.getKey()), entry.getValue());
-                }
-            }
 
-            if (config.metadataTableAllow) {
-                connection.commit();
+                if (config.metadataTableAllow) {
+                    connection.commit();
+                }
+            } finally {
+                // DROP TEMPORARY TABLE does not commit the current transaction. Drop staging
+                // tables before this connection is closed or reused.
+                dropTemporaryTables(stmt, insertWriters);
             }
         } catch (IOException ex) {
             throw new ConnectException(ex.getLocalizedMessage());
+        }
+    }
+
+    private void dropTemporaryTables(Statement stmt, Map<String, InsertDbWriter> insertWriters) {
+        for (InsertDbWriter insertWriter : insertWriters.values()) {
+            String drop = insertWriter.generateDropTemporaryTableQuery();
+            try {
+                log.trace("Executing SQL:\n{}", drop);
+                stmt.executeUpdate(drop);
+            } catch (SQLException ex) {
+                log.warn("Failed to drop temporary table {}", insertWriter.getTemporaryTable(), ex);
+            }
         }
     }
 

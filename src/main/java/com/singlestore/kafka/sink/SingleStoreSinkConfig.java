@@ -127,17 +127,26 @@ public class SingleStoreSinkConfig extends AbstractConfig {
 
     private static  final String UPSERT = "singlestore.upsert";
     private static  final String UPSERT_DOC = "Replaces the existing row when a duplicate key is found (LOAD DATA REPLACE). "
-            + "Use singlestore.onDuplicateKeySQL to update selected columns and leave the others unchanged.";
+            + "Use singlestore.onDuplicateKeyUpdate to update selected columns and leave the others unchanged.";
     private static  final String UPSERT_DISPLAY = "Change the behavior to update the row with the same key instead of throwing an error";
 
+    public static final String ON_DUPLICATE_KEY_UPDATE = "singlestore.onDuplicateKeyUpdate";
+    private static final String ON_DUPLICATE_KEY_UPDATE_DOC =
+            "Load rows into a temporary table, then insert them with INSERT ... ON DUPLICATE KEY UPDATE (default: false). "
+                    + "Set the assignment list with singlestore.onDuplicateKeySQL, and override it per table with "
+                    + "singlestore.onDuplicateKeySQL.<tableName>. Mutually exclusive with singlestore.upsert.";
+    private static final String ON_DUPLICATE_KEY_UPDATE_DISPLAY = "On Duplicate Key Update";
+
     public static final String ON_DUPLICATE_KEY_SQL = "singlestore.onDuplicateKeySQL";
+    private static final String ON_DUPLICATE_KEY_SQL_PREFIX = ON_DUPLICATE_KEY_SQL + ".";
     private static final String ON_DUPLICATE_KEY_SQL_DOC =
-            "Assignment list for INSERT ... ON DUPLICATE KEY UPDATE. Rows are loaded into a temporary table, then inserted "
-                    + "into the destination table. On a duplicate PRIMARY KEY or UNIQUE index, only these assignments run, so columns omitted "
+            "Default assignment list for INSERT ... ON DUPLICATE KEY UPDATE. Requires singlestore.onDuplicateKeyUpdate. "
+                    + "Override one table with singlestore.onDuplicateKeySQL.<tableName>. "
+                    + "On a duplicate PRIMARY KEY or UNIQUE index, only these assignments run, so columns omitted "
                     + "from the list keep their current values. Example: `data` = VALUES(`data`). "
-                    + "The value is inserted directly into the query and is not SQL-injection safe. "
-                    + "Mutually exclusive with singlestore.upsert.";
+                    + "The value is inserted directly into the query and is not SQL-injection safe.";
     private static final String ON_DUPLICATE_KEY_SQL_DISPLAY = "On Duplicate Key SQL";
+    private static final ConfigDef.Validator NON_EMPTY_STRING = new NonEmptyStringValidator();
 
     private static final ConfigDef.Range NON_NEGATIVE_INT_VALIDATOR = ConfigDef.Range.atLeast(0);
 
@@ -361,13 +370,23 @@ public class SingleStoreSinkConfig extends AbstractConfig {
                 4,
                 ConfigDef.Width.MEDIUM,
                 UPSERT_DISPLAY)
+            .define(ON_DUPLICATE_KEY_UPDATE,
+                ConfigDef.Type.BOOLEAN,
+                false,
+                ConfigDef.Importance.MEDIUM,
+                ON_DUPLICATE_KEY_UPDATE_DOC,
+                SINGLESTORE_GROUP,
+                5,
+                ConfigDef.Width.MEDIUM,
+                ON_DUPLICATE_KEY_UPDATE_DISPLAY)
             .define(ON_DUPLICATE_KEY_SQL,
                 ConfigDef.Type.STRING,
                 null,
+                NON_EMPTY_STRING,
                 ConfigDef.Importance.MEDIUM,
                 ON_DUPLICATE_KEY_SQL_DOC,
                 SINGLESTORE_GROUP,
-                5,
+                6,
                 ConfigDef.Width.LONG,
                 ON_DUPLICATE_KEY_SQL_DISPLAY);
 
@@ -391,7 +410,9 @@ public class SingleStoreSinkConfig extends AbstractConfig {
     public final String recordToTableMappingField;
     public final Map<String, String> recordToTableMap;
     public boolean upsert;
+    public final boolean onDuplicateKeyUpdate;
     public final String onDuplicateKeySQL;
+    public final Map<String, String> tableToOnDuplicateKeySQL;
     public final Map<String, String> customMetricTags;
 
 
@@ -443,11 +464,21 @@ public class SingleStoreSinkConfig extends AbstractConfig {
         this.recordToTableMappingField = getString(RECORD_TO_TABLE_MAPPING_FIELD);
         this.recordToTableMap = getRecordToTableMap(props);
         this.upsert = getBoolean(UPSERT);
+        this.onDuplicateKeyUpdate = getBoolean(ON_DUPLICATE_KEY_UPDATE);
         this.onDuplicateKeySQL = getOnDuplicateKeySQL();
+        this.tableToOnDuplicateKeySQL = getTableToOnDuplicateKeySQL(props);
         this.customMetricTags = getCustomMetricTags();
 
-        if (this.upsert && this.onDuplicateKeySQL != null) {
-            throw new ConfigException("Configurations \"singlestore.upsert\" and \"singlestore.onDuplicateKeySQL\" are mutually exclusive");
+        if (this.upsert && this.onDuplicateKeyUpdate) {
+            throw new ConfigException("Configurations \"singlestore.upsert\" and \"singlestore.onDuplicateKeyUpdate\" are mutually exclusive");
+        }
+
+        if (!this.onDuplicateKeyUpdate && (this.onDuplicateKeySQL != null || !this.tableToOnDuplicateKeySQL.isEmpty())) {
+            throw new ConfigException("Configurations \"singlestore.onDuplicateKeySQL\" and \"singlestore.onDuplicateKeySQL.<tableName>\" require \"singlestore.onDuplicateKeyUpdate\"");
+        }
+
+        if (this.onDuplicateKeyUpdate && this.onDuplicateKeySQL == null && this.tableToOnDuplicateKeySQL.isEmpty()) {
+            throw new ConfigException("Configuration \"singlestore.onDuplicateKeyUpdate\" requires \"singlestore.onDuplicateKeySQL\" or \"singlestore.onDuplicateKeySQL.<tableName>\"");
         }
 
         if (!topicToTableMap.isEmpty() && recordToTableMappingField != null) {
@@ -469,16 +500,58 @@ public class SingleStoreSinkConfig extends AbstractConfig {
         }
     }
 
+    public String onDuplicateKeySql(String table) {
+        String specific = tableToOnDuplicateKeySQL.get(table);
+        if (specific != null) {
+            return specific;
+        }
+        return onDuplicateKeySQL;
+    }
+
     private String getOnDuplicateKeySQL() {
         String value = getString(ON_DUPLICATE_KEY_SQL);
         if (value == null) {
             return null;
         }
-        String trimmed = value.trim();
-        if (trimmed.isEmpty()) {
-            throw new ConfigException("Configuration \"singlestore.onDuplicateKeySQL\" must not be empty");
+        return value.trim();
+    }
+
+    private Map<String, String> getTableToOnDuplicateKeySQL(Map<String, String> props) {
+        Map<String, String> map = new HashMap<>();
+        for (Map.Entry<String, String> entry : props.entrySet()) {
+            String key = entry.getKey();
+            if (!key.startsWith(ON_DUPLICATE_KEY_SQL_PREFIX)) {
+                continue;
+            }
+            String table = key.substring(ON_DUPLICATE_KEY_SQL_PREFIX.length());
+            if (table.isEmpty()) {
+                throw new ConfigException(String.format("Invalid configuration \"%s\"", key));
+            }
+            String value = entry.getValue();
+            if (value == null) {
+                throw new ConfigException(key, null, "must not be empty");
+            }
+            NON_EMPTY_STRING.ensureValid(key, value);
+            map.put(table, value.trim());
         }
-        return trimmed;
+        return map;
+    }
+
+    private static final class NonEmptyStringValidator implements ConfigDef.Validator {
+        @Override
+        public void ensureValid(String name, Object value) {
+            if (value == null) {
+                return;
+            }
+            if (!(value instanceof String) || ((String) value).trim().isEmpty()) {
+                throw new ConfigException(name, value, "must not be empty");
+            }
+        }
+
+        @Override
+        public String toString() {
+            return "non-empty string";
+        }
     }
 
     private DataCompression getDataCompression() {

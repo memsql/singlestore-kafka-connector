@@ -23,6 +23,7 @@ public class InsertDbWriterTest {
                         + "AS `_singlestore_kafka_order`, `id` AS `_singlestore_kafka_column_0`, "
                         + "`data` AS `_singlestore_kafka_column_1` FROM `partial` WHERE 1=0",
                 writer.generateCreateTemporaryTableQuery());
+        assertEquals("DROP TEMPORARY TABLE IF EXISTS `_incoming`", writer.generateDropTemporaryTableQuery());
         assertEquals(
                 "INSERT INTO `partial` (`id`, `data`) SELECT `_singlestore_kafka_column_0` AS `id`, "
                         + "`_singlestore_kafka_column_1` AS `data` FROM `_incoming` "
@@ -39,6 +40,7 @@ public class InsertDbWriterTest {
                         + "AS `_singlestore_kafka_order`, `c``d` AS `_singlestore_kafka_column_0` "
                         + "FROM `a``b` WHERE 1=0",
                 writer.generateCreateTemporaryTableQuery());
+        assertEquals("DROP TEMPORARY TABLE IF EXISTS `t``mp`", writer.generateDropTemporaryTableQuery());
         assertEquals(
                 "INSERT INTO `a``b` (`c``d`) SELECT `_singlestore_kafka_column_0` AS `c``d` FROM `t``mp` "
                         + "ORDER BY `_singlestore_kafka_order` ON DUPLICATE KEY UPDATE `age` = `age` + 1",
@@ -64,9 +66,28 @@ public class InsertDbWriterTest {
     }
 
     @Test
-    public void rejectsInvalidArguments() {
-        assertThrows(IllegalArgumentException.class,
-                () -> new InsertDbWriter(Collections.singletonList("id"), null, "t", " ", TEMPORARY_TABLE));
+    public void avoidsOrderColumnCollisionIgnoringCase() {
+        InsertDbWriter writer = writer(Arrays.asList("_SINGLESTORE_KAFKA_ORDER", "data"), null, "partial");
+        assertEquals("__singlestore_kafka_order", writer.getOrderColumn());
+        assertEquals(
+                "INSERT INTO `partial` (`_SINGLESTORE_KAFKA_ORDER`, `data`) "
+                        + "SELECT `_singlestore_kafka_column_0` AS `_SINGLESTORE_KAFKA_ORDER`, "
+                        + "`_singlestore_kafka_column_1` AS `data` FROM `_incoming` "
+                        + "ORDER BY `__singlestore_kafka_order` ON DUPLICATE KEY UPDATE `data` = VALUES(`data`)",
+                writer.generateInsertQuery());
+    }
+
+    @Test
+    public void avoidsRepeatedOrderColumnCollisionIgnoringCase() {
+        InsertDbWriter writer = writer(
+                Arrays.asList("_singlestore_kafka_order", "__SINGLESTORE_KAFKA_ORDER"), null, "partial");
+        assertEquals("___singlestore_kafka_order", writer.getOrderColumn());
+    }
+
+    @Test
+    public void rejectsMissingAssignmentList() {
+        assertThrows(NullPointerException.class,
+                () -> new InsertDbWriter(Collections.singletonList("id"), null, "t", null, TEMPORARY_TABLE));
     }
 
     private static InsertDbWriter writer(List<String> columns, String filter, String table) {
