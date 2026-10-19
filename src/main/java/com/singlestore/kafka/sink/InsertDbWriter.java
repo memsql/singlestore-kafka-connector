@@ -28,7 +28,6 @@ public class InsertDbWriter {
     private static final String STAGING_COLUMN_PREFIX = "_singlestore_kafka_column_";
     private static final String SOURCE_ALIAS = "_singlestore_kafka_src";
     // Fixed-width hash of the case-folded destination name. The same table keeps the same
-    // staging name, so compiled plans can be reused, and long names are not truncated.
     private static final String TEMPORARY_TABLE_PREFIX = "_ssk_";
 
     private final List<String> columns;
