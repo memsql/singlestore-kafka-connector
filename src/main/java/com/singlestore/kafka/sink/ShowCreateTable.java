@@ -175,11 +175,14 @@ class ShowCreateTable {
     }
 
     /**
-     * Removes AUTO_INCREMENT [AS SEQUENCE] from a column definition. SingleStore requires an
-     * AUTO_INCREMENT column to be part of an index, and indexes are not copied to the staging table.
+     * Removes AUTO_INCREMENT [AS SEQUENCE] from a column definition and makes that column
+     * nullable. SingleStore requires an AUTO_INCREMENT column to be part of an index, and
+     * indexes are not copied to the staging table. A nullable staging column lets LOAD DATA
+     * omit it, so the destination table keeps an existing value or generates a new one.
      */
     private static String stripAutoIncrement(String column) {
         StringBuilder result = new StringBuilder();
+        boolean removed = false;
         int i = 0;
         while (i < column.length()) {
             char c = column.charAt(i);
@@ -197,6 +200,32 @@ class ShowCreateTable {
                     while (result.length() > 0 && Character.isWhitespace(result.charAt(result.length() - 1))) {
                         result.setLength(result.length() - 1);
                     }
+                    removed = true;
+                    continue;
+                }
+            }
+            result.append(c);
+            i++;
+        }
+        return removed ? makeNullable(result.toString()) : result.toString();
+    }
+
+    private static String makeNullable(String column) {
+        StringBuilder result = new StringBuilder();
+        int i = 0;
+        while (i < column.length()) {
+            char c = column.charAt(i);
+            if (isQuote(c)) {
+                int end = quotedEnd(column, i, c) + 1;
+                result.append(column, i, end);
+                i = end;
+                continue;
+            }
+            if (!Character.isWhitespace(c) && (i == 0 || !isIdentifierCharacter(column.charAt(i - 1)))) {
+                int end = keywordsEnd(column, i, "NOT", "NULL");
+                if (end >= 0) {
+                    result.append("NULL");
+                    i = end;
                     continue;
                 }
             }

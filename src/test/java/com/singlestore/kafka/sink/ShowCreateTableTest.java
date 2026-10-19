@@ -88,11 +88,12 @@ public class ShowCreateTableTest {
 
     @Test
     public void stripsAutoIncrement() {
-        assertColumn("`id` bigint(20) NOT NULL AUTO_INCREMENT", "`id` bigint(20) NOT NULL");
-        assertColumn("`id` bigint(20) NOT NULL auto_increment", "`id` bigint(20) NOT NULL");
-        assertColumn("`id` int(11) NOT NULL AUTO_INCREMENT AS SEQUENCE", "`id` int(11) NOT NULL");
+        assertColumn("`id` bigint(20) NOT NULL AUTO_INCREMENT", "`id` bigint(20) NULL");
+        assertColumn("`id` bigint(20) NOT NULL auto_increment", "`id` bigint(20) NULL");
+        assertColumn("`id` int(11) NOT NULL AUTO_INCREMENT AS SEQUENCE", "`id` int(11) NULL");
+        assertColumn("`id` bigint(20) AUTO_INCREMENT NOT NULL", "`id` bigint(20) NULL");
         assertColumn("`id` int(11) AUTO_INCREMENT  AS  SEQUENCE SPARSE", "`id` int(11) SPARSE");
-        assertColumn("`id` bigint(20) AUTO_INCREMENT COMMENT 'id'", "`id` bigint(20) COMMENT 'id'");
+        assertColumn("`id` bigint(20) AUTO_INCREMENT COMMENT 'NOT NULL'", "`id` bigint(20) COMMENT 'NOT NULL'");
     }
 
     @Test

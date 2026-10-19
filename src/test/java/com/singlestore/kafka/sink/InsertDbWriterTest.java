@@ -9,7 +9,6 @@ import java.util.List;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
 
 public class InsertDbWriterTest {
 
@@ -172,24 +171,17 @@ public class InsertDbWriterTest {
 
     @Test
     public void temporaryTableNameIsStableAndHashed() {
-        String ordersTable = InsertDbWriter.temporaryTableName("orders");
-        assertTrue(ordersTable.startsWith("_ssk_orders_"));
-        assertEquals(76, ordersTable.length());
+        String ordersTable = "_ssk_1c168adb00d208e42f93314529f1fa9c0427eb63233ceda95a5db52b7012a719";
         assertEquals(ordersTable, InsertDbWriter.temporaryTableName("orders"));
+        assertEquals(69, ordersTable.length());
+        assertEquals(ordersTable, InsertDbWriter.temporaryTableName("Orders"));
         assertNotEquals(ordersTable, InsertDbWriter.temporaryTableName("orders2"));
-
-        String longName = repeat('a', 300);
-        String temporaryTable = InsertDbWriter.temporaryTableName(longName);
-        assertTrue(temporaryTable.startsWith("_ssk_" + repeat('a', 128) + "_"));
-        assertEquals(198, temporaryTable.length());
+        assertNotEquals(ordersTable, InsertDbWriter.temporaryTableName("_ssk_orders"));
 
         assertNotEquals(
                 InsertDbWriter.temporaryTableName(repeat('a', 300) + "1"),
                 InsertDbWriter.temporaryTableName(repeat('a', 300) + "2"));
-
-        String supplementaryCharacterAtLimit = repeat('a', 127) + "\uD83D\uDE00" + repeat('b', 130);
-        assertTrue(InsertDbWriter.temporaryTableName(supplementaryCharacterAtLimit)
-                .startsWith("_ssk_" + repeat('a', 127) + "\uD83D\uDE00_"));
+        assertEquals(69, InsertDbWriter.temporaryTableName(repeat('a', 300)).length());
     }
 
     @Test
@@ -205,7 +197,7 @@ public class InsertDbWriterTest {
         InsertDbWriter writer = new InsertDbWriter(
                 Arrays.asList("biz", "data"), null, "auto", UPDATE, TEMPORARY_TABLE, showCreate);
         assertEquals(
-                "CREATE ROWSTORE TEMPORARY TABLE `_incoming` (`id` bigint(20) NOT NULL, "
+                "CREATE ROWSTORE TEMPORARY TABLE `_incoming` (`id` bigint(20) NULL, "
                         + "`biz` int(11) NOT NULL, `data` text, "
                         + "`_singlestore_kafka_order` BIGINT NULL, SHARD KEY `__SHARDKEY` (`biz`))",
                 writer.generateCreateTemporaryTableQuery());

@@ -7,6 +7,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.StringJoiner;
 
@@ -26,10 +27,9 @@ public class InsertDbWriter {
     // both tables.
     private static final String STAGING_COLUMN_PREFIX = "_singlestore_kafka_column_";
     private static final String SOURCE_ALIAS = "_singlestore_kafka_src";
-    // The temporary table name must be stable and unique to the destination table so
-    // SingleStore can reuse compiled plans without collisions in multi-table batches.
+    // Fixed-width hash of the case-folded destination name. The same table keeps the same
+    // staging name, so compiled plans can be reused, and long names are not truncated.
     private static final String TEMPORARY_TABLE_PREFIX = "_ssk_";
-    private static final int TEMPORARY_TABLE_PREFIX_CHARACTERS = 128;
 
     private final List<String> columns;
     private final String filter;
@@ -125,16 +125,7 @@ public class InsertDbWriter {
     }
 
     static String temporaryTableName(String table) {
-        return TEMPORARY_TABLE_PREFIX
-                + characterPrefix(table, TEMPORARY_TABLE_PREFIX_CHARACTERS)
-                + "_"
-                + sha256(table);
-    }
-
-    private static String characterPrefix(String value, int maxCharacters) {
-        int characterCount = value.codePointCount(0, value.length());
-        int end = value.offsetByCodePoints(0, Math.min(characterCount, maxCharacters));
-        return value.substring(0, end);
+        return TEMPORARY_TABLE_PREFIX + sha256(table.toLowerCase(Locale.ROOT));
     }
 
     private static String sha256(String value) {
