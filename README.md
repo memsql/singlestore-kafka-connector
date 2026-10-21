@@ -111,31 +111,15 @@ For a row `(id=1, data='old', created_at='2020-01-01')` and an incoming record `
 
 The assignment list can also be an expression, for example `` `age` = `age` + 1 ``.
 
-Keep `singlestore.metadata.allow` enabled. It is strongly recommended. The temporary staging load is session-local and does not modify the destination table. The destination updates follow the same transaction behavior as ordinary `LOAD DATA` writes. With metadata disabled, each destination table commits separately. If a later table fails, earlier tables keep their updates and Kafka retries the batch. Assignments such as `` `data` = VALUES(`data`) `` write the same values again. Expressions such as `` `age` = `age` + 1 `` run again.
+Keep `singlestore.metadata.allow` enabled. With metadata disabled, each destination table commits separately. If a later table fails, earlier tables keep their updates and Kafka retries the batch. Assignments such as `` `data` = VALUES(`data`) `` write the same values again. Expressions such as `` `age` = `age` + 1 `` run again.
 
-Rows are applied in the order they are received. When a batch contains the same key more than once, the last record wins for `VALUES(...)` assignments, and expressions such as `` `age` = `age` + 1 `` run once per record. Concurrent tasks that update the same keys in different orders can block each other until SingleStore kills one of the statements.
+Rows are applied in the order they are received. When a batch contains the same key more than once, the last record wins for `VALUES(...)` assignments, and expressions such as `` `age` = `age` + 1 `` run once per record. Concurrent tasks that update the same keys can block each other.
 
 ### Performance
 
-Each batch is written twice: `LOAD DATA` into the temporary table, then `INSERT ... SELECT` into the destination table. The temporary table copies the destination's column definitions and shard key, so the staged rows already sit on the right partitions. `METADATA_ONLY` is removed because a rowstore temporary table rejects it. A shard key on a `TEXT`, `BLOB`, or `JSON` column is left off for the same reason, and the `INSERT` redistributes those rows.
+Each batch is written twice: once into a temporary table, then into the destination table. This mode is slower than `singlestore.upsert` and plain `LOAD DATA`. If throughput matters, tune the batch size with `consumer.override.max.poll.records` and the parallelism with `tasks.max`.
 
-To apply rows in the order they were received, the final statement ends with `ORDER BY` on an internal sequence column. `EXPLAIN` shows the cost of that ordering. Each partition sorts its rows, the aggregator gathers and merges them into a single ordered stream, and the aggregator performs the insert:
-
-```
-SegmentMerge
-InsertInto db.orders [...] local:yes
-Sort [remote_0._singlestore_kafka_order]
-Gather partitions:all alias:remote_0 parallelism_level:partition
-Project [...]
-Sort [_singlestore_kafka_src._singlestore_kafka_order]
-TableScan db._ssk_<hash> AS _singlestore_kafka_src table_type:sharded_rowstore
-```
-
-Without the ordering, each partition would insert its own rows in parallel, but the result for duplicate keys within a batch would be unpredictable. In a test on SingleStore 9.0 with 262,144 rows over 1,000 keys, the ordered statement left every key with its latest value, while the unordered one did so for only 35 keys. The ordered statement took about 9 times longer (1.1 s against 0.12 s). Expect this mode to be slower than `singlestore.upsert` and plain `LOAD DATA`. If throughput matters, tune the batch size with `consumer.override.max.poll.records` and the parallelism with `tasks.max`.
-
-The temporary table is built from the destination's `SHOW CREATE TABLE` output on every batch, so schema changes to the destination table are picked up immediately.
-
-`singlestore.onDuplicateKeySQL` is inserted directly into the statement and is not SQL-injection safe. It cannot be combined with `singlestore.upsert`. `singlestore.filter` is applied by the staging `LOAD DATA` and again by the final `INSERT ... SELECT`, so rows that fail the predicate are not inserted or updated. `LOAD DATA` checks `NOT NULL` before `WHERE`, so when a filter is set the staging columns are nullable. A filtered-out NULL is not written. A row that passes the filter and contains NULL is still rejected by the destination table. The temporary table keeps the destination column names, so write the filter against those names, as with ordinary `LOAD DATA` writes.
+`singlestore.onDuplicateKeySQL` is inserted directly into the statement and is not SQL-injection safe. It cannot be combined with `singlestore.upsert`. `singlestore.filter` skips rows that fail the predicate, so they are not inserted or updated. Write the filter against the destination column names. A row that passes the filter and contains NULL for a `NOT NULL` column is still rejected.
 
 Use `fields.blacklist` for top-level record fields that the connector should never write, such as columns with `DEFAULT` or `ON UPDATE`. Blacklisting does not remove a destination column listed in `singlestore.columnToField`. Those columns are still included in the insert, and a missing source field is written as NULL. Leave them out of the explicit mappings and out of the update assignments.
 
