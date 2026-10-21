@@ -74,10 +74,32 @@ public class ShowCreateTableHelperTest {
     public void keepsShardKeyVariants() {
         assertShardKey("SHARD KEY `__SHARDKEY` (`id`)");
         assertShardKey("SHARD KEY ()");
-        assertShardKey("shard key (`id`) METADATA_ONLY");
         assertShardKey("CONSTRAINT SHARD KEY (`id`)");
         assertShardKey("CONSTRAINT `s k` SHARD KEY (`id`)");
         assertShardKey("CONSTRAINT sk SHARD KEY (`id`)");
+    }
+
+    @Test
+    public void stripsMetadataOnlyFromRowstoreShardKey() {
+        assertShardKey("shard key (`id`) METADATA_ONLY", "shard key (`id`)");
+        assertShardKey("SHARD KEY `__SHARDKEY` (`id`, `name`) metadata_only", "SHARD KEY `__SHARDKEY` (`id`, `name`)");
+        assertShardKey("SHARD KEY () METADATA_ONLY", "SHARD KEY ()");
+    }
+
+    @Test
+    public void omitsShardKeyOnTextBlobOrJson() {
+        assertOmitsShardKey("`data` text", "SHARD KEY (`data`)");
+        assertOmitsShardKey("`data` tinytext", "SHARD KEY (`data`)");
+        assertOmitsShardKey("`data` mediumtext", "SHARD KEY (`data`)");
+        assertOmitsShardKey("`data` longtext", "SHARD KEY (`data`)");
+        assertOmitsShardKey("`data` blob", "SHARD KEY (`data`)");
+        assertOmitsShardKey("`data` tinyblob", "SHARD KEY (`data`)");
+        assertOmitsShardKey("`data` mediumblob", "SHARD KEY (`data`)");
+        assertOmitsShardKey("`data` longblob", "SHARD KEY (`data`)");
+        assertOmitsShardKey("`doc` JSON", "SHARD KEY (`doc`) METADATA_ONLY");
+        assertOmitsShardKey("`Data` TEXT CHARACTER SET utf8", "SHARD KEY (`DATA`)");
+        assertOmitsShardKey("`id` int, `data` text", "SHARD KEY (`id`, `data`)");
+        assertOmitsShardKey("`id` int, `c` AS (concat(`id`, ',')) PERSISTED text", "SHARD KEY (`c`)");
     }
 
     @Test
@@ -126,10 +148,23 @@ public class ShowCreateTableHelperTest {
     }
 
     private static void assertShardKey(String shardKey) {
+        assertShardKey(shardKey, shardKey);
+    }
+
+    private static void assertShardKey(String shardKey, String expectedShardKey) {
         ShowCreateTableHelper table = ShowCreateTableHelper.parse(
-                "CREATE TABLE `t` (`id` int, PRIMARY KEY (`id`), " + shardKey + ")");
+                "CREATE TABLE `t` (`id` int, `name` varchar(20), PRIMARY KEY (`id`), " + shardKey + ")");
         assertEquals(
-                "CREATE ROWSTORE TEMPORARY TABLE `tmp` (`id` int, `ord` BIGINT NULL, " + shardKey + ")",
+                "CREATE ROWSTORE TEMPORARY TABLE `tmp` (`id` int, `name` varchar(20), `ord` BIGINT NULL, "
+                        + expectedShardKey + ")",
+                table.toCreateTemporaryTable("tmp", "ord"));
+    }
+
+    private static void assertOmitsShardKey(String columns, String shardKey) {
+        ShowCreateTableHelper table = ShowCreateTableHelper.parse(
+                "CREATE TABLE `t` (" + columns + ", " + shardKey + ")");
+        assertEquals(
+                "CREATE ROWSTORE TEMPORARY TABLE `tmp` (" + columns + ", `ord` BIGINT NULL)",
                 table.toCreateTemporaryTable("tmp", "ord"));
     }
 

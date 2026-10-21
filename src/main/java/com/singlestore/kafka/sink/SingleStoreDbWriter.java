@@ -55,6 +55,8 @@ public class SingleStoreDbWriter {
             }
         }
 
+        Map<String, String> assignments = onDuplicateKeyAssignments(tableToRecords);
+
         for (Map.Entry<String, Collection<SinkRecord>> entry: tableToRecords.entrySet()) {
             String table = entry.getKey();
             SinkRecord record = entry.getValue().iterator().next();
@@ -87,12 +89,7 @@ public class SingleStoreDbWriter {
                         String table = entry.getKey();
                         Collection<SinkRecord> tableRecords = entry.getValue();
                         SinkRecord firstTableRecord = tableRecords.iterator().next();
-                        String onDuplicateKeySQL = config.onDuplicateKeySQLForTable(table);
-                        if (onDuplicateKeySQL == null) {
-                            throw new ConnectException(String.format(
-                                    "No assignment list is configured for table `%s`. Set \"singlestore.onDuplicateKeySQL\" or \"singlestore.onDuplicateKeySQL.%s\".",
-                                    table, table));
-                        }
+                        String onDuplicateKeySQL = assignments.get(table);
                         String showCreateTable = JdbcHelper.showCreateTable(connection, table);
                         InsertDbWriter insertWriter = new InsertDbWriter(
                                 config, firstTableRecord, table, onDuplicateKeySQL, showCreateTable);
@@ -145,6 +142,23 @@ public class SingleStoreDbWriter {
         }
     }
 
+    private Map<String, String> onDuplicateKeyAssignments(Map<String, Collection<SinkRecord>> tableToRecords) {
+        Map<String, String> assignments = new HashMap<>();
+        if (!config.onDuplicateKeyUpdate) {
+            return assignments;
+        }
+        for (String table : tableToRecords.keySet()) {
+            String assignment = config.onDuplicateKeySQLForTable(table);
+            if (assignment == null) {
+                throw new ConnectException(String.format(
+                        "No assignment list is configured for table `%s`. Set \"singlestore.onDuplicateKeySQL\" or \"singlestore.onDuplicateKeySQL.%s\".",
+                        table, table));
+            }
+            assignments.put(table, assignment);
+        }
+        return assignments;
+    }
+
     private void dropTemporaryTables(Statement stmt, Map<String, InsertDbWriter> insertWriters) {
         for (InsertDbWriter insertWriter : insertWriters.values()) {
             String drop = insertWriter.generateDropTemporaryTableQuery();
@@ -157,6 +171,10 @@ public class SingleStoreDbWriter {
         }
     }
 
+    // TODO: PLAT-8180: writeData fills this pipe before executeUpdate starts reading. A compressed
+    // payload larger than BUFFER_SIZE waits forever in awaitSpace(). This matches the
+    // load path on master; fix it by writing on another thread, or by buffering to a
+    // temp file or byte array first.
     private void writeWithLoadData(Statement stmt, CsvDbWriter dbWriter,
                                    Collection<SinkRecord> tableRecords) throws IOException, SQLException {
         try (PipedOutputStream baseStream  = new PipedOutputStream();

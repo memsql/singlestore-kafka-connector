@@ -117,7 +117,7 @@ Rows are applied in the order they are received. When a batch contains the same 
 
 ### Performance
 
-Each batch is written twice: `LOAD DATA` into the temporary table, then `INSERT ... SELECT` into the destination table. The temporary table copies the destination's column definitions and shard key, so the staged rows already sit on the right partitions.
+Each batch is written twice: `LOAD DATA` into the temporary table, then `INSERT ... SELECT` into the destination table. The temporary table copies the destination's column definitions and shard key, so the staged rows already sit on the right partitions. `METADATA_ONLY` is removed because a rowstore temporary table rejects it. A shard key on a `TEXT`, `BLOB`, or `JSON` column is left off for the same reason, and the `INSERT` redistributes those rows.
 
 To apply rows in the order they were received, the final statement ends with `ORDER BY` on an internal sequence column. `EXPLAIN` shows the cost of that ordering. Each partition sorts its rows, the aggregator gathers and merges them into a single ordered stream, and the aggregator performs the insert:
 

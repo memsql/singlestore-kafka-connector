@@ -49,14 +49,14 @@ public class InsertDbWriterTest {
     @Test
     public void generateQueryEscapesIdentifiers() {
         String showCreate = "CREATE TABLE `a``b` (\n"
-                + "  `c``d` text,\n"
+                + "  `c``d` varchar(10),\n"
                 + "  UNIQUE KEY `c` (`c``d`),\n"
                 + "  SHARD KEY (`c``d`)\n"
                 + ")";
         InsertDbWriter writer = new InsertDbWriter(
                 Collections.singletonList("c`d"), null, "a`b", "`age` = `age` + 1", "t`mp", showCreate);
         assertEquals(
-                "CREATE ROWSTORE TEMPORARY TABLE `t``mp` (`c``d` text, "
+                "CREATE ROWSTORE TEMPORARY TABLE `t``mp` (`c``d` varchar(10), "
                         + "`_singlestore_kafka_order` BIGINT NULL, SHARD KEY (`c``d`))",
                 writer.generateCreateTemporaryTableQuery());
         assertEquals("DROP TEMPORARY TABLE IF EXISTS `t``mp`", writer.generateDropTemporaryTableQuery());
