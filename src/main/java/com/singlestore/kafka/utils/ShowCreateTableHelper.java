@@ -58,9 +58,18 @@ public class ShowCreateTableHelper {
     }
 
     public String toCreateTemporaryTable(String temporaryTable, String orderColumn) {
+        return toCreateTemporaryTable(temporaryTable, orderColumn, false);
+    }
+
+    /**
+     * @param nullableColumns removes {@code NOT NULL} from copied columns. {@code LOAD DATA}
+     * checks that constraint before {@code WHERE}, so a filtered-out NULL fails the load
+     * unless the staging column accepts it. The INSERT still applies the filter.
+     */
+    public String toCreateTemporaryTable(String temporaryTable, String orderColumn, boolean nullableColumns) {
         StringJoiner definitions = new StringJoiner(", ");
         for (String column : columnDefinitions) {
-            definitions.add(column);
+            definitions.add(nullableColumns ? makeNullable(column) : column);
         }
         definitions.add(SingleStoreDialect.quoteIdentifier(orderColumn) + " BIGINT NULL");
         String compatibleShardKey = rowstoreShardKey();

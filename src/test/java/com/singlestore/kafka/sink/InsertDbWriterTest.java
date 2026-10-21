@@ -117,6 +117,17 @@ public class InsertDbWriterTest {
     }
 
     @Test
+    public void filterMakesStagingColumnsNullable() {
+        InsertDbWriter writer = writer(Arrays.asList("id", "data"), "keep = 'load'", "partial");
+        assertEquals(
+                "CREATE ROWSTORE TEMPORARY TABLE `_incoming` (`id` int(11) NULL, "
+                        + "`data` text CHARACTER SET utf8 COLLATE utf8_general_ci, "
+                        + "`status` enum('a,b','c') DEFAULT NULL, `amount` decimal(10,2) DEFAULT NULL, "
+                        + "`_singlestore_kafka_order` BIGINT NULL, SHARD KEY `__SHARDKEY` (`id`))",
+                writer.generateCreateTemporaryTableQuery());
+    }
+
+    @Test
     public void generateQueryWithFilter() {
         InsertDbWriter writer = writer(Arrays.asList("id", "data"), "id > 1", "partial");
         assertEquals(

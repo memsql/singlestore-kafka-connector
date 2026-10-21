@@ -520,6 +520,37 @@ public class OnDuplicateKeyUpdateTest extends IntegrationBase {
     }
 
     @Test
+    public void filterSkipsRowThatViolatesStagingConstraint() throws SQLException {
+        Schema schema = SchemaBuilder.struct()
+                .field("id", Schema.INT32_SCHEMA)
+                .field("data", Schema.OPTIONAL_STRING_SCHEMA)
+                .field("keep", Schema.STRING_SCHEMA)
+                .build();
+        String table = "odku_filter_constraint";
+        Map<String, String> props = props(UPDATE_DATA);
+        props.put(SingleStoreSinkConfig.FILTER, "keep = 'load'");
+
+        executeQuery("DROP TABLE IF EXISTS testdb." + table);
+        executeQuery(columnstore(table, "id INT NOT NULL PRIMARY KEY, data TEXT NOT NULL, keep TEXT"));
+        executeQuery("INSERT INTO testdb." + table + " VALUES (1, 'old', 'stay')");
+
+        Struct filtered = new Struct(schema).put("id", 2).put("data", null).put("keep", "drop");
+        Struct kept = new Struct(schema).put("id", 1).put("data", "new").put("keep", "load");
+        put(props, Arrays.asList(
+                createRecord(schema, filtered, table),
+                createRecord(schema, kept, table)
+        ), null, false);
+
+        ResultSet rs = executeQueryWithResultSet(
+                "SELECT id, data, keep FROM testdb." + table + " ORDER BY id");
+        assertTrue(rs.next());
+        assertEquals(1, rs.getInt("id"));
+        assertEquals("new", rs.getString("data"));
+        assertEquals("stay", rs.getString("keep"));
+        assertFalse(rs.next());
+    }
+
+    @Test
     public void primitiveRecords() throws SQLException {
         String table = "odku_primitive";
         Map<String, String> props = props("`hits` = `hits` + 1");

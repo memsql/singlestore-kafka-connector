@@ -135,7 +135,7 @@ Without the ordering, each partition would insert its own rows in parallel, but 
 
 The temporary table is built from the destination's `SHOW CREATE TABLE` output on every batch, so schema changes to the destination table are picked up immediately.
 
-`singlestore.onDuplicateKeySQL` is inserted directly into the statement and is not SQL-injection safe. It cannot be combined with `singlestore.upsert`. `singlestore.filter` is applied by the final `INSERT ... SELECT`, so rows that fail the predicate are not inserted or updated. The temporary table keeps the destination column names, so write the filter against those names, as with ordinary `LOAD DATA` writes.
+`singlestore.onDuplicateKeySQL` is inserted directly into the statement and is not SQL-injection safe. It cannot be combined with `singlestore.upsert`. `singlestore.filter` is applied by the staging `LOAD DATA` and again by the final `INSERT ... SELECT`, so rows that fail the predicate are not inserted or updated. `LOAD DATA` checks `NOT NULL` before `WHERE`, so when a filter is set the staging columns are nullable. A filtered-out NULL is not written. A row that passes the filter and contains NULL is still rejected by the destination table. The temporary table keeps the destination column names, so write the filter against those names, as with ordinary `LOAD DATA` writes.
 
 Use `fields.blacklist` for top-level record fields that the connector should never write, such as columns with `DEFAULT` or `ON UPDATE`. Blacklisting does not remove a destination column listed in `singlestore.columnToField`. Those columns are still included in the insert, and a missing source field is written as NULL. Leave them out of the explicit mappings and out of the update assignments.
 

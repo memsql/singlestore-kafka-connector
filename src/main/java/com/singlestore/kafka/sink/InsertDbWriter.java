@@ -67,7 +67,9 @@ public class InsertDbWriter {
     }
 
     public String generateCreateTemporaryTableQuery() {
-        return showCreateTable.toCreateTemporaryTable(temporaryTable, orderColumn);
+        // LOAD DATA rejects NULL in a NOT NULL column before applying singlestore.filter.
+        // Nullable staging columns let that row load; the INSERT WHERE then discards it.
+        return showCreateTable.toCreateTemporaryTable(temporaryTable, orderColumn, filter != null);
     }
 
     public String generateDropTemporaryTableQuery() {

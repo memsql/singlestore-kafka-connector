@@ -101,7 +101,7 @@ public class SingleStoreDbWriter {
 
                         CsvDbWriter csvWriter = new CsvDbWriter(
                                 config, insertWriter.getTemporaryTable(), table, insertWriter.getColumns(),
-                                null, false, insertWriter.getOrderColumn());
+                                config.filter, false, insertWriter.getOrderColumn());
                         writeWithLoadData(stmt, csvWriter, tableRecords);
                     }
                 }

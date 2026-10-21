@@ -45,6 +45,9 @@ public class CsvDbWriter {
         String columnNames = SingleStoreDialect.escapeColumnNames(queryColumns);
         String queryReplace = upsert ? "REPLACE" : "";
         String queryTable = String.format("INTO TABLE %s (%s)", SingleStoreDialect.quoteIdentifier(table), columnNames);
+        // TODO: LOAD DATA checks NOT NULL before WHERE, so a filtered-out NULL in a
+        // NOT NULL column fails the batch. The duplicate-key path avoids this by
+        // making staging columns nullable. This direct load does not.
         String queryFilter = filter == null ? "" : String.format("WHERE %s", filter);
         return String.join(" ", queryPrefix, queryReplace, queryTable, queryFilter);
     }
