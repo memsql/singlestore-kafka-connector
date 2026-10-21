@@ -55,6 +55,8 @@ public class SingleStoreDbWriter {
             }
         }
 
+        Map<String, String> assignments = onDuplicateKeyAssignments(tableToRecords);
+
         for (Map.Entry<String, Collection<SinkRecord>> entry: tableToRecords.entrySet()) {
             String table = entry.getKey();
             SinkRecord record = entry.getValue().iterator().next();
@@ -74,48 +76,120 @@ public class SingleStoreDbWriter {
             ? JdbcHelper.getDDLConnection(config)
             : JdbcHelper.getDMLConnection(config);
              Statement stmt = connection.createStatement()) {
-            if (config.metadataTableAllow) {
-                String metaId = String.format("%s-%s-%s", first.topic(), first.kafkaPartition(), first.kafkaOffset());
-                if (JdbcHelper.metadataRecordExists(connection, metaId, config)) {
-                    // If metadata record already exists, skip writing this batch of data
-                    return;
-                }
-                connection.setAutoCommit(false);
-                Integer recordsCount = records.size();
-                try (PreparedStatement metadataStmt = SingleStoreDialect.getInsertIntoMetadataQuery(connection, config.metadataTableName, metaId, recordsCount)) {
-                    log.trace("Executing SQL:\n{}", metadataStmt);
-                    metadataStmt.executeUpdate();
-                }
+            String metaId = String.format("%s-%s-%s", first.topic(), first.kafkaPartition(), first.kafkaOffset());
+            if (config.metadataTableAllow && JdbcHelper.metadataRecordExists(connection, metaId, config)) {
+                // If metadata record already exists, skip writing this batch of data
+                return;
             }
 
-            // TODO: investigate parallelization of this loop
-            for (Map.Entry<String, Collection<SinkRecord>> entry: tableToRecords.entrySet()) {
-                String table = entry.getKey();
-                Collection<SinkRecord> tableRecords = entry.getValue();
-                SinkRecord firstTableRecord = tableRecords.iterator().next();
+            Map<String, InsertDbWriter> insertWriters = new HashMap<>();
+            try {
+                if (config.onDuplicateKeyUpdate) {
+                    for (Map.Entry<String, Collection<SinkRecord>> entry: tableToRecords.entrySet()) {
+                        String table = entry.getKey();
+                        Collection<SinkRecord> tableRecords = entry.getValue();
+                        SinkRecord firstTableRecord = tableRecords.iterator().next();
+                        String onDuplicateKeySQL = assignments.get(table);
+                        String showCreateTable = JdbcHelper.showCreateTable(connection, table);
+                        InsertDbWriter insertWriter = new InsertDbWriter(
+                                config, firstTableRecord, table, onDuplicateKeySQL, showCreateTable);
+                        insertWriters.put(table, insertWriter);
 
-                try (PipedOutputStream baseStream  = new PipedOutputStream();
-                     InputStream inputStream = new PipedInputStream(baseStream, BUFFER_SIZE)) {
-                    ((com.singlestore.jdbc.Statement)stmt).setNextLocalInfileInputStream(inputStream);
+                        String createTemporaryTable = insertWriter.generateCreateTemporaryTableQuery();
+                        log.trace("Executing SQL:\n{}", createTemporaryTable);
+                        stmt.executeUpdate(createTemporaryTable);
 
-                    DataExtension dataExtension = getDataExtension(baseStream);
-                    try (OutputStream outputStream = dataExtension.getOutputStream()) {
-                        write(firstTableRecord, dataExtension, table, outputStream, tableRecords, stmt);
+                        CsvDbWriter csvWriter = new CsvDbWriter(
+                                config, insertWriter.getTemporaryTable(), table, insertWriter.getColumns(),
+                                config.filter, false, insertWriter.getOrderColumn());
+                        writeWithLoadData(stmt, csvWriter, tableRecords);
                     }
                 }
-            }
 
-            if (config.metadataTableAllow) {
-                connection.commit();
+                if (config.metadataTableAllow) {
+                    connection.setAutoCommit(false);
+                    Integer recordsCount = records.size();
+                    try (PreparedStatement metadataStmt = SingleStoreDialect.getInsertIntoMetadataQuery(connection, config.metadataTableName, metaId, recordsCount)) {
+                        log.trace("Executing SQL:\n{}", metadataStmt);
+                        metadataStmt.executeUpdate();
+                    }
+                }
+
+                if (config.onDuplicateKeyUpdate) {
+                    for (InsertDbWriter insertWriter: insertWriters.values()) {
+                        String insert = insertWriter.generateInsertQuery();
+                        log.trace("Executing SQL:\n{}", insert);
+                        stmt.executeUpdate(insert);
+                    }
+                } else {
+                    // TODO: investigate parallelization of this loop
+                    for (Map.Entry<String, Collection<SinkRecord>> entry: tableToRecords.entrySet()) {
+                        SinkRecord firstTableRecord = entry.getValue().iterator().next();
+                        writeWithLoadData(stmt, new CsvDbWriter(config, firstTableRecord, entry.getKey()), entry.getValue());
+                    }
+                }
+
+                if (config.metadataTableAllow) {
+                    connection.commit();
+                }
+            } finally {
+                // DROP TEMPORARY TABLE does not commit the current transaction. Drop staging
+                // tables before this connection is closed or reused.
+                dropTemporaryTables(stmt, insertWriters);
             }
         } catch (IOException ex) {
             throw new ConnectException(ex.getLocalizedMessage());
         }
     }
 
-    private void write(SinkRecord record, DataExtension dataCompression, String table,
+    private Map<String, String> onDuplicateKeyAssignments(Map<String, Collection<SinkRecord>> tableToRecords) {
+        Map<String, String> assignments = new HashMap<>();
+        if (!config.onDuplicateKeyUpdate) {
+            return assignments;
+        }
+        for (String table : tableToRecords.keySet()) {
+            String assignment = config.onDuplicateKeySQLForTable(table);
+            if (assignment == null) {
+                throw new ConnectException(String.format(
+                        "No assignment list is configured for table `%s`. Set \"singlestore.onDuplicateKeySQL\" or \"singlestore.onDuplicateKeySQL.%s\".",
+                        table, table));
+            }
+            assignments.put(table, assignment);
+        }
+        return assignments;
+    }
+
+    private void dropTemporaryTables(Statement stmt, Map<String, InsertDbWriter> insertWriters) {
+        for (InsertDbWriter insertWriter : insertWriters.values()) {
+            String drop = insertWriter.generateDropTemporaryTableQuery();
+            try {
+                log.trace("Executing SQL:\n{}", drop);
+                stmt.executeUpdate(drop);
+            } catch (SQLException ex) {
+                log.warn("Failed to drop temporary table {}", insertWriter.getTemporaryTable(), ex);
+            }
+        }
+    }
+
+    // TODO: PLAT-8180: writeData fills this pipe before executeUpdate starts reading. A compressed
+    // payload larger than BUFFER_SIZE waits forever in awaitSpace(). This matches the
+    // load path on master; fix it by writing on another thread, or by buffering to a
+    // temp file or byte array first.
+    private void writeWithLoadData(Statement stmt, CsvDbWriter dbWriter,
+                                   Collection<SinkRecord> tableRecords) throws IOException, SQLException {
+        try (PipedOutputStream baseStream  = new PipedOutputStream();
+             InputStream inputStream = new PipedInputStream(baseStream, BUFFER_SIZE)) {
+            ((com.singlestore.jdbc.Statement)stmt).setNextLocalInfileInputStream(inputStream);
+
+            DataExtension dataExtension = getDataExtension(baseStream);
+            try (OutputStream outputStream = dataExtension.getOutputStream()) {
+                write(dbWriter, dataExtension, outputStream, tableRecords, stmt);
+            }
+        }
+    }
+
+    private void write(CsvDbWriter dbWriter, DataExtension dataCompression,
                          OutputStream outputStream, Collection<SinkRecord> records, Statement stmt) throws IOException, SQLException {
-        CsvDbWriter dbWriter = new CsvDbWriter(config, record, table);
         String dataQuery = dbWriter.generateQuery(dataCompression.getExt());
         dbWriter.writeData(outputStream, records);
         outputStream.close();

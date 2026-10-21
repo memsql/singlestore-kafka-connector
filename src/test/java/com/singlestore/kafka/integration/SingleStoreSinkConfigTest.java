@@ -414,4 +414,73 @@ public class SingleStoreSinkConfigTest extends IntegrationBase {
         assertEquals(1, config.customMetricTags.size());
         assertEquals("platform", config.customMetricTags.get("team"));
     }
+
+    @Test
+    public void successOnDuplicateKeySQL() {
+        Map<String, String> props = getMinimalRequiredParameters();
+        SingleStoreSinkConfig defaults = new SingleStoreSinkConfig(props);
+        assertNull(defaults.onDuplicateKeySQL);
+        assertFalse(defaults.onDuplicateKeyUpdate);
+        assertTrue(defaults.tableToOnDuplicateKeySQL.isEmpty());
+        assertFalse(defaults.upsert);
+
+        props.put(SingleStoreSinkConfig.ON_DUPLICATE_KEY_UPDATE, "true");
+        props.put(SingleStoreSinkConfig.ON_DUPLICATE_KEY_SQL, "  `data` = VALUES(`data`)  ");
+        props.put(SingleStoreSinkConfig.ON_DUPLICATE_KEY_SQL + ".orders", "  `status` = VALUES(`status`)  ");
+        SingleStoreSinkConfig config = new SingleStoreSinkConfig(props);
+        assertTrue(config.onDuplicateKeyUpdate);
+        assertEquals("`data` = VALUES(`data`)", config.onDuplicateKeySQL);
+        assertEquals("`status` = VALUES(`status`)", config.tableToOnDuplicateKeySQL.get("orders"));
+        assertEquals("`data` = VALUES(`data`)", config.onDuplicateKeySQLForTable("other"));
+        assertEquals("`status` = VALUES(`status`)", config.onDuplicateKeySQLForTable("orders"));
+    }
+
+    @Test
+    public void failEmptyOnDuplicateKeySQL() {
+        Map<String, String> props = getMinimalRequiredParameters();
+        props.put(SingleStoreSinkConfig.ON_DUPLICATE_KEY_SQL, "   ");
+        ConfigException ex = assertThrows(ConfigException.class, () -> new SingleStoreSinkConfig(props));
+        assertEquals("Invalid value  for configuration singlestore.onDuplicateKeySQL: must not be empty",
+                ex.getLocalizedMessage());
+    }
+
+    @Test
+    public void failEmptyPerTableOnDuplicateKeySQL() {
+        Map<String, String> props = getMinimalRequiredParameters();
+        props.put(SingleStoreSinkConfig.ON_DUPLICATE_KEY_UPDATE, "true");
+        props.put(SingleStoreSinkConfig.ON_DUPLICATE_KEY_SQL + ".orders", " ");
+        ConfigException ex = assertThrows(ConfigException.class, () -> new SingleStoreSinkConfig(props));
+        assertEquals("Invalid value   for configuration singlestore.onDuplicateKeySQL.orders: must not be empty",
+                ex.getLocalizedMessage());
+    }
+
+    @Test
+    public void failOnDuplicateKeySQLWithoutUpdateFlag() {
+        Map<String, String> props = getMinimalRequiredParameters();
+        props.put(SingleStoreSinkConfig.ON_DUPLICATE_KEY_SQL, "`data` = VALUES(`data`)");
+        ConfigException ex = assertThrows(ConfigException.class, () -> new SingleStoreSinkConfig(props));
+        assertEquals("Configurations \"singlestore.onDuplicateKeySQL\" and \"singlestore.onDuplicateKeySQL.<tableName>\" require \"singlestore.onDuplicateKeyUpdate\"",
+                ex.getLocalizedMessage());
+    }
+
+    @Test
+    public void failOnDuplicateKeyUpdateWithoutAssignmentList() {
+        Map<String, String> props = getMinimalRequiredParameters();
+        props.put(SingleStoreSinkConfig.ON_DUPLICATE_KEY_UPDATE, "true");
+        ConfigException ex = assertThrows(ConfigException.class, () -> new SingleStoreSinkConfig(props));
+        assertEquals("Configuration \"singlestore.onDuplicateKeyUpdate\" requires \"singlestore.onDuplicateKeySQL\" or \"singlestore.onDuplicateKeySQL.<tableName>\"",
+                ex.getLocalizedMessage());
+    }
+
+    @Test
+    public void failUpsertWithOnDuplicateKeyUpdate() {
+        Map<String, String> props = getMinimalRequiredParameters();
+        props.put("singlestore.upsert", "true");
+        props.put(SingleStoreSinkConfig.ON_DUPLICATE_KEY_UPDATE, "true");
+        props.put(SingleStoreSinkConfig.ON_DUPLICATE_KEY_SQL, "`data` = VALUES(`data`)");
+        ConfigException ex = assertThrows(ConfigException.class, () -> new SingleStoreSinkConfig(props));
+        assertEquals("Configurations \"singlestore.upsert\" and \"singlestore.onDuplicateKeyUpdate\" are mutually exclusive",
+                ex.getLocalizedMessage());
+    }
+
 }

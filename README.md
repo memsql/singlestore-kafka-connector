@@ -27,11 +27,15 @@ specified before starting kafka-connect job.
 | `params.<name>`                                             | Specify a specific MySQL or JDBC parameter which will be injected into the connection URI (default: empty)                                                                                                                                                                 |
 | `max.retries`                                               | The maximum number of times to retry on errors before failing the task. (default: 10)                                                                                                                                                                                      |
 | `fields.whitelist`                                          | Comma-separated list of record fields to insert. When empty, all fields are candidates unless excluded by `fields.blacklist`.                                                                                                                                                                                            |
-| `fields.blacklist`                                          | Comma-separated list of top-level fields to omit from the row (e.g. columns with `DEFAULT` / `ON UPDATE`). Applied after the whitelist when both are set. (default: none excluded)                                                                                                                                                                                            |
+| `fields.blacklist`                                          | Comma-separated list of top-level fields to omit from the row (e.g. columns with `DEFAULT` / `ON UPDATE`). Applied after the whitelist when both are set. Does not remove columns listed in `singlestore.columnToField`. (default: none excluded)                                                                                       |
 | `retry.backoff.ms`                                          | The time in milliseconds to wait following an error before a retry attempt is made. (default 3000)                                                                                                                                                                         |
 | `tableKey.<index_type>[.name]`                              | Specify additional keys to add to tables created by the connector; value of this property is the comma separated list with names of the columns to apply key; <index_type> one of (`PRIMARY`, `COLUMNSTORE`, `UNIQUE`, `SHARD`, `KEY`);                                    |
 | `custom.metric.tags`                                        | Comma-separated list of key-value pairs (`key=value`) added as extra JMX tags to task metric ObjectNames. Example: `team=data,env=prod`.                                                                                                                                  |
-| `singlestore.loadDataCompression`                           | Compress data on load; one of (`GZip`, `LZ4`, `Skip`) (default: GZip)                                                                                                                                                                                                      |
+| `singlestore.loadDataCompression`                           | Compress data on load; one of (`GZip`, `LZ4`, `Skip`) (default: GZip).                                                                                                                                                                                                     |
+| `singlestore.upsert`                                        | Replace the existing row when a duplicate key is found (`LOAD DATA ... REPLACE`). Mutually exclusive with `singlestore.onDuplicateKeyUpdate`.                                                                                                                              |
+| `singlestore.onDuplicateKeyUpdate`                          | Load rows into a temporary table, then insert them with [`INSERT ... ON DUPLICATE KEY UPDATE`](https://docs.singlestore.com/cloud/reference/sql-reference/data-manipulation-language-dml/insert/#on-duplicate-key-update). Requires an assignment list. Mutually exclusive with `singlestore.upsert`. (default: false) |
+| `singlestore.onDuplicateKeySQL`                             | Default assignment list used when `singlestore.onDuplicateKeyUpdate` is true. Example: `` `data` = VALUES(`data`) ``. Inserted directly into the query and not SQL-injection safe.                                                                                          |
+| `singlestore.onDuplicateKeySQL.<tableName>`                 | Assignment list for one destination table. Overrides `singlestore.onDuplicateKeySQL` for that table. `<tableName>` is case-sensitive and must exactly match the destination table name.                                                    |
 | `singlestore.metadata.allow`                                | Allows or denies the use of an additional meta-table to save the recording results (default: true)                                                                                                                                                                         |
 | `singlestore.metadata.table`                                | Specify the name of the table to save kafka transaction metadata (default: `kafka_connect_transaction_metadata`)                                                                                                                                                           |
 | `singlestore.tableName.<topicName>=<tableName>`             | Specify an explicit table name to use for the specified topic                                                                                                                                                                                                              |
@@ -89,6 +93,36 @@ Because of this, if some error occurred, no data will be actually added to the d
 
 To overwrite the name of this table, use `singlestore.metadata.table` option.
 
+## Updating existing rows
+
+`singlestore.upsert` loads rows with `LOAD DATA ... REPLACE`. That statement replaces every column of the existing row.
+
+`singlestore.onDuplicateKeyUpdate` loads incoming rows with `LOAD DATA` into a temporary table, then runs [`INSERT ... SELECT ... ON DUPLICATE KEY UPDATE`](https://docs.singlestore.com/cloud/reference/sql-reference/data-manipulation-language-dml/insert/) against the destination table. The table needs a `PRIMARY KEY` or `UNIQUE` index. New rows are inserted with every mapped column. When a key already exists, SingleStore runs only the assignments configured for that table. Columns omitted from that list keep their current values.
+
+Set the assignment list with `singlestore.onDuplicateKeySQL`. Use `singlestore.onDuplicateKeySQL.<tableName>` when tables need different assignments. A per-table value overrides the default for that table. `<tableName>` is case-sensitive and must exactly match the destination table name the connector resolves (from the topic name, `singlestore.tableName.<topicName>`, or `singlestore.recordToTable.mapping.<value>`). Otherwise, the default assignment list is used.
+
+```
+"singlestore.onDuplicateKeyUpdate": "true",
+"singlestore.onDuplicateKeySQL": "`data` = VALUES(`data`)",
+"singlestore.onDuplicateKeySQL.orders": "`status` = VALUES(`status`)"
+```
+
+For a row `(id=1, data='old', created_at='2020-01-01')` and an incoming record `(id=1, data='new', created_at='2024-01-01')`, the assignment `` `data` = VALUES(`data`) `` stores `data='new'` and leaves `created_at` unchanged. Because `id=1` already exists, SingleStore runs only that assignment. `VALUES(data)` is the incoming `data` value. The incoming `created_at` is not assigned, so the stored value remains. A new key inserts every mapped column, including `created_at`.
+
+The assignment list can also be an expression, for example `` `age` = `age` + 1 ``.
+
+Keep `singlestore.metadata.allow` enabled. With metadata disabled, each destination table commits separately. If a later table fails, earlier tables keep their updates and Kafka retries the batch. Assignments such as `` `data` = VALUES(`data`) `` write the same values again. Expressions such as `` `age` = `age` + 1 `` run again.
+
+Rows are applied in the order they are received. When a batch contains the same key more than once, the last record wins for `VALUES(...)` assignments, and expressions such as `` `age` = `age` + 1 `` run once per record. Concurrent tasks that update the same keys can block each other.
+
+### Performance
+
+Each batch is written twice: once into a temporary table, then into the destination table. This mode is slower than `singlestore.upsert` and plain `LOAD DATA`. If throughput matters, tune the batch size with `consumer.override.max.poll.records` and the parallelism with `tasks.max`.
+
+`singlestore.onDuplicateKeySQL` is inserted directly into the statement and is not SQL-injection safe. It cannot be combined with `singlestore.upsert`. `singlestore.filter` skips rows that fail the predicate, so they are not inserted or updated. Write the filter against the destination column names. A row that passes the filter and contains NULL for a `NOT NULL` column is still rejected.
+
+Use `fields.blacklist` for top-level record fields that the connector should never write, such as columns with `DEFAULT` or `ON UPDATE`. Blacklisting does not remove a destination column listed in `singlestore.columnToField`. Those columns are still included in the insert, and a missing source field is written as NULL. Leave them out of the explicit mappings and out of the update assignments.
+
 ## Data Types
 
 `singlestore-kafka-connector` makes such conversions from Kafka types to SingleStore types:
@@ -105,8 +139,10 @@ To overwrite the name of this table, use `singlestore.metadata.table` option.
 | FLOAT32    | FLOAT            |
 | FLOAT64    | DOUBLE           |
 | BOOLEAN    | TINYINT          |
-| BYTES      | TEXT             |
-| STRING     | VARBINARY(1024)  |
+| BYTES      | VARBINARY(1024)  |
+| STRING     | TEXT             |
+
+`BYTES` values are written through `LOAD DATA` as UTF-8 text in every write mode, so bytes that are not valid UTF-8 can change.
 
 ## Table keys
 

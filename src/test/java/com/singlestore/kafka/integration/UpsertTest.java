@@ -49,4 +49,38 @@ public class UpsertTest extends IntegrationBase{
         assertEquals("b", rs.getString("data"));
         assertFalse(rs.next());
     }
+
+    @Test
+    public void upsertReplacesEveryColumn() throws SQLException {
+        Schema schema = SchemaBuilder.struct()
+            .field("id", Schema.INT32_SCHEMA)
+            .field("data", Schema.STRING_SCHEMA)
+            .field("keep", Schema.STRING_SCHEMA);
+
+        List<SinkRecord> records = Collections.singletonList(createRecord(schema, new Struct(schema)
+                .put("id", 1)
+                .put("data", "a")
+                .put("keep", "original"),
+            "upsertReplace"
+        ));
+
+        Map<String, String> props = new HashMap<>();
+        props.put("singlestore.upsert", "true");
+
+        put(props, records, "CREATE TABLE testdb.upsertReplace(id INT PRIMARY KEY, data TEXT, keep TEXT)", true);
+
+        records = Collections.singletonList(createRecord(schema, new Struct(schema)
+                .put("id", 1)
+                .put("data", "b")
+                .put("keep", "replaced"),
+            "upsertReplace"
+        ));
+        put(props, records, null, false);
+
+        ResultSet rs = executeQueryWithResultSet("SELECT * FROM testdb.upsertReplace");
+        assertTrue(rs.next());
+        assertEquals("b", rs.getString("data"));
+        assertEquals("replaced", rs.getString("keep"));
+        assertFalse(rs.next());
+    }
 }
