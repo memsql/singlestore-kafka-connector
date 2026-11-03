@@ -26,8 +26,6 @@ public class SingleStoreDbWriter {
     private static final Logger log = LoggerFactory.getLogger(SingleStoreDbWriter.class);
     private final SingleStoreSinkConfig config;
 
-    private final int BUFFER_SIZE = 524288;
-
     public SingleStoreDbWriter(SingleStoreSinkConfig config) {
         this.config = config;
     }
@@ -171,30 +169,19 @@ public class SingleStoreDbWriter {
         }
     }
 
-    // TODO: PLAT-8180: writeData fills this pipe before executeUpdate starts reading. A compressed
-    // payload larger than BUFFER_SIZE waits forever in awaitSpace(). This matches the
-    // load path on master; fix it by writing on another thread, or by buffering to a
-    // temp file or byte array first.
     private void writeWithLoadData(Statement stmt, CsvDbWriter dbWriter,
                                    Collection<SinkRecord> tableRecords) throws IOException, SQLException {
-        try (PipedOutputStream baseStream  = new PipedOutputStream();
-             InputStream inputStream = new PipedInputStream(baseStream, BUFFER_SIZE)) {
-            ((com.singlestore.jdbc.Statement)stmt).setNextLocalInfileInputStream(inputStream);
-
+        try (ByteArrayOutputStream baseStream = new ByteArrayOutputStream()) {
             DataExtension dataExtension = getDataExtension(baseStream);
             try (OutputStream outputStream = dataExtension.getOutputStream()) {
-                write(dbWriter, dataExtension, outputStream, tableRecords, stmt);
+                dbWriter.writeData(outputStream, tableRecords);
             }
-        }
-    }
 
-    private void write(CsvDbWriter dbWriter, DataExtension dataCompression,
-                         OutputStream outputStream, Collection<SinkRecord> records, Statement stmt) throws IOException, SQLException {
-        String dataQuery = dbWriter.generateQuery(dataCompression.getExt());
-        dbWriter.writeData(outputStream, records);
-        outputStream.close();
-        log.trace("Executing SQL:\n{}", dataQuery);
-        stmt.executeUpdate(dataQuery);
+            ((com.singlestore.jdbc.Statement)stmt).setNextLocalInfileInputStream(new ByteArrayInputStream(baseStream.toByteArray()));
+            String dataQuery = dbWriter.generateQuery(dataExtension.getExt());
+            log.trace("Executing SQL:\n{}", dataQuery);
+            stmt.executeUpdate(dataQuery);
+        }
     }
 
     private DataExtension getDataExtension(OutputStream baseStream) {
